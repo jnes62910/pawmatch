@@ -2002,7 +2002,13 @@ function Onboarding({ onComplete }) {
             <input value={form.ownerName} onChange={e => set("ownerName", e.target.value)} placeholder="Ex: Marie" style={{ ...inputStyle, marginBottom: 16 }} />
             <label style={labelStyle}>VOTRE EMAIL</label>
             <input value={form.ownerEmail} onChange={e => set("ownerEmail", e.target.value)} placeholder="marie@email.com" type="email" style={{ ...inputStyle, marginBottom: 6 }} />
-            <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 12 }}>Pour recevoir vos matchs et notifications.</div>
+            <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 24 }}>Pour recevoir vos matchs et notifications.</div>
+            <button onClick={next} disabled={!form.ownerName}
+              style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: form.ownerName ? "pointer" : "default",
+                background: form.ownerName ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB",
+                color: form.ownerName ? "#fff" : "#9CA3AF" }}>
+              Continuer →
+            </button>
           </div>
         )}
 
