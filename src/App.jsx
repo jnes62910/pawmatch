@@ -2235,23 +2235,22 @@ function Onboarding({ onComplete }) {
       </div>
 
       {/* CTA */}
-      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0 }}>
+      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: current === "owner" ? "none" : "block" }}>
         {current === "recap" ? (
           <button onClick={() => onComplete(form)}
             style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(242,100,25,.35)" }}>
             🐾 Découvrir les profils !
           </button>
-        ) : (
+        ) : current === "owner" ? null : (
           <button onClick={next}
             disabled={
-              (current === "owner" && !form.ownerName) ||
               (current === "species" && !form.species) ||
               (current === "identity" && (!form.petName || !form.gender))
             }
             style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer", transition: "all .2s",
-              background: (current === "owner" && !form.ownerName) || (current === "species" && !form.species) || (current === "identity" && (!form.petName || !form.gender))
+              background: (current === "species" && !form.species) || (current === "identity" && (!form.petName || !form.gender))
                 ? "#E5E7EB" : "linear-gradient(135deg,#F26419,#F7931A)",
-              color: (current === "owner" && !form.ownerName) || (current === "species" && !form.species) || (current === "identity" && (!form.petName || !form.gender))
+              color: (current === "species" && !form.species) || (current === "identity" && (!form.petName || !form.gender))
                 ? "#9CA3AF" : "#fff",
               boxShadow: "0 6px 20px rgba(242,100,25,.2)" }}>
             Continuer →
