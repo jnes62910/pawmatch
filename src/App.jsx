@@ -1991,18 +1991,18 @@ function Onboarding({ onComplete }) {
       </div>
 
       {/* Step content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 24px 32px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px 24px 16px" }}>
 
         {/* ── OWNER ── */}
         {current === "owner" && (
           <div>
             <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Parlez-nous de vous 👤</div>
-            <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 28, lineHeight: 1.6 }}>Ces informations restent privées et ne sont pas visibles sur le profil de votre animal.</div>
+            <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 16, lineHeight: 1.6 }}>Ces informations restent privées et ne sont pas visibles sur le profil de votre animal.</div>
             <label style={labelStyle}>VOTRE PRÉNOM</label>
             <input value={form.ownerName} onChange={e => set("ownerName", e.target.value)} placeholder="Ex: Marie" style={{ ...inputStyle, marginBottom: 16 }} />
             <label style={labelStyle}>VOTRE EMAIL</label>
-            <input value={form.ownerEmail} onChange={e => set("ownerEmail", e.target.value)} placeholder="marie@email.com" type="email" style={{ ...inputStyle, marginBottom: 8 }} />
-            <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 28 }}>Pour recevoir vos matchs et notifications.</div>
+            <input value={form.ownerEmail} onChange={e => set("ownerEmail", e.target.value)} placeholder="marie@email.com" type="email" style={{ ...inputStyle, marginBottom: 6 }} />
+            <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 12 }}>Pour recevoir vos matchs et notifications.</div>
           </div>
         )}
 
@@ -2280,7 +2280,7 @@ export default function PawMatch() {
   function openPremium() { if (!isPremium) setShowPremiumTunnel(true); }
   function onPremiumSuccess() { setIsPremium(true); setShowPremiumTunnel(false); }
 
-  const isStatusLight = !onboarded || screen === "profile";
+  
   const NAV = [
     { id: "swipe", label: "Découvrir", icon: "🐾" },
     { id: "map", label: "Carte", icon: "🗺️" },
@@ -2295,14 +2295,12 @@ export default function PawMatch() {
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#D1D5DB", fontFamily: "'Inter', -apple-system, sans-serif" }}>
       <div style={{ width: 390, height: 844, background: "#fff", borderRadius: 40, boxShadow: "0 24px 80px rgba(0,0,0,.3)", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
 
-        {/* Status bar */}
-        <div style={{ background: isStatusLight ? "transparent" : "#fff", padding: "12px 24px 4px", display: "flex", justifyContent: "space-between", alignItems: "center", position: isStatusLight ? "absolute" : "static", top: 0, left: 0, right: 0, zIndex: 10, flexShrink: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: isStatusLight ? "#fff" : "#2D1200" }}>9:41</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {isPremium && <span style={{ fontSize: 11, fontWeight: 800, color: "#F26419", background: "#FFF4EC", padding: "2px 8px", borderRadius: 10 }}>👑 PREMIUM</span>}
-            <span style={{ fontSize: 13, color: isStatusLight ? "#fff" : "#2D1200" }}>📶 🔋</span>
+        {/* Badge Premium uniquement si actif */}
+        {isPremium && (
+          <div style={{ position: "absolute", top: 8, right: 12, zIndex: 20 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#F26419", background: "#FFF4EC", padding: "2px 8px", borderRadius: 10 }}>👑 PREMIUM</span>
           </div>
-        </div>
+        )}
 
         {/* Header */}
         {showHeader && (
