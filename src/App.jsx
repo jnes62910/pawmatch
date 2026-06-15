@@ -2092,12 +2092,18 @@ function Onboarding({ onComplete }) {
             </div>
 
             <label style={labelStyle}>SEXE</label>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
               {[["M","♂ Mâle"],["F","♀ Femelle"]].map(([v,l]) => (
                 <button key={v} onClick={() => set("gender", v)}
                   style={{ flex: 1, padding: "12px", borderRadius: 12, border: `2px solid ${form.gender === v ? "#F26419" : "#E5E7EB"}`, background: form.gender === v ? "#FFF4EC" : "#F9FAFB", color: form.gender === v ? "#F26419" : "#6B7280", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>{l}</button>
               ))}
             </div>
+            <button onClick={next} disabled={!form.petName || !form.gender}
+              style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: (form.petName && form.gender) ? "pointer" : "default",
+                background: (form.petName && form.gender) ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB",
+                color: (form.petName && form.gender) ? "#fff" : "#9CA3AF" }}>
+              Continuer →
+            </button>
           </div>
         )}
 
@@ -2130,6 +2136,14 @@ function Onboarding({ onComplete }) {
                 </button>
               ))}
             </div>
+            <div style={{ marginTop: 24 }}>
+              <button onClick={next}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                Continuer →
+              </button>
+              <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
+            </div>
           </div>
         )}
 
@@ -2147,6 +2161,14 @@ function Onboarding({ onComplete }) {
             {form.temper.length === 4 && (
               <div style={{ fontSize: 12, color: "#F26419", marginTop: 14, fontWeight: 600 }}>Maximum atteint — désélectionnez un trait pour en choisir un autre.</div>
             )}
+            <div style={{ marginTop: 24 }}>
+              <button onClick={next}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                Continuer →
+              </button>
+              <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
+            </div>
           </div>
         )}
 
@@ -2171,6 +2193,14 @@ function Onboarding({ onComplete }) {
                   </div>
                 </button>
               ))}
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <button onClick={next}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                Continuer →
+              </button>
+              <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
             </div>
           </div>
         )}
@@ -2208,6 +2238,14 @@ function Onboarding({ onComplete }) {
               </button>
             )}
             <div style={{ fontSize: 12, color: "#9CA3AF", textAlign: "center", marginTop: 6 }}>Vous pouvez continuer sans photo et en ajouter plus tard.</div>
+            <div style={{ marginTop: 24 }}>
+              <button onClick={next}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                Continuer →
+              </button>
+              <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
+            </div>
           </div>
         )}
 
@@ -2225,6 +2263,14 @@ function Onboarding({ onComplete }) {
               style={{ ...inputStyle, minHeight: 140, resize: "none", lineHeight: 1.7 }}
             />
             <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8 }}>{form.bio.length}/300 caractères</div>
+            <div style={{ marginTop: 24 }}>
+              <button onClick={next}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                Continuer →
+              </button>
+              <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
+            </div>
           </div>
         )}
 
@@ -2277,7 +2323,7 @@ function Onboarding({ onComplete }) {
       </div>
 
       {/* CTA */}
-      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: current === "owner" ? "none" : "block" }}>
+      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity"].includes(current) ? "none" : "block" }}>
         {current === "recap" ? (
           <button onClick={() => onComplete(form)}
             style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(242,100,25,.35)" }}>
