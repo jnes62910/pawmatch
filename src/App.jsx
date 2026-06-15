@@ -2068,6 +2068,14 @@ function Onboarding({ onComplete }) {
                 </div>
               ))}
             </div>
+          <div style={{ marginTop: 24 }}>
+              <button onClick={next} disabled={!form.species}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: form.species ? "pointer" : "default",
+                  background: form.species ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB",
+                  color: form.species ? "#fff" : "#9CA3AF" }}>
+                Continuer →
+              </button>
+            </div>
           </div>
         )}
 
@@ -2323,7 +2331,7 @@ function Onboarding({ onComplete }) {
       </div>
 
       {/* CTA */}
-      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity"].includes(current) ? "none" : "block" }}>
+      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity","species"].includes(current) ? "none" : "block" }}>
         {current === "recap" ? (
           <button onClick={() => onComplete(form)}
             style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(242,100,25,.35)" }}>
