@@ -593,7 +593,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
                 )}
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "2px solid #E5E7EB", background: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#B84A0F" }}>💬 Message</button>
-                  <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }} style2={{ display:"flex", gap:6, alignItems:"center" }}>Dire bonjour !</button>
+                  <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display:"flex", gap:6, alignItems:"center" }}>Dire bonjour !</button>
                 </div>
               </>
             )}
