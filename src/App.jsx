@@ -4,20 +4,25 @@ import { useState, useRef } from "react";
 // ── LOGO ──────────────────────────────────────────────────────────────────────
 function PawLogo({ size = 48, color = "#fff" }) {
   return (
-    <div style={{
-      width: size,
-      height: size,
-      backgroundColor: color,
-      maskImage: "url(/logo.png)",
-      maskSize: "contain",
-      maskRepeat: "no-repeat",
-      maskPosition: "center",
-      WebkitMaskImage: "url(/logo.png)",
-      WebkitMaskSize: "contain",
-      WebkitMaskRepeat: "no-repeat",
-      WebkitMaskPosition: "center",
-      flexShrink: 0,
-    }} />
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      {/* Heart outline */}
+      <path
+        d="M50 82 C48 80 14 58 14 34 C14 21 23 13 34 13 C40 13 46 16 50 21 C54 16 60 13 66 13 C77 13 86 21 86 34 C86 58 52 80 50 82Z"
+        stroke={color} strokeWidth="5.5" fill="none" strokeLinecap="round" strokeLinejoin="round"
+      />
+      {/* Top-right paw — main pad */}
+      <ellipse cx="64" cy="34" rx="7.5" ry="6.5" fill={color}/>
+      {/* Top-right paw — 3 toes */}
+      <ellipse cx="56.5" cy="26" rx="4" ry="3.5" fill={color}/>
+      <ellipse cx="64" cy="24" rx="4" ry="3.5" fill={color}/>
+      <ellipse cx="71.5" cy="26" rx="4" ry="3.5" fill={color}/>
+      {/* Bottom-left paw — main pad */}
+      <ellipse cx="40" cy="62" rx="9" ry="7.5" fill={color}/>
+      {/* Bottom-left paw — 3 toes */}
+      <ellipse cx="31" cy="53" rx="4.2" ry="3.8" fill={color}/>
+      <ellipse cx="39.5" cy="50" rx="4.2" ry="3.8" fill={color}/>
+      <ellipse cx="48" cy="53" rx="4.2" ry="3.8" fill={color}/>
+    </svg>
   );
 }
 
