@@ -308,6 +308,8 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
   const [sharing, setSharing] = useState(false);
   const [showSharePrompt, setShowSharePrompt] = useState(false);
   const [showModeInfo, setShowModeInfo] = useState(false);
+  const [userPos, setUserPos] = useState(null); // { lat, lng }
+  const [geoError, setGeoError] = useState(null);
 
   const filteredSpots = SPOTS.filter(s => filter === "all" || s.type === filter);
   const animals = mode === "rural" ? RURAL_ANIMALS : URBAN_ANIMALS;
@@ -316,12 +318,40 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
 
   function toggleSharing() {
     if (!sharing) setShowSharePrompt(true);
-    else setSharing(false);
+    else { setSharing(false); setUserPos(null); }
+  }
+
+  function requestGeolocation() {
+    if (!navigator.geolocation) {
+      setGeoError("La géolocalisation n'est pas supportée par votre navigateur.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserPos({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setSharing(true);
+        setShowSharePrompt(false);
+        setGeoError(null);
+      },
+      (error) => {
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            setGeoError("Vous avez refusé l'accès à votre position. Activez-le dans les paramètres de votre navigateur.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setGeoError("Position indisponible. Vérifiez votre GPS.");
+            break;
+          default:
+            setGeoError("Impossible de récupérer votre position.");
+        }
+        setShowSharePrompt(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   }
 
   function confirmSharing() {
-    setSharing(true);
-    setShowSharePrompt(false);
+    requestGeolocation();
   }
 
   const isRural = mode === "rural";
@@ -350,7 +380,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
                 {sharing ? "Vous êtes visible sur la carte" : "Partager ma position"}
               </div>
               <div style={{ fontSize: 11, color: "#9CA3AF" }}>
-                {sharing ? "Les autres propriétaires peuvent vous trouver" : isRural ? "Essentiel en zone rurale pour se trouver" : "Visible dans un rayon de 5 km"}
+                {sharing && userPos ? `📍 ${userPos.lat.toFixed(4)}, ${userPos.lng.toFixed(4)}` : sharing ? "Position en cours de récupération..." : isRural ? "Essentiel en zone rurale pour se trouver" : "Visible dans un rayon de 5 km"}
               </div>
             </div>
           </div>
@@ -560,6 +590,18 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
         </div>
       )}
 
+      {/* Geo error banner */}
+      {geoError && (
+        <div style={{ margin: "8px 16px", padding: "10px 14px", background: "#FEE2E2", borderRadius: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#DC2626", marginBottom: 2 }}>Géolocalisation impossible</div>
+            <div style={{ fontSize: 12, color: "#7F1D1D" }}>{geoError}</div>
+          </div>
+          <button onClick={() => setGeoError(null)} style={{ background: "none", border: "none", color: "#DC2626", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
+        </div>
+      )}
+
       {/* Prompt partage de position */}
       {showSharePrompt && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowSharePrompt(false)}>
@@ -579,7 +621,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
               ))}
             </div>
             <button onClick={confirmSharing} style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>
-              📍 Activer le partage
+              📍 Activer la géolocalisation
             </button>
             <button onClick={() => setShowSharePrompt(false)} style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "#F3F4F6", color: "#6B7280", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
               Pas maintenant
