@@ -5,23 +5,25 @@ import { useState, useRef } from "react";
 function PawLogo({ size = 48, color = "#fff" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-      {/* Heart outline */}
+      {/* Heart — trait fin et élégant */}
       <path
-        d="M50 82 C48 80 14 58 14 34 C14 21 23 13 34 13 C40 13 46 16 50 21 C54 16 60 13 66 13 C77 13 86 21 86 34 C86 58 52 80 50 82Z"
-        stroke={color} strokeWidth="5.5" fill="none" strokeLinecap="round" strokeLinejoin="round"
+        d="M50 84 C50 84 12 60 12 33 C12 20 21 11 32 11 C39 11 45 15 50 21 C55 15 61 11 68 11 C79 11 88 20 88 33 C88 60 50 84 50 84Z"
+        stroke={color} strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"
       />
-      {/* Top-right paw — main pad */}
-      <ellipse cx="64" cy="34" rx="7.5" ry="6.5" fill={color}/>
-      {/* Top-right paw — 3 toes */}
-      <ellipse cx="56.5" cy="26" rx="4" ry="3.5" fill={color}/>
-      <ellipse cx="64" cy="24" rx="4" ry="3.5" fill={color}/>
-      <ellipse cx="71.5" cy="26" rx="4" ry="3.5" fill={color}/>
-      {/* Bottom-left paw — main pad */}
-      <ellipse cx="40" cy="62" rx="9" ry="7.5" fill={color}/>
-      {/* Bottom-left paw — 3 toes */}
-      <ellipse cx="31" cy="53" rx="4.2" ry="3.8" fill={color}/>
-      <ellipse cx="39.5" cy="50" rx="4.2" ry="3.8" fill={color}/>
-      <ellipse cx="48" cy="53" rx="4.2" ry="3.8" fill={color}/>
+      {/* Patte haut-droite — pad principal */}
+      <ellipse cx="65" cy="37" rx="8" ry="6.5" fill={color}/>
+      {/* Patte haut-droite — 4 orteils */}
+      <ellipse cx="55" cy="28" rx="3.8" ry="3.2" fill={color}/>
+      <ellipse cx="62" cy="25" rx="3.8" ry="3.2" fill={color}/>
+      <ellipse cx="69" cy="25" rx="3.8" ry="3.2" fill={color}/>
+      <ellipse cx="75" cy="29" rx="3.8" ry="3.2" fill={color}/>
+      {/* Patte bas-gauche — pad principal */}
+      <ellipse cx="38" cy="63" rx="9" ry="7.5" fill={color}/>
+      {/* Patte bas-gauche — 4 orteils */}
+      <ellipse cx="27" cy="54" rx="4" ry="3.4" fill={color}/>
+      <ellipse cx="34" cy="50" rx="4" ry="3.4" fill={color}/>
+      <ellipse cx="42" cy="49" rx="4" ry="3.4" fill={color}/>
+      <ellipse cx="49" cy="53" rx="4" ry="3.4" fill={color}/>
     </svg>
   );
 }
@@ -89,13 +91,13 @@ function EnergyDots({ level }) {
   return (
     <div style={{ display: "flex", gap: 3 }}>
       {[1,2,3,4,5].map(i => (
-        <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i <= level ? "#F26419" : "#E5E7EB" }} />
+        <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i <= level ? "#B25F46" : "#E5E7EB" }} />
       ))}
     </div>
   );
 }
 
-function Badge({ children, color = "#FFF4EC", text = "#B84A0F" }) {
+function Badge({ children, color = "#FAF0EB", text = "#8B3D28" }) {
   return (
     <span style={{ background: color, color: text, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-block" }}>
       {children}
@@ -177,7 +179,7 @@ function SwipeScreen({ onNav }) {
   if (!profile) return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
       <div style={{ fontSize: 64, marginBottom: 16 }}>🐾</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: "#B84A0F", marginBottom: 8 }}>Plus de profils ici !</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: "#8B3D28", marginBottom: 8 }}>Plus de profils ici !</div>
       <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF" }}>Élargis ta zone de recherche ou reviens plus tard.</div>
     </div>
   );
@@ -189,7 +191,7 @@ function SwipeScreen({ onNav }) {
       <div style={{ display: "flex", gap: 8, padding: "12px 16px 0", background: "#fff", flexShrink: 0 }}>
         {[["all","Tous 🐾"],["cats","Chats 🐱"],["dogs","Chiens 🐕"]].map(([v,l]) => (
           <button key={v} onClick={() => { setTab(v); setIdx(0); setPhoto(0); setDragX(0); }}
-            style={{ padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: tab === v ? "#B84A0F" : "#FFF4EC", color: tab === v ? "#fff" : "#B84A0F" }}>{l}</button>
+            style={{ padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: tab === v ? "#8B3D28" : "#FAF0EB", color: tab === v ? "#fff" : "#8B3D28" }}>{l}</button>
         ))}
       </div>
 
@@ -203,7 +205,7 @@ function SwipeScreen({ onNav }) {
             cursor: dragging ? "grabbing" : "grab",
             transform: `translateX(${dragX}px) rotate(${dragX * 0.08}deg)`,
             transition: dragging ? "none" : "transform .38s cubic-bezier(.25,.46,.45,.94)",
-            boxShadow: "0 8px 32px rgba(242,100,25,.10)",
+            boxShadow: "0 8px 32px rgba(178,95,70,.10)",
             touchAction: "pan-y" }}>
 
           {/* LIKE stamp */}
@@ -225,7 +227,7 @@ function SwipeScreen({ onNav }) {
           {/* Photo dots */}
           <div style={{ display: "flex", justifyContent: "center", gap: 6, position: "absolute", top: 12, left: 0, right: 0, zIndex: 2, pointerEvents: "none" }}>
             {profile.photos.map((_, i) => (
-              <div key={i} style={{ width: i === photo ? 24 : 16, height: 4, borderRadius: 2, background: i === photo ? "#F26419" : "rgba(255,255,255,.6)", transition: "width .2s" }} />
+              <div key={i} style={{ width: i === photo ? 24 : 16, height: 4, borderRadius: 2, background: i === photo ? "#B25F46" : "rgba(255,255,255,.6)", transition: "width .2s" }} />
             ))}
           </div>
 
@@ -241,7 +243,7 @@ function SwipeScreen({ onNav }) {
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
             </div>
-            <div style={{ fontSize: 13, color: "#B84A0F", fontWeight: 600, marginBottom: 8 }}>{profile.breed} · {profile.distance}</div>
+            <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{profile.breed} · {profile.distance}</div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
               {profile.temper.map(t => <Badge key={t}>{t}</Badge>)}
               {profile.sterilized && <Badge color="#E8F5E9" text="#2E7D32">Stérilisé·e</Badge>}
@@ -251,20 +253,20 @@ function SwipeScreen({ onNav }) {
               <EnergyDots level={profile.energy} />
             </div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {profile.seeking.map(s => <Badge key={s} color="#FFF4EC" text="#F26419">{s}</Badge>)}
+              {profile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#B25F46">{s}</Badge>)}
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{ textAlign: "center", fontSize: 11, color: "#F7C49A", padding: "2px 0 4px" }}>
+      <div style={{ textAlign: "center", fontSize: 11, color: "#E8B89F", padding: "2px 0 4px" }}>
         ← Glisse à gauche pour refuser · à droite pour liker 🐾 →
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 24, padding: "8px 16px 20px" }}>
         <button onClick={() => swipe("nope")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #FCA5A5", background: "#FFF", fontSize: 26, cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>❌</button>
-        <button onClick={() => setShowDetail(true)} style={{ width: 48, height: 48, borderRadius: "50%", border: "2px solid #F7C49A", background: "#FFF4EC", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⭐</button>
-        <button onClick={() => swipe("like")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #F26419", background: "linear-gradient(135deg,#F26419,#F7931A)", cursor: "pointer", boxShadow: "0 4px 16px rgba(242,100,25,.3)", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={28} color="#fff" /></button>
+        <button onClick={() => setShowDetail(true)} style={{ width: 48, height: 48, borderRadius: "50%", border: "2px solid #E8B89F", background: "#FAF0EB", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⭐</button>
+        <button onClick={() => swipe("like")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #B25F46", background: "linear-gradient(135deg,#B25F46,#C97A5E)", cursor: "pointer", boxShadow: "0 4px 16px rgba(178,95,70,.3)", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={28} color="#fff" /></button>
       </div>
 
       {showDetail && (
@@ -275,7 +277,7 @@ function SwipeScreen({ onNav }) {
               <div style={{ fontSize: 56 }}>{profile.emoji}</div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{profile.name} <span style={{ fontSize: 15, color: "#6B7280" }}>{profile.age}</span></div>
-                <div style={{ fontSize: 13, color: "#B84A0F", fontWeight: 600 }}>{profile.breed} · {profile.distance}</div>
+                <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{profile.breed} · {profile.distance}</div>
                 <div style={{ fontSize: 12, color: "#9CA3AF" }}>Propriétaire : {profile.owner}</div>
               </div>
             </div>
@@ -286,23 +288,23 @@ function SwipeScreen({ onNav }) {
             </div>
             <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{profile.bio}</p>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 20 }}>
-              {profile.seeking.map(s => <Badge key={s} color="#FFF4EC" text="#F26419">{s}</Badge>)}
+              {profile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#B25F46">{s}</Badge>)}
             </div>
             <div style={{ display: "flex", gap: 12 }}>
               <button onClick={() => { setShowDetail(false); swipe("nope"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "2px solid #FCA5A5", background: "#fff", fontSize: 18, cursor: "pointer", fontWeight: 700 }}>❌ Passer</button>
-              <button onClick={() => { setShowDetail(false); swipe("like"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 15, cursor: "pointer", fontWeight: 700 }}>🐾 J'adore !</button>
+              <button onClick={() => { setShowDetail(false); swipe("like"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 15, cursor: "pointer", fontWeight: 700 }}>🐾 J'adore !</button>
             </div>
           </div>
         </div>
       )}
 
       {matchedWith && (
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#B84A0F,#F26419)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#B25F46)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
           <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
           <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", marginBottom: 32, textAlign: "center" }}>{matchedWith.name} et votre animal s'adorent 🐾</div>
           <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}><PawLogo size={80} color="#fff" /><span>{matchedWith.emoji}</span></div>
-          <button onClick={() => { closeMatch(); onNav("messages"); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#B84A0F", fontSize: 16, fontWeight: 800, cursor: "pointer", marginBottom: 12 }}>💬 Envoyer un message</button>
+          <button onClick={() => { closeMatch(); onNav("messages"); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#8B3D28", fontSize: 16, fontWeight: 800, cursor: "pointer", marginBottom: 12 }}>💬 Envoyer un message</button>
           <button onClick={closeMatch} style={{ background: "transparent", border: "2px solid rgba(255,255,255,.5)", color: "#fff", padding: "14px", borderRadius: 16, width: "100%", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Continuer à swiper</button>
         </div>
       )}
@@ -391,10 +393,10 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           {[["urban","🏙️ Urbain"],["rural","🌿 Rural"]].map(([v,l]) => (
             <button key={v} onClick={() => { setMode(v); setSelected(null); setFilter("all"); }}
-              style={{ flex: 1, padding: "8px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: mode === v ? "#B84A0F" : "#FFF4EC", color: mode === v ? "#fff" : "#B84A0F", transition: "all .2s" }}>{l}</button>
+              style={{ flex: 1, padding: "8px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: mode === v ? "#8B3D28" : "#FAF0EB", color: mode === v ? "#fff" : "#8B3D28", transition: "all .2s" }}>{l}</button>
           ))}
           <button onClick={() => setShowModeInfo(true)}
-            style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: "#FFF4EC", color: "#9CA3AF", fontSize: 16, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>ℹ️</button>
+            style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: "#FAF0EB", color: "#9CA3AF", fontSize: 16, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>ℹ️</button>
         </div>
 
         {/* Share position toggle */}
@@ -431,7 +433,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
           <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto" }}>
             {[["all","Tout 🗺️"],["park","Parcs 🌳"],["catcafe","Cafés chat ☕"],["dogpark","Dog parks 🏟️"]].map(([v,l]) => (
               <button key={v} onClick={() => setFilter(v)}
-                style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: filter === v ? "#B84A0F" : "#FFF4EC", color: filter === v ? "#fff" : "#B84A0F" }}>{l}</button>
+                style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
             ))}
           </div>
         )}
@@ -471,7 +473,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
         {liveAnimals.map(a => (
           <div key={a.id} onClick={() => setSelected(a)}
             style={{ position: "absolute", left: `${a.x}%`, top: `${a.y}%`, transform: "translate(-50%,-50%)", cursor: "pointer", zIndex: 8 }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 2px 10px rgba(13,157,168,.4)", border: "2.5px solid #fff" }}>{a.emoji}</div>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 2px 10px rgba(13,157,168,.4)", border: "2.5px solid #fff" }}>{a.emoji}</div>
             <div style={{ position: "absolute", top: -4, right: -4, width: 12, height: 12, borderRadius: "50%", background: "#22C55E", border: "2px solid #fff" }} />
             <div style={{ position: "absolute", top: 42, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,.65)", color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 6, whiteSpace: "nowrap" }}>{a.name}</div>
           </div>
@@ -494,9 +496,9 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
           return (
             <div key={sp.id} onClick={() => setSelected(spot)}
               style={{ position: "absolute", left: `${sp.x}%`, top: `${sp.y}%`, transform: "translate(-50%,-50%)", cursor: "pointer", zIndex: 9 }}>
-              <div style={{ background: spot.open ? "#fff" : "#F3F4F6", border: `2px solid ${spot.open ? "#B84A0F" : "#D1D5DB"}`, borderRadius: 12, padding: "4px 8px", fontSize: 16, boxShadow: "0 2px 8px rgba(0,0,0,.15)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ background: spot.open ? "#fff" : "#F3F4F6", border: `2px solid ${spot.open ? "#8B3D28" : "#D1D5DB"}`, borderRadius: 12, padding: "4px 8px", fontSize: 16, boxShadow: "0 2px 8px rgba(0,0,0,.15)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
                 {spot.emoji}
-                <span style={{ fontSize: 10, fontWeight: 700, color: spot.open ? "#B84A0F" : "#9CA3AF" }}>{spot.animals}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: spot.open ? "#8B3D28" : "#9CA3AF" }}>{spot.animals}</span>
               </div>
             </div>
           );
@@ -533,7 +535,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
             <div key={a.id} onClick={() => setSelected(a)}
               style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
               <div style={{ position: "relative" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: a.live ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{a.emoji}</div>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: a.live ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{a.emoji}</div>
                 <div style={{ position: "absolute", bottom: 0, right: 0, width: 12, height: 12, borderRadius: "50%", background: a.live ? "#22C55E" : "#9CA3AF", border: "2px solid #fff" }} />
               </div>
               <div style={{ flex: 1 }}>
@@ -576,12 +578,12 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
               <>
                 <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>
                   <div style={{ position: "relative" }}>
-                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: selected.live ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>{selected.emoji}</div>
+                    <div style={{ width: 56, height: 56, borderRadius: "50%", background: selected.live ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>{selected.emoji}</div>
                     <div style={{ position: "absolute", bottom: 1, right: 1, width: 14, height: 14, borderRadius: "50%", background: selected.live ? "#22C55E" : "#9CA3AF", border: "2px solid #fff" }} />
                   </div>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selected.name}</div>
-                    <div style={{ fontSize: 13, color: "#B84A0F", fontWeight: 600 }}>{selected.breed} · {selected.distance}</div>
+                    <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selected.breed} · {selected.distance}</div>
                     <div style={{ fontSize: 12, color: "#9CA3AF" }}>{selected.owner}</div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: selected.live ? "#2E7D32" : "#9CA3AF", marginTop: 2 }}>{selected.live ? "🟢 En ligne maintenant" : "⚪ Hors ligne"}</div>
                   </div>
@@ -592,8 +594,8 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "2px solid #E5E7EB", background: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#B84A0F" }}>💬 Message</button>
-                  <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display:"flex", gap:6, alignItems:"center" }}>Dire bonjour !</button>
+                  <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "2px solid #E5E7EB", background: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#8B3D28" }}>💬 Message</button>
+                  <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display:"flex", gap:6, alignItems:"center" }}>Dire bonjour !</button>
                 </div>
               </>
             )}
@@ -604,7 +606,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
                   <div style={{ fontSize: 40 }}>{selected.emoji}</div>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selected.name}</div>
-                    <div style={{ fontSize: 13, color: "#B84A0F" }}>{selected.distance} · {selected.animals} animaux maintenant</div>
+                    <div style={{ fontSize: 13, color: "#8B3D28" }}>{selected.distance} · {selected.animals} animaux maintenant</div>
                   </div>
                   <div style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 10, background: selected.open ? "#E8F5E9" : "#FEE2E2", color: selected.open ? "#2E7D32" : "#DC2626" }}>{selected.open ? "Ouvert" : "Fermé"}</div>
                 </div>
@@ -646,7 +648,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
                 </div>
               ))}
             </div>
-            <button onClick={confirmSharing} style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>
+            <button onClick={confirmSharing} style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>
               📍 Activer la géolocalisation
             </button>
             <button onClick={() => setShowSharePrompt(false)} style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "#F3F4F6", color: "#6B7280", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
@@ -673,7 +675,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
                 </div>
               </div>
             ))}
-            <button onClick={() => setShowModeInfo(false)} style={{ width: "100%", padding: "13px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Compris !</button>
+            <button onClick={() => setShowModeInfo(false)} style={{ width: "100%", padding: "13px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Compris !</button>
           </div>
         </div>
       )}
@@ -695,17 +697,17 @@ function ReproScreen() {
         <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 10 }}>Reproduction vérifiée et sécurisée 🌱</div>
         <div style={{ display: "flex", gap: 8 }}>
           {[["all","Tous"],["cats","Chats 🐱"],["dogs","Chiens 🐕"]].map(([v,l]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{ padding: "5px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: filter === v ? "#B84A0F" : "#FFF4EC", color: filter === v ? "#fff" : "#B84A0F" }}>{l}</button>
+            <button key={v} onClick={() => setFilter(v)} style={{ padding: "5px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
           ))}
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {/* Info banner */}
-        <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#FFF4EC", borderRadius: 12, display: "flex", gap: 10, alignItems: "flex-start" }}>
+        <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#FAF0EB", borderRadius: 12, display: "flex", gap: 10, alignItems: "flex-start" }}>
           <span style={{ fontSize: 18 }}>🔒</span>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#F26419" }}>REPRODUCTION SÉCURISÉE</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>REPRODUCTION SÉCURISÉE</div>
             <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>Tous les profils sont vérifiés. Documents sanitaires validés. Paiement sécurisé via escrow.</div>
           </div>
         </div>
@@ -720,7 +722,7 @@ function ReproScreen() {
                     <span style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{p.name}</span>
                     <span style={{ fontSize: 13, color: "#6B7280" }}>{p.age} {p.gender === "F" ? "♀" : "♂"}</span>
                   </div>
-                  <div style={{ fontSize: 13, color: "#B84A0F", fontWeight: 600, marginBottom: 6 }}>{p.breed} · {p.distance}</div>
+                  <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 6 }}>{p.breed} · {p.distance}</div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                     {p.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné ✓</Badge>}
                     {p.pedigree && <Badge color="#F3E5F5" text="#7B1FA2">Pedigree ✓</Badge>}
@@ -728,7 +730,7 @@ function ReproScreen() {
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#F26419" }}>{p.price}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#B25F46" }}>{p.price}</div>
                   <div style={{ fontSize: 10, color: "#9CA3AF" }}>saillie</div>
                 </div>
               </div>
@@ -746,7 +748,7 @@ function ReproScreen() {
               <div style={{ fontSize: 52 }}>{selected.emoji}</div>
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selected.name}</div>
-                <div style={{ fontSize: 13, color: "#B84A0F", fontWeight: 600 }}>{selected.breed} · {selected.age}</div>
+                <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selected.breed} · {selected.age}</div>
                 <div style={{ fontSize: 12, color: "#9CA3AF" }}>Propriétaire : {selected.owner}</div>
               </div>
             </div>
@@ -766,17 +768,17 @@ function ReproScreen() {
               </div>
               <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8 }}>💳 Paiement sécurisé. Libéré après confirmation de la rencontre.</div>
             </div>
-            <button onClick={() => setRequested(selected)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>🌱 Envoyer une demande</button>
+            <button onClick={() => setRequested(selected)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>🌱 Envoyer une demande</button>
           </div>
         </div>
       )}
 
       {requested && (
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#B84A0F,#1B5E3B)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#1B5E3B)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{ fontSize: 72, marginBottom: 16 }}>🌱</div>
           <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", marginBottom: 8, textAlign: "center" }}>Demande envoyée !</div>
           <div style={{ fontSize: 15, color: "rgba(255,255,255,.8)", textAlign: "center", marginBottom: 32, lineHeight: 1.6 }}>{selected.owner} recevra votre demande et pourra l'accepter. Vous serez notifié dès qu'une réponse sera disponible.</div>
-          <button onClick={() => { setRequested(null); setSelected(null); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#B84A0F", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Retour à la liste</button>
+          <button onClick={() => { setRequested(null); setSelected(null); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#8B3D28", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Retour à la liste</button>
         </div>
       )}
     </div>
@@ -803,12 +805,12 @@ function AgendaScreen() {
         <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", marginBottom: 10, letterSpacing: 1 }}>À VENIR</div>
         {upcoming.map(ev => (
           <div key={ev.id} style={{ marginBottom: 12, borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
-            <div style={{ background: ev.status === "confirmed" ? "linear-gradient(90deg,#FFF4EC,#fff)" : "linear-gradient(90deg,#FFF9E6,#fff)", padding: "14px 16px" }}>
+            <div style={{ background: ev.status === "confirmed" ? "linear-gradient(90deg,#FAF0EB,#fff)" : "linear-gradient(90deg,#FFF9E6,#fff)", padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{ev.ownerEmoji}</div>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{ev.ownerEmoji}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{ev.type} avec {ev.with}</div>
-                  <div style={{ fontSize: 12, color: "#B84A0F" }}>{ev.owner}</div>
+                  <div style={{ fontSize: 12, color: "#8B3D28" }}>{ev.owner}</div>
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>📅 {ev.date} à {ev.time} · 📍 {ev.place}</div>
                 </div>
                 <div style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 10, background: ev.status === "confirmed" ? "#E8F5E9" : "#FEF9C3", color: ev.status === "confirmed" ? "#2E7D32" : "#854D0E" }}>{ev.status === "confirmed" ? "Confirmé ✓" : "En attente"}</div>
@@ -834,7 +836,7 @@ function AgendaScreen() {
                   {ev.rating ? (
                     <div style={{ fontSize: 14, marginTop: 4 }}>{"⭐".repeat(ev.rating)}</div>
                   ) : (
-                    <button onClick={() => setRatingFor(ev.id)} style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "#F26419", background: "none", border: "none", cursor: "pointer", padding: 0 }}>+ Laisser un avis</button>
+                    <button onClick={() => setRatingFor(ev.id)} style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "#B25F46", background: "none", border: "none", cursor: "pointer", padding: 0 }}>+ Laisser un avis</button>
                   )}
                 </div>
               </div>
@@ -853,7 +855,7 @@ function AgendaScreen() {
                 <button key={s} onClick={() => setRating(s)} style={{ fontSize: 36, background: "none", border: "none", cursor: "pointer", opacity: rating && s > rating ? 0.3 : 1, transition: "opacity .15s" }}>⭐</button>
               ))}
             </div>
-            <button onClick={() => rating && submitRating(ratingFor, rating)} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: rating ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB", color: rating ? "#fff" : "#9CA3AF", fontWeight: 800, fontSize: 15, cursor: rating ? "pointer" : "default" }}>Envoyer mon avis</button>
+            <button onClick={() => rating && submitRating(ratingFor, rating)} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: rating ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", color: rating ? "#fff" : "#9CA3AF", fontWeight: 800, fontSize: 15, cursor: rating ? "pointer" : "default" }}>Envoyer mon avis</button>
           </div>
         </div>
       )}
@@ -897,7 +899,7 @@ function CommunityScreen({ onPremium, isPremium }) {
   const TAG_COLORS = {
     "Événement": ["#E3F2FD","#1565C0"],
     "Conseil": ["#FFF9E6","#854D0E"],
-    "Anniversaire": ["#FFF4EC","#B84A0F"],
+    "Anniversaire": ["#FAF0EB","#8B3D28"],
     "Reproduction": ["#E8F5E9","#2E7D32"]
   };
 
@@ -931,7 +933,7 @@ function CommunityScreen({ onPremium, isPremium }) {
       <div style={{ overflowX: "auto", display: "flex", gap: 8, padding: "10px 16px", background: "#fff", flexShrink: 0 }}>
         {breeds.map(b => (
           <button key={b} onClick={() => setBreedFilter(b)}
-            style={{ padding: "5px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: breedFilter === b ? "#B84A0F" : "#FFF4EC", color: breedFilter === b ? "#fff" : "#B84A0F" }}>
+            style={{ padding: "5px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: breedFilter === b ? "#8B3D28" : "#FAF0EB", color: breedFilter === b ? "#fff" : "#8B3D28" }}>
             {b === "all" ? "Toutes les races" : b}
           </button>
         ))}
@@ -940,14 +942,14 @@ function CommunityScreen({ onPremium, isPremium }) {
       <div style={{ flex: 1, overflowY: "auto" }}>
         {/* New post */}
         <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, display: "flex", gap: 10, alignItems: "center", border: "1px solid #E5E7EB" }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🐱</div>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🐱</div>
           <div onClick={() => isPremium ? null : setShowPremium(true)} style={{ flex: 1, fontSize: 14, color: "#9CA3AF", cursor: "pointer" }}>Partager un moment avec Caramel...</div>
-          <button onClick={() => isPremium ? null : setShowPremium(true)} style={{ background: "linear-gradient(135deg,#F26419,#F7931A)", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 700, padding: "6px 12px", cursor: "pointer" }}>📸</button>
+          <button onClick={() => isPremium ? null : setShowPremium(true)} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 700, padding: "6px 12px", cursor: "pointer" }}>📸</button>
         </div>
 
         {/* Posts */}
         {filtered.map(post => {
-          const [bgTag, textTag] = TAG_COLORS[post.tag] || ["#FFF4EC","#B84A0F"];
+          const [bgTag, textTag] = TAG_COLORS[post.tag] || ["#FAF0EB","#8B3D28"];
           const postComments = comments[post.id] || [];
           const isLiked = liked[post.id];
 
@@ -956,7 +958,7 @@ function CommunityScreen({ onPremium, isPremium }) {
               <div style={{ padding: "14px 14px 10px" }}>
                 {/* Author */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${post.emoji === "🐱" ? "#F26419,#F7931A" : "#B84A0F,#8B3510"})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{post.emoji}</div>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${post.emoji === "🐱" ? "#B25F46,#C97A5E" : "#8B3D28,#8B3510"})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{post.emoji}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{post.pet} <span style={{ fontWeight: 400, color: "#9CA3AF" }}>· {post.author}</span></div>
                     <div style={{ fontSize: 11, color: "#9CA3AF" }}>{post.breed} · {post.time}</div>
@@ -970,11 +972,11 @@ function CommunityScreen({ onPremium, isPremium }) {
                 {/* Actions — sans bouton Partager */}
                 <div style={{ display: "flex", gap: 16, borderTop: "1px solid #F3F4F6", paddingTop: 10 }}>
                   <button onClick={() => setLiked(l => ({ ...l, [post.id]: !l[post.id] }))}
-                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: isLiked ? "#F26419" : "#9CA3AF" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: isLiked ? "#B25F46" : "#9CA3AF" }}>
                     {isLiked ? "🧡" : "🤍"} {post.likes + (isLiked ? 1 : 0)}
                   </button>
                   <button onClick={() => setOpenComments(post.id)}
-                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: openComments === post.id ? "#F26419" : "#9CA3AF" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: openComments === post.id ? "#B25F46" : "#9CA3AF" }}>
                     💬 {postComments.length}
                   </button>
                 </div>
@@ -985,7 +987,7 @@ function CommunityScreen({ onPremium, isPremium }) {
                     style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 10, background: "#F9FAFB", borderRadius: 10, padding: "8px 10px", border: "none", cursor: "pointer", width: "100%", textAlign: "left" }}>
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{postComments[postComments.length - 1].emoji}</span>
                     <div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "#B84A0F" }}>{postComments[postComments.length - 1].author} </span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#8B3D28" }}>{postComments[postComments.length - 1].author} </span>
                       <span style={{ fontSize: 12, color: "#6B7280" }}>{postComments[postComments.length - 1].text}</span>
                     </div>
                   </button>
@@ -1015,13 +1017,13 @@ function CommunityScreen({ onPremium, isPremium }) {
                 <div style={{ fontWeight: 800, color: "#2D1200", fontSize: 16 }}>4,99 €</div>
                 <div style={{ fontSize: 12, color: "#9CA3AF" }}>par mois</div>
               </div>
-              <div style={{ flex: 1, padding: "14px", borderRadius: 14, border: "2px solid #F26419", textAlign: "center", background: "#FFF4EC" }}>
-                <div style={{ fontWeight: 800, color: "#F26419", fontSize: 16 }}>39,99 €</div>
-                <div style={{ fontSize: 12, color: "#F26419" }}>par an · -33%</div>
+              <div style={{ flex: 1, padding: "14px", borderRadius: 14, border: "2px solid #B25F46", textAlign: "center", background: "#FAF0EB" }}>
+                <div style={{ fontWeight: 800, color: "#B25F46", fontSize: 16 }}>39,99 €</div>
+                <div style={{ fontSize: 12, color: "#B25F46" }}>par an · -33%</div>
               </div>
             </div>
             <button onClick={() => { setShowPremium(false); onPremium(); }}
-              style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
+              style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
               👑 Passer Premium
             </button>
           </div>
@@ -1043,7 +1045,7 @@ function CommunityScreen({ onPremium, isPremium }) {
               </div>
               {/* Post résumé */}
               <div style={{ marginTop: 10, padding: "8px 12px", background: "#F9FAFB", borderRadius: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#B84A0F" }}>{activePost.pet} · {activePost.author}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#8B3D28" }}>{activePost.pet} · {activePost.author}</div>
                 <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2, WebkitLineClamp: 2, overflow: "hidden", display: "-webkit-box", WebkitBoxOrient: "vertical" }}>{activePost.text}</div>
               </div>
             </div>
@@ -1061,16 +1063,16 @@ function CommunityScreen({ onPremium, isPremium }) {
                 const isCommentLiked = commentLikes[likeKey];
                 return (
                   <div key={c.id} style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: c.emoji === "🩺" ? "#E3F2FD" : "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{c.emoji}</div>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: c.emoji === "🩺" ? "#E3F2FD" : "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{c.emoji}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: "#F9FAFB", borderRadius: "4px 14px 14px 14px", padding: "10px 12px" }}>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: "#B84A0F", marginBottom: 3 }}>{c.author} <span style={{ color: "#9CA3AF", fontWeight: 400 }}>· {c.pet}</span></div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: "#8B3D28", marginBottom: 3 }}>{c.author} <span style={{ color: "#9CA3AF", fontWeight: 400 }}>· {c.pet}</span></div>
                         <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.5 }}>{c.text}</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 5, paddingLeft: 4 }}>
                         <span style={{ fontSize: 11, color: "#9CA3AF" }}>{c.time}</span>
                         <button onClick={() => toggleCommentLike(openComments, c.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: isCommentLiked ? "#F26419" : "#9CA3AF", fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 3 }}>
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: isCommentLiked ? "#B25F46" : "#9CA3AF", fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 3 }}>
                           {isCommentLiked ? "🧡" : "🤍"} {c.likes + (isCommentLiked ? 1 : 0)}
                         </button>
                         <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9CA3AF", padding: 0, fontWeight: 600 }}>Répondre</button>
@@ -1084,7 +1086,7 @@ function CommunityScreen({ onPremium, isPremium }) {
 
             {/* Input */}
             <div style={{ padding: "10px 16px 28px", borderTop: "1px solid #F3F4F6", display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🐱</div>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🐱</div>
               <input
                 value={commentInputs[openComments] || ""}
                 onChange={e => setCommentInputs(i => ({ ...i, [openComments]: e.target.value }))}
@@ -1093,7 +1095,7 @@ function CommunityScreen({ onPremium, isPremium }) {
                 style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB", fontFamily: "inherit" }}
               />
               <button onClick={() => submitComment(openComments)}
-                style={{ width: 38, height: 38, borderRadius: "50%", border: "none", background: (commentInputs[openComments] || "").trim() ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB", cursor: (commentInputs[openComments] || "").trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={18} color={(commentInputs[openComments] || "").trim() ? "#fff" : "#9CA3AF"} /></button>
+                style={{ width: 38, height: 38, borderRadius: "50%", border: "none", background: (commentInputs[openComments] || "").trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", cursor: (commentInputs[openComments] || "").trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={18} color={(commentInputs[openComments] || "").trim() ? "#fff" : "#9CA3AF"} /></button>
             </div>
           </div>
         </div>
@@ -1123,7 +1125,7 @@ function MatchesScreen({ onOpenChat }) {
       {/* Tab switcher */}
       <div style={{ display: "flex", background: "#fff", flexShrink: 0, borderBottom: "1px solid #F3F4F6" }}>
         {[["messages","💬 Messages"],["agenda","📅 Agenda"]].map(([v,l]) => (
-          <button key={v} onClick={() => setTab(v)} style={{ flex: 1, padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: tab === v ? "#F26419" : "#9CA3AF", borderBottom: `3px solid ${tab === v ? "#F26419" : "transparent"}`, transition: "all .2s" }}>{l}</button>
+          <button key={v} onClick={() => setTab(v)} style={{ flex: 1, padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: tab === v ? "#B25F46" : "#9CA3AF", borderBottom: `3px solid ${tab === v ? "#B25F46" : "transparent"}`, transition: "all .2s" }}>{l}</button>
         ))}
       </div>
 
@@ -1137,9 +1139,9 @@ function MatchesScreen({ onOpenChat }) {
           <div style={{ overflowX: "auto", display: "flex", gap: 12, padding: "8px 16px 16px" }}>
             {MATCHES.map(m => (
               <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, position: "relative", boxShadow: "0 4px 12px rgba(242,100,25,.25)" }}>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, position: "relative", boxShadow: "0 4px 12px rgba(242,100,25,.25)" }}>
                   {m.emoji}
-                  {m.unread > 0 && <div style={{ position: "absolute", top: 0, right: 0, width: 18, height: 18, borderRadius: "50%", background: "#F26419", color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{m.unread}</div>}
+                  {m.unread > 0 && <div style={{ position: "absolute", top: 0, right: 0, width: 18, height: 18, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{m.unread}</div>}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#2D1200", marginTop: 6 }}>{m.name}</div>
               </div>
@@ -1150,17 +1152,17 @@ function MatchesScreen({ onOpenChat }) {
             <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", marginTop: 12, marginBottom: 8, letterSpacing: 1 }}>MESSAGES</div>
           </div>
           {MATCHES.map(m => (
-            <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", cursor: "pointer", background: m.unread ? "#FFF4EC" : "#fff", borderBottom: "1px solid #F3F4F6" }}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>{m.emoji}</div>
+            <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", cursor: "pointer", background: m.unread ? "#FAF0EB" : "#fff", borderBottom: "1px solid #F3F4F6" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>{m.emoji}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontWeight: 700, color: "#2D1200", fontSize: 15 }}>{m.name}</span>
                   <span style={{ fontSize: 12, color: "#9CA3AF" }}>{m.time}</span>
                 </div>
-                <div style={{ fontSize: 13, color: m.unread ? "#B84A0F" : "#6B7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: m.unread ? 600 : 400 }}>{m.lastMsg}</div>
+                <div style={{ fontSize: 13, color: m.unread ? "#8B3D28" : "#6B7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: m.unread ? 600 : 400 }}>{m.lastMsg}</div>
                 <div style={{ fontSize: 11, color: "#9CA3AF" }}>{m.owner}</div>
               </div>
-              {m.unread > 0 && <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#F26419", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.unread}</div>}
+              {m.unread > 0 && <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.unread}</div>}
             </div>
           ))}
         </div>
@@ -1179,12 +1181,12 @@ function MatchesScreen({ onOpenChat }) {
           )}
           {upcoming.map(ev => (
             <div key={ev.id} style={{ marginBottom: 12, borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
-              <div style={{ background: ev.status === "confirmed" ? "linear-gradient(90deg,#FFF4EC,#fff)" : "linear-gradient(90deg,#FFF9E6,#fff)", padding: "14px 16px" }}>
+              <div style={{ background: ev.status === "confirmed" ? "linear-gradient(90deg,#FAF0EB,#fff)" : "linear-gradient(90deg,#FFF9E6,#fff)", padding: "14px 16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{ev.ownerEmoji}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{ev.ownerEmoji}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{ev.type} avec {ev.with}</div>
-                    <div style={{ fontSize: 12, color: "#B84A0F" }}>{ev.owner}</div>
+                    <div style={{ fontSize: 12, color: "#8B3D28" }}>{ev.owner}</div>
                     <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>📅 {ev.date} à {ev.time} · 📍 {ev.place}</div>
                   </div>
                   <div style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 10, background: ev.status === "confirmed" ? "#E8F5E9" : "#FEF9C3", color: ev.status === "confirmed" ? "#2E7D32" : "#854D0E" }}>
@@ -1211,7 +1213,7 @@ function MatchesScreen({ onOpenChat }) {
                     <div style={{ fontSize: 12, color: "#9CA3AF" }}>{ev.date} · {ev.place}</div>
                     {ev.rating
                       ? <div style={{ fontSize: 14, marginTop: 4 }}>{"⭐".repeat(ev.rating)}</div>
-                      : <button onClick={() => setRatingFor(ev.id)} style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "#F26419", background: "none", border: "none", cursor: "pointer", padding: 0 }}>+ Laisser un avis</button>
+                      : <button onClick={() => setRatingFor(ev.id)} style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "#B25F46", background: "none", border: "none", cursor: "pointer", padding: 0 }}>+ Laisser un avis</button>
                     }
                   </div>
                 </div>
@@ -1232,7 +1234,7 @@ function MatchesScreen({ onOpenChat }) {
                 <button key={s} onClick={() => setRating(s)} style={{ fontSize: 36, background: "none", border: "none", cursor: "pointer", opacity: rating && s > rating ? 0.3 : 1, transition: "opacity .15s" }}>⭐</button>
               ))}
             </div>
-            <button onClick={() => rating && submitRating(ratingFor, rating)} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: rating ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB", color: rating ? "#fff" : "#9CA3AF", fontWeight: 800, fontSize: 15, cursor: rating ? "pointer" : "default" }}>
+            <button onClick={() => rating && submitRating(ratingFor, rating)} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: rating ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", color: rating ? "#fff" : "#9CA3AF", fontWeight: 800, fontSize: 15, cursor: rating ? "pointer" : "default" }}>
               Envoyer mon avis
             </button>
           </div>
@@ -1263,25 +1265,25 @@ function ChatScreen({ matchId, onBack }) {
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid #F3F4F6", background: "#fff" }}>
         <button onClick={onBack} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer" }}>←</button>
-        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{match?.emoji}</div>
+        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{match?.emoji}</div>
         <div><div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div><div style={{ fontSize: 12, color: "#9CA3AF" }}>{match?.owner}</div></div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button style={{ background: "#FFF4EC", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer" }}>📍</button>
-          <button style={{ background: "#FFF4EC", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer" }}>🗓️</button>
+          <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer" }}>📍</button>
+          <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer" }}>🗓️</button>
         </div>
       </div>
-      <div style={{ margin: "10px 14px 0", padding: "10px 14px", background: "#FFF4EC", borderRadius: 12, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ margin: "10px 14px 0", padding: "10px 14px", background: "#FAF0EB", borderRadius: 12, display: "flex", alignItems: "center", gap: 10 }}>
         <span>📍</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#F26419" }}>LIEU SUGGÉRÉ</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#B25F46" }}>LIEU SUGGÉRÉ</div>
           <div style={{ fontSize: 13, color: "#4B5563" }}>Parc Montsouris · 0,8 km · Ouvert</div>
         </div>
-        <button style={{ background: "#F26419", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 700, padding: "5px 9px", cursor: "pointer" }}>Proposer</button>
+        <button style={{ background: "#B25F46", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 700, padding: "5px 9px", cursor: "pointer" }}>Proposer</button>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         {msgs.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
-            <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#F26419,#F7931A)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
+            <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
               {msg.text}
               <div style={{ fontSize: 10, opacity: .6, marginTop: 4, textAlign: msg.from === "me" ? "right" : "left" }}>{msg.time}</div>
             </div>
@@ -1290,9 +1292,9 @@ function ChatScreen({ matchId, onBack }) {
         <div ref={bottomRef} />
       </div>
       <div style={{ display: "flex", gap: 10, padding: "12px 16px", borderTop: "1px solid #F3F4F6", background: "#fff" }}>
-        <button style={{ background: "#FFF4EC", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>📷</button>
+        <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>📷</button>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écrire un message..." style={{ flex: 1, padding: "10px 16px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB" }} />
-        <button onClick={send} style={{ background: input.trim() ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
+        <button onClick={send} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
       </div>
     </div>
   );
@@ -1371,13 +1373,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #F3F4F6", background: "#fff", flexShrink: 0 }}>
         <button onClick={() => setEditing(false)} style={{ background: "none", border: "none", fontSize: 14, color: "#9CA3AF", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
         <span style={{ fontWeight: 800, fontSize: 16, color: "#2D1200" }}>Modifier le profil</span>
-        <button onClick={save} style={{ background: "linear-gradient(135deg,#F26419,#F7931A)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 14, padding: "6px 14px", cursor: "pointer" }}>Sauver</button>
+        <button onClick={save} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 14, padding: "6px 14px", cursor: "pointer" }}>Sauver</button>
       </div>
 
       {/* Tab switcher */}
       <div style={{ display: "flex", background: "#F9FAFB", padding: "8px 16px", gap: 8, flexShrink: 0, borderBottom: "1px solid #F3F4F6" }}>
         {[["profil","🐾 Profil"],["repro","🌱 Reproduction"]].map(([v,l]) => (
-          <button key={v} onClick={() => setEditTab(v)} style={{ flex: 1, padding: "9px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: editTab === v ? "#fff" : "transparent", color: editTab === v ? "#B84A0F" : "#9CA3AF", boxShadow: editTab === v ? "0 1px 6px rgba(0,0,0,.08)" : "none", transition: "all .2s" }}>{l}</button>
+          <button key={v} onClick={() => setEditTab(v)} style={{ flex: 1, padding: "9px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: editTab === v ? "#fff" : "transparent", color: editTab === v ? "#8B3D28" : "#9CA3AF", boxShadow: editTab === v ? "0 1px 6px rgba(0,0,0,.08)" : "none", transition: "all .2s" }}>{l}</button>
         ))}
       </div>
 
@@ -1394,12 +1396,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
                 {p ? (
                   <>
                     <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    {i === 0 && <div style={{ position: "absolute", bottom: 5, left: 5, background: "#F26419", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 6 }}>PRINCIPALE</div>}
+                    {i === 0 && <div style={{ position: "absolute", bottom: 5, left: 5, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 6 }}>PRINCIPALE</div>}
                     <button onClick={e => { e.stopPropagation(); removePhoto(i); }} style={{ position: "absolute", top: 5, right: 5, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
                   </>
                 ) : (
                   <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
-                    <span style={{ fontSize: 24, color: "#F7C49A" }}>+</span>
+                    <span style={{ fontSize: 24, color: "#E8B89F" }}>+</span>
                     {i === 0 && <span style={{ fontSize: 9, color: "#9CA3AF", fontWeight: 600, textAlign: "center" }}>Photo principale</span>}
                   </div>
                 )}
@@ -1408,7 +1410,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
           </div>
           <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoAdd} />
           {draft.photos.length < 6 && (
-            <button onClick={() => photoRef.current?.click()} style={{ width: "100%", padding: "11px", borderRadius: 12, border: "2px dashed #F7C49A", background: "#FFF4EC", color: "#B84A0F", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 18 }}>📷 Ajouter des photos</button>
+            <button onClick={() => photoRef.current?.click()} style={{ width: "100%", padding: "11px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 18 }}>📷 Ajouter des photos</button>
           )}
 
           {/* Vidéo */}
@@ -1419,7 +1421,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
               <button onClick={() => setDraft(d => ({ ...d, video: null }))} style={{ position: "absolute", top: 7, right: 7, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.65)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
           ) : (
-            <button onClick={() => videoRef.current?.click()} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px dashed #F7C49A", background: "#FFF4EC", color: "#B84A0F", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 4 }}>
+            <button onClick={() => videoRef.current?.click()} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 4 }}>
               <span style={{ fontSize: 22 }}>🎬</span>
               <div style={{ textAlign: "left" }}><div>Ajouter une vidéo</div><div style={{ fontSize: 11, fontWeight: 400, color: "#9CA3AF" }}>30 sec max · augmente les matchs de 3×</div></div>
             </button>
@@ -1440,14 +1442,14 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
           <label style={labelStyle}>SEXE</label>
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             {[["M","♂ Mâle"],["F","♀ Femelle"]].map(([v,l]) => (
-              <button key={v} onClick={() => setDraft(d => ({ ...d, gender: v }))} style={{ flex: 1, padding: "10px", borderRadius: 12, border: `2px solid ${draft.gender === v ? "#F26419" : "#E5E7EB"}`, background: draft.gender === v ? "#FFF4EC" : "#F9FAFB", color: draft.gender === v ? "#F26419" : "#6B7280", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>{l}</button>
+              <button key={v} onClick={() => setDraft(d => ({ ...d, gender: v }))} style={{ flex: 1, padding: "10px", borderRadius: 12, border: `2px solid ${draft.gender === v ? "#B25F46" : "#E5E7EB"}`, background: draft.gender === v ? "#FAF0EB" : "#F9FAFB", color: draft.gender === v ? "#B25F46" : "#6B7280", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>{l}</button>
             ))}
           </div>
 
           <label style={labelStyle}>NIVEAU D'ÉNERGIE</label>
           <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
             {[1,2,3,4,5].map(i => (
-              <button key={i} onClick={() => setDraft(d => ({ ...d, energy: i }))} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `2px solid ${draft.energy >= i ? "#F26419" : "#E5E7EB"}`, background: draft.energy >= i ? "#FFF4EC" : "#F9FAFB", fontSize: 14, cursor: "pointer", color: draft.energy >= i ? "#F26419" : "#9CA3AF", fontWeight: 700 }}>{i}</button>
+              <button key={i} onClick={() => setDraft(d => ({ ...d, energy: i }))} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `2px solid ${draft.energy >= i ? "#B25F46" : "#E5E7EB"}`, background: draft.energy >= i ? "#FAF0EB" : "#F9FAFB", fontSize: 14, cursor: "pointer", color: draft.energy >= i ? "#B25F46" : "#9CA3AF", fontWeight: 700 }}>{i}</button>
             ))}
           </div>
 
@@ -1461,7 +1463,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
           <label style={labelStyle}>CARACTÈRE (max 4)</label>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
             {ALL_TEMPER.map(t => (
-              <button key={t} onClick={() => toggleTemper(t)} style={{ padding: "5px 12px", borderRadius: 20, border: `2px solid ${draft.temper.includes(t) ? "#B84A0F" : "#E5E7EB"}`, background: draft.temper.includes(t) ? "#FFF4EC" : "#F9FAFB", color: draft.temper.includes(t) ? "#B84A0F" : "#9CA3AF", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>{t}</button>
+              <button key={t} onClick={() => toggleTemper(t)} style={{ padding: "5px 12px", borderRadius: 20, border: `2px solid ${draft.temper.includes(t) ? "#8B3D28" : "#E5E7EB"}`, background: draft.temper.includes(t) ? "#FAF0EB" : "#F9FAFB", color: draft.temper.includes(t) ? "#8B3D28" : "#9CA3AF", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>{t}</button>
             ))}
           </div>
 
@@ -1471,13 +1473,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
               .filter(s => draft.species !== "dog" || !["Cat date"].includes(s.id))
               .map(s => (
               <button key={s.id} onClick={() => toggleSeeking(s.id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, border: `2px solid ${draft.seeking.includes(s.id) ? "#F26419" : "#E5E7EB"}`, background: draft.seeking.includes(s.id) ? "#FFF4EC" : "#F9FAFB", cursor: "pointer", textAlign: "left" }}>
-                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${draft.seeking.includes(s.id) ? "#F26419" : "#D1D5DB"}`, background: draft.seeking.includes(s.id) ? "#F26419" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, border: `2px solid ${draft.seeking.includes(s.id) ? "#B25F46" : "#E5E7EB"}`, background: draft.seeking.includes(s.id) ? "#FAF0EB" : "#F9FAFB", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${draft.seeking.includes(s.id) ? "#B25F46" : "#D1D5DB"}`, background: draft.seeking.includes(s.id) ? "#B25F46" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   {draft.seeking.includes(s.id) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
                 </div>
                 <span style={{ fontSize: 18, flexShrink: 0 }}>{s.icon}</span>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: draft.seeking.includes(s.id) ? "#F26419" : "#2D1200" }}>{s.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: draft.seeking.includes(s.id) ? "#B25F46" : "#2D1200" }}>{s.label}</div>
                   <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>{s.desc}</div>
                 </div>
               </button>
@@ -1525,8 +1527,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
                   {!draft.repro.priceNegotiable && <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9CA3AF", fontWeight: 600 }}>€</span>}
                 </div>
               </div>
-              <button onClick={() => setRepro("priceNegotiable", !draft.repro.priceNegotiable)} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: "0 0 14px", fontSize: 13, color: draft.repro.priceNegotiable ? "#F26419" : "#9CA3AF", fontWeight: 600 }}>
-                <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${draft.repro.priceNegotiable ? "#F26419" : "#D1D5DB"}`, background: draft.repro.priceNegotiable ? "#F26419" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <button onClick={() => setRepro("priceNegotiable", !draft.repro.priceNegotiable)} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: "0 0 14px", fontSize: 13, color: draft.repro.priceNegotiable ? "#B25F46" : "#9CA3AF", fontWeight: 600 }}>
+                <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${draft.repro.priceNegotiable ? "#B25F46" : "#D1D5DB"}`, background: draft.repro.priceNegotiable ? "#B25F46" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   {draft.repro.priceNegotiable && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
                 </div>
                 Prix à discuter
@@ -1549,11 +1551,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
               <label style={labelStyle}>CERTIFICATIONS</label>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
                 {[["pedigree","📜 Pedigree officiel (LOOF / SCC)"],["geneticTest","🧬 Bilan génétique complet"]].map(([k,l]) => (
-                  <button key={k} onClick={() => setRepro(k, !draft.repro[k])} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, border: `2px solid ${draft.repro[k] ? "#B84A0F" : "#E5E7EB"}`, background: draft.repro[k] ? "#FFF4EC" : "#F9FAFB", cursor: "pointer", textAlign: "left" }}>
-                    <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${draft.repro[k] ? "#B84A0F" : "#D1D5DB"}`, background: draft.repro[k] ? "#B84A0F" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <button key={k} onClick={() => setRepro(k, !draft.repro[k])} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, border: `2px solid ${draft.repro[k] ? "#8B3D28" : "#E5E7EB"}`, background: draft.repro[k] ? "#FAF0EB" : "#F9FAFB", cursor: "pointer", textAlign: "left" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${draft.repro[k] ? "#8B3D28" : "#D1D5DB"}`, background: draft.repro[k] ? "#8B3D28" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {draft.repro[k] && <span style={{ color: "#fff", fontSize: 11 }}>✓</span>}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: draft.repro[k] ? "#B84A0F" : "#6B7280" }}>{l}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: draft.repro[k] ? "#8B3D28" : "#6B7280" }}>{l}</span>
                   </button>
                 ))}
               </div>
@@ -1562,13 +1564,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
               <label style={labelStyle}>DOCUMENTS SANITAIRES</label>
               <div style={{ marginBottom: 10 }}>
                 {draft.repro.docs.map((doc, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#FFF4EC", borderRadius: 10, marginBottom: 6 }}>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#FAF0EB", borderRadius: 10, marginBottom: 6 }}>
                     <span style={{ fontSize: 16 }}>{doc.type?.includes("pdf") ? "📄" : "🖼️"}</span>
-                    <span style={{ flex: 1, fontSize: 13, color: "#B84A0F", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</span>
+                    <span style={{ flex: 1, fontSize: 13, color: "#8B3D28", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</span>
                     <button onClick={() => removeDoc(i)} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0 }}>✕</button>
                   </div>
                 ))}
-                <button onClick={() => docRef.current?.click()} style={{ width: "100%", padding: "11px", borderRadius: 12, border: "2px dashed #F7C49A", background: "#FFF4EC", color: "#B84A0F", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                <button onClick={() => docRef.current?.click()} style={{ width: "100%", padding: "11px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                   📎 Ajouter un document (PDF, image)
                 </button>
                 <input ref={docRef} type="file" accept=".pdf,image/*" multiple style={{ display: "none" }} onChange={handleDocAdd} />
@@ -1600,7 +1602,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
       )}
 
       {/* Cover */}
-      <div style={{ height: 180, background: mainPhoto ? "#000" : "linear-gradient(135deg,#B84A0F,#F26419)", position: "relative", overflow: "hidden" }}>
+      <div style={{ height: 180, background: mainPhoto ? "#000" : "linear-gradient(135deg,#8B3D28,#B25F46)", position: "relative", overflow: "hidden" }}>
         {mainPhoto && <img src={mainPhoto.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .85 }} />}
         {!mainPhoto && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={80} color="rgba(255,255,255,.6)" /></div>}
         <button onClick={openEdit} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,.35)", border: "none", borderRadius: 10, color: "#fff", padding: "6px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✏️ Modifier</button>
@@ -1626,7 +1628,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
 
       <div style={{ padding: "14px 20px 24px" }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{pet.name} <span style={{ fontSize: 16, color: "#6B7280", fontWeight: 400 }}>{pet.age} {pet.gender === "M" ? "♂" : "♀"}</span></div>
-        <div style={{ fontSize: 14, color: "#B84A0F", fontWeight: 600, marginBottom: 8 }}>{pet.breed}</div>
+        <div style={{ fontSize: 14, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{pet.breed}</div>
         {pet.bio && <p style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.6, marginBottom: 12 }}>{pet.bio}</p>}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
           {pet.temper.map(t => <Badge key={t}>{t}</Badge>)}
@@ -1639,7 +1641,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
         </div>
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 5, letterSpacing: 1 }}>CHERCHE</div>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>{pet.seeking.map(s => { const opt = ALL_SEEKING.find(o => o.id === s); return <Badge key={s} color="#FFF4EC" text="#F26419">{opt ? opt.icon + " " + opt.label : s}</Badge>; })}</div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>{pet.seeking.map(s => { const opt = ALL_SEEKING.find(o => o.id === s); return <Badge key={s} color="#FAF0EB" text="#B25F46">{opt ? opt.icon + " " + opt.label : s}</Badge>; })}</div>
         </div>
 
         {/* Bloc reproduction visible si actif */}
@@ -1666,12 +1668,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
         <div style={{ background: "#F9FAFB", borderRadius: 14, padding: "12px 14px", marginBottom: 14, border: "1px solid #F3F4F6" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: "#2D1200" }}>Complétude du profil</span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "#F26419" }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#B25F46" }}>
               {(pet.photos.length > 0 ? 25 : 0) + (pet.video ? 20 : 0) + (pet.bio ? 20 : 0) + (pet.temper.length > 0 ? 15 : 0) + (pet.vaccinated ? 10 : 0) + (pet.repro.active && pet.repro.price ? 10 : 0)}%
             </span>
           </div>
           <div style={{ height: 6, background: "#E5E7EB", borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: "100%", borderRadius: 3, background: "linear-gradient(90deg,#F26419,#F7931A)", width: `${(pet.photos.length > 0 ? 25 : 0) + (pet.video ? 20 : 0) + (pet.bio ? 20 : 0) + (pet.temper.length > 0 ? 15 : 0) + (pet.vaccinated ? 10 : 0) + (pet.repro.active && pet.repro.price ? 10 : 0)}%`, transition: "width .4s" }} />
+            <div style={{ height: "100%", borderRadius: 3, background: "linear-gradient(90deg,#B25F46,#C97A5E)", width: `${(pet.photos.length > 0 ? 25 : 0) + (pet.video ? 20 : 0) + (pet.bio ? 20 : 0) + (pet.temper.length > 0 ? 15 : 0) + (pet.vaccinated ? 10 : 0) + (pet.repro.active && pet.repro.price ? 10 : 0)}%`, transition: "width .4s" }} />
           </div>
           <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6 }}>
             {pet.photos.length === 0 ? "📷 Ajoute des photos pour +25%" : !pet.video ? "🎬 Ajoute une vidéo pour +20%" : !pet.repro.active ? "🌱 Active la reproduction pour +10%" : "🐾 Super profil !"}
@@ -1683,14 +1685,14 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             {[["12","Likes reçus"],["3","Matchs"],["5","Rencontres"]].map(([n,l]) => (
               <div key={l} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#B84A0F" }}>{n}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>{n}</div>
                 <div style={{ fontSize: 11, color: "#9CA3AF" }}>{l}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#B84A0F", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
+        <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
         {isPremium ? (
           <div style={{ background: "linear-gradient(135deg,#2E7D32,#43A047)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 26 }}>👑</span>
@@ -1701,13 +1703,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
             <div style={{ background: "rgba(255,255,255,.2)", borderRadius: 10, color: "#fff", fontWeight: 800, fontSize: 11, padding: "6px 10px" }}>Actif ✓</div>
           </div>
         ) : (
-          <button onClick={onPremium} style={{ width: "100%", background: "linear-gradient(135deg,#B84A0F,#F26419)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
+          <button onClick={onPremium} style={{ width: "100%", background: "linear-gradient(135deg,#8B3D28,#B25F46)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
             <span style={{ fontSize: 26 }}>👑</span>
             <div style={{ flex: 1 }}>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>PawMatch Premium</div>
               <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Swipes illimités · Qui t'a liké · Boost</div>
             </div>
-            <div style={{ background: "#fff", borderRadius: 10, color: "#B84A0F", fontWeight: 800, fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap" }}>4,99 €/mois</div>
+            <div style={{ background: "#fff", borderRadius: 10, color: "#8B3D28", fontWeight: 800, fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap" }}>4,99 €/mois</div>
           </button>
         )}
       </div>
@@ -1789,7 +1791,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
             </div>
 
             {/* Features */}
-            <div style={{ background: "#FFF4EC", borderRadius: 16, padding: "14px 16px", marginBottom: 20 }}>
+            <div style={{ background: "#FAF0EB", borderRadius: 16, padding: "14px 16px", marginBottom: 20 }}>
               {FEATURES.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{icon}</span>
@@ -1803,11 +1805,11 @@ function PremiumTunnel({ onClose, onSuccess }) {
             <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
               {PLANS.map(p => (
                 <div key={p.id} onClick={() => setPlan(p.id)}
-                  style={{ flex: 1, padding: "14px 10px", borderRadius: 16, border: `2px solid ${plan === p.id ? "#F26419" : "#E5E7EB"}`, background: plan === p.id ? "#FFF4EC" : "#F9FAFB", cursor: "pointer", textAlign: "center", position: "relative", transition: "all .2s" }}>
+                  style={{ flex: 1, padding: "14px 10px", borderRadius: 16, border: `2px solid ${plan === p.id ? "#B25F46" : "#E5E7EB"}`, background: plan === p.id ? "#FAF0EB" : "#F9FAFB", cursor: "pointer", textAlign: "center", position: "relative", transition: "all .2s" }}>
                   {p.badge && (
-                    <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 10, whiteSpace: "nowrap" }}>{p.badge}</div>
+                    <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 10, whiteSpace: "nowrap" }}>{p.badge}</div>
                   )}
-                  <div style={{ fontSize: 13, fontWeight: 700, color: plan === p.id ? "#F26419" : "#6B7280", marginBottom: 6 }}>{p.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: plan === p.id ? "#B25F46" : "#6B7280", marginBottom: 6 }}>{p.label}</div>
                   <div style={{ fontSize: 24, fontWeight: 900, color: "#2D1200" }}>{p.price} €</div>
                   <div style={{ fontSize: 12, color: "#9CA3AF" }}>par {p.period}</div>
                   {p.savings && <div style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", marginTop: 4 }}>{p.savings}</div>}
@@ -1817,12 +1819,12 @@ function PremiumTunnel({ onClose, onSuccess }) {
 
             {plan === "yearly" && (
               <div style={{ textAlign: "center", fontSize: 12, color: "#9CA3AF", marginBottom: 16 }}>
-                Soit <strong style={{ color: "#F26419" }}>3,33 € / mois</strong> — 2 mois offerts 🎁
+                Soit <strong style={{ color: "#B25F46" }}>3,33 € / mois</strong> — 2 mois offerts 🎁
               </div>
             )}
 
             <button onClick={() => setStep("payment")}
-              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 6px 20px rgba(242,100,25,.35)" }}>
+              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 6px 20px rgba(178,95,70,.35)" }}>
               Continuer → {selectedPlan.price} € / {selectedPlan.period}
             </button>
 
@@ -1861,7 +1863,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
                   onChange={e => setCard(c => ({ ...c, number: formatCardNumber(e.target.value) }))}
                   placeholder="1234 5678 9012 3456"
                   maxLength={19}
-                  style={{ ...inputBase, border: `1.5px solid ${errors.number ? "#EF4444" : card.number ? "#B84A0F" : "#E5E7EB"}`, paddingRight: 44 }}
+                  style={{ ...inputBase, border: `1.5px solid ${errors.number ? "#EF4444" : card.number ? "#8B3D28" : "#E5E7EB"}`, paddingRight: 44 }}
                 />
                 <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 20 }}>💳</span>
               </div>
@@ -1877,7 +1879,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
                   onChange={e => setCard(c => ({ ...c, expiry: formatExpiry(e.target.value) }))}
                   placeholder="MM/AA"
                   maxLength={5}
-                  style={{ ...inputBase, border: `1.5px solid ${errors.expiry ? "#EF4444" : card.expiry ? "#B84A0F" : "#E5E7EB"}` }}
+                  style={{ ...inputBase, border: `1.5px solid ${errors.expiry ? "#EF4444" : card.expiry ? "#8B3D28" : "#E5E7EB"}` }}
                 />
                 {errors.expiry && <div style={{ fontSize: 11, color: "#EF4444", marginTop: 4 }}>{errors.expiry}</div>}
               </div>
@@ -1889,7 +1891,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
                   placeholder="123"
                   maxLength={3}
                   type="password"
-                  style={{ ...inputBase, border: `1.5px solid ${errors.cvc ? "#EF4444" : card.cvc ? "#B84A0F" : "#E5E7EB"}` }}
+                  style={{ ...inputBase, border: `1.5px solid ${errors.cvc ? "#EF4444" : card.cvc ? "#8B3D28" : "#E5E7EB"}` }}
                 />
                 {errors.cvc && <div style={{ fontSize: 11, color: "#EF4444", marginTop: 4 }}>{errors.cvc}</div>}
               </div>
@@ -1902,7 +1904,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
                 value={card.name}
                 onChange={e => setCard(c => ({ ...c, name: e.target.value }))}
                 placeholder="Jean Dupont"
-                style={{ ...inputBase, border: `1.5px solid ${errors.name ? "#EF4444" : card.name ? "#B84A0F" : "#E5E7EB"}` }}
+                style={{ ...inputBase, border: `1.5px solid ${errors.name ? "#EF4444" : card.name ? "#8B3D28" : "#E5E7EB"}` }}
               />
               {errors.name && <div style={{ fontSize: 11, color: "#EF4444", marginTop: 4 }}>{errors.name}</div>}
             </div>
@@ -1920,12 +1922,12 @@ function PremiumTunnel({ onClose, onSuccess }) {
               <div style={{ height: 1, background: "#E5E7EB", margin: "8px 0" }} />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#2D1200" }}>Total</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#F26419" }}>{selectedPlan.price} €</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#B25F46" }}>{selectedPlan.price} €</span>
               </div>
             </div>
 
             <button onClick={pay} disabled={loading}
-              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: loading ? "#D1D5DB" : "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: loading ? "default" : "pointer", boxShadow: loading ? "none" : "0 6px 20px rgba(242,100,25,.35)", transition: "all .2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: loading ? "#D1D5DB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: loading ? "default" : "pointer", boxShadow: loading ? "none" : "0 6px 20px rgba(178,95,70,.35)", transition: "all .2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
               {loading ? (
                 <>
                   <div style={{ width: 20, height: 20, border: "3px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -1944,14 +1946,14 @@ function PremiumTunnel({ onClose, onSuccess }) {
         {/* ── STEP 3 : Succès ── */}
         {step === "success" && (
           <div style={{ padding: "24px 24px 48px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-            <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg,#F26419,#F7931A)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, marginBottom: 20, boxShadow: "0 8px 24px rgba(242,100,25,.35)" }}>👑</div>
+            <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, marginBottom: 20, boxShadow: "0 8px 24px rgba(178,95,70,.35)" }}>👑</div>
             <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 8 }}>Bienvenue Premium !</div>
             <div style={{ fontSize: 15, color: "#6B7280", lineHeight: 1.7, marginBottom: 28 }}>
               Votre abonnement {selectedPlan.label} est activé.<br/>
-              <strong style={{ color: "#F26419" }}>Toutes les fonctionnalités Premium</strong> sont maintenant disponibles pour votre animal 🐾
+              <strong style={{ color: "#B25F46" }}>Toutes les fonctionnalités Premium</strong> sont maintenant disponibles pour votre animal 🐾
             </div>
 
-            <div style={{ width: "100%", background: "#FFF4EC", borderRadius: 16, padding: "16px", marginBottom: 24 }}>
+            <div style={{ width: "100%", background: "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 24 }}>
               {FEATURES.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18 }}>{icon}</span>
@@ -1967,7 +1969,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
             </div>
 
             <button onClick={onSuccess}
-              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
+              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
               C'est parti ! 🐾
             </button>
           </div>
@@ -2027,13 +2029,13 @@ function Onboarding({ onComplete }) {
 
   // ── SPLASH ──────────────────────────────────────────────────────────────────
   if (current === "splash") return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 28px", background: "linear-gradient(160deg,#B84A0F 0%,#F26419 100%)" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 28px", background: "linear-gradient(160deg,#8B3D28 0%,#B25F46 100%)" }}>
       <div style={{ marginBottom: 20 }}><PawLogo size={100} color="#fff" /></div>
       <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 10, textAlign: "center", lineHeight: 1.2 }}>Bienvenue sur PawMatch</div>
       <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", textAlign: "center", lineHeight: 1.7, marginBottom: 48 }}>
         La première app de rencontres pour chats & chiens.<br/>Créons ensemble le profil de votre animal en 2 minutes.
       </div>
-      <button onClick={next} style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "#fff", color: "#B84A0F", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>
+      <button onClick={next} style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "#fff", color: "#8B3D28", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>
         C'est parti ! 🐾
       </button>
       <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 20, textAlign: "center" }}>Gratuit · Sans engagement · 2 minutes</div>
@@ -2050,7 +2052,7 @@ function Onboarding({ onComplete }) {
             <button onClick={back} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9CA3AF", padding: 0, flexShrink: 0 }}>←</button>
           )}
           <div style={{ flex: 1, height: 5, background: "#F3F4F6", borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: "100%", borderRadius: 3, background: "linear-gradient(90deg,#F26419,#F7931A)", width: `${progress * 100}%`, transition: "width .4s ease" }} />
+            <div style={{ height: "100%", borderRadius: 3, background: "linear-gradient(90deg,#B25F46,#C97A5E)", width: `${progress * 100}%`, transition: "width .4s ease" }} />
           </div>
           <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600, flexShrink: 0 }}>{step}/{STEPS.length - 1}</span>
         </div>
@@ -2071,7 +2073,7 @@ function Onboarding({ onComplete }) {
             <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 24 }}>Pour recevoir vos matchs et notifications.</div>
             <button onClick={next} disabled={!form.ownerName}
               style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: form.ownerName ? "pointer" : "default",
-                background: form.ownerName ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB",
+                background: form.ownerName ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB",
                 color: form.ownerName ? "#fff" : "#9CA3AF" }}>
               Continuer →
             </button>
@@ -2086,16 +2088,16 @@ function Onboarding({ onComplete }) {
             <div style={{ display: "flex", gap: 14, marginBottom: 40 }}>
               {[["cat","🐱","Chat"],["dog","🐕","Chien"]].map(([v,e,l]) => (
                 <div key={v} onClick={() => set("species", v)}
-                  style={{ flex: 1, padding: "28px 16px", borderRadius: 20, border: `3px solid ${form.species === v ? "#F26419" : "#E5E7EB"}`, background: form.species === v ? "#FFF4EC" : "#F9FAFB", cursor: "pointer", textAlign: "center", transition: "all .2s" }}>
+                  style={{ flex: 1, padding: "28px 16px", borderRadius: 20, border: `3px solid ${form.species === v ? "#B25F46" : "#E5E7EB"}`, background: form.species === v ? "#FAF0EB" : "#F9FAFB", cursor: "pointer", textAlign: "center", transition: "all .2s" }}>
                   <div style={{ fontSize: 56, marginBottom: 10 }}>{e}</div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: form.species === v ? "#F26419" : "#2D1200" }}>{l}</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: form.species === v ? "#B25F46" : "#2D1200" }}>{l}</div>
                 </div>
               ))}
             </div>
           <div style={{ marginTop: 24 }}>
               <button onClick={next} disabled={!form.species}
                 style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: form.species ? "pointer" : "default",
-                  background: form.species ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB",
+                  background: form.species ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB",
                   color: form.species ? "#fff" : "#9CA3AF" }}>
                 Continuer →
               </button>
@@ -2127,12 +2129,12 @@ function Onboarding({ onComplete }) {
             <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
               {[["M","♂ Mâle"],["F","♀ Femelle"]].map(([v,l]) => (
                 <button key={v} onClick={() => set("gender", v)}
-                  style={{ flex: 1, padding: "12px", borderRadius: 12, border: `2px solid ${form.gender === v ? "#F26419" : "#E5E7EB"}`, background: form.gender === v ? "#FFF4EC" : "#F9FAFB", color: form.gender === v ? "#F26419" : "#6B7280", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>{l}</button>
+                  style={{ flex: 1, padding: "12px", borderRadius: 12, border: `2px solid ${form.gender === v ? "#B25F46" : "#E5E7EB"}`, background: form.gender === v ? "#FAF0EB" : "#F9FAFB", color: form.gender === v ? "#B25F46" : "#6B7280", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>{l}</button>
               ))}
             </div>
             <button onClick={next} disabled={!form.petName || !form.gender}
               style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: (form.petName && form.gender) ? "pointer" : "default",
-                background: (form.petName && form.gender) ? "linear-gradient(135deg,#F26419,#F7931A)" : "#E5E7EB",
+                background: (form.petName && form.gender) ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB",
                 color: (form.petName && form.gender) ? "#fff" : "#9CA3AF" }}>
               Continuer →
             </button>
@@ -2149,7 +2151,7 @@ function Onboarding({ onComplete }) {
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               {[1,2,3,4,5].map(i => (
                 <button key={i} onClick={() => set("energy", i)}
-                  style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: `2px solid ${form.energy >= i ? "#F26419" : "#E5E7EB"}`, background: form.energy >= i ? "#FFF4EC" : "#F9FAFB", fontSize: 16, cursor: "pointer", color: form.energy >= i ? "#F26419" : "#9CA3AF", fontWeight: 800 }}>{i}</button>
+                  style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: `2px solid ${form.energy >= i ? "#B25F46" : "#E5E7EB"}`, background: form.energy >= i ? "#FAF0EB" : "#F9FAFB", fontSize: 16, cursor: "pointer", color: form.energy >= i ? "#B25F46" : "#9CA3AF", fontWeight: 800 }}>{i}</button>
               ))}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginBottom: 28 }}>
@@ -2171,7 +2173,7 @@ function Onboarding({ onComplete }) {
             <div style={{ marginTop: 24 }}>
               <button onClick={next}
                 style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
-                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                  background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
                 Continuer →
               </button>
               <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
@@ -2187,16 +2189,16 @@ function Onboarding({ onComplete }) {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {OB_TEMPER.map(t => (
                 <button key={t} onClick={() => toggleTemper(t)}
-                  style={{ padding: "10px 16px", borderRadius: 20, border: `2px solid ${form.temper.includes(t) ? "#B84A0F" : "#E5E7EB"}`, background: form.temper.includes(t) ? "#FFF4EC" : "#F9FAFB", color: form.temper.includes(t) ? "#B84A0F" : "#6B7280", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>{t}</button>
+                  style={{ padding: "10px 16px", borderRadius: 20, border: `2px solid ${form.temper.includes(t) ? "#8B3D28" : "#E5E7EB"}`, background: form.temper.includes(t) ? "#FAF0EB" : "#F9FAFB", color: form.temper.includes(t) ? "#8B3D28" : "#6B7280", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>{t}</button>
               ))}
             </div>
             {form.temper.length === 4 && (
-              <div style={{ fontSize: 12, color: "#F26419", marginTop: 14, fontWeight: 600 }}>Maximum atteint — désélectionnez un trait pour en choisir un autre.</div>
+              <div style={{ fontSize: 12, color: "#B25F46", marginTop: 14, fontWeight: 600 }}>Maximum atteint — désélectionnez un trait pour en choisir un autre.</div>
             )}
             <div style={{ marginTop: 24 }}>
               <button onClick={next}
                 style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
-                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                  background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
                 Continuer →
               </button>
               <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
@@ -2214,13 +2216,13 @@ function Onboarding({ onComplete }) {
                 .filter(s => form.species !== "dog" || !["Cat date"].includes(s.id))
                 .map(s => (
                 <button key={s.id} onClick={() => toggleArr("seeking", s.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderRadius: 14, border: `2px solid ${form.seeking.includes(s.id) ? "#F26419" : "#E5E7EB"}`, background: form.seeking.includes(s.id) ? "#FFF4EC" : "#F9FAFB", cursor: "pointer" }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${form.seeking.includes(s.id) ? "#F26419" : "#D1D5DB"}`, background: form.seeking.includes(s.id) ? "#F26419" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderRadius: 14, border: `2px solid ${form.seeking.includes(s.id) ? "#B25F46" : "#E5E7EB"}`, background: form.seeking.includes(s.id) ? "#FAF0EB" : "#F9FAFB", cursor: "pointer" }}>
+                  <div style={{ width: 24, height: 24, borderRadius: 7, border: `2px solid ${form.seeking.includes(s.id) ? "#B25F46" : "#D1D5DB"}`, background: form.seeking.includes(s.id) ? "#B25F46" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     {form.seeking.includes(s.id) && <span style={{ color: "#fff", fontSize: 14 }}>✓</span>}
                   </div>
                   <span style={{ fontSize: 22, flexShrink: 0 }}>{s.icon}</span>
                   <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: form.seeking.includes(s.id) ? "#F26419" : "#2D1200" }}>{s.label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: form.seeking.includes(s.id) ? "#B25F46" : "#2D1200" }}>{s.label}</div>
                     <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{s.desc}</div>
                   </div>
                 </button>
@@ -2229,7 +2231,7 @@ function Onboarding({ onComplete }) {
             <div style={{ marginTop: 24 }}>
               <button onClick={next}
                 style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
-                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                  background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
                 Continuer →
               </button>
               <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
@@ -2249,13 +2251,13 @@ function Onboarding({ onComplete }) {
                   {p ? (
                     <>
                       <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      {i === 0 && <div style={{ position: "absolute", bottom: 4, left: 4, background: "#F26419", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6 }}>PRINCIPALE</div>}
+                      {i === 0 && <div style={{ position: "absolute", bottom: 4, left: 4, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6 }}>PRINCIPALE</div>}
                       <button onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, photos: f.photos.filter((_, j) => j !== i) })); }}
                         style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
                     </>
                   ) : (
                     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 24, color: "#F7C49A" }}>+</span>
+                      <span style={{ fontSize: 24, color: "#E8B89F" }}>+</span>
                       {i === 0 && <span style={{ fontSize: 9, color: "#9CA3AF", fontWeight: 600, marginTop: 2 }}>Principale</span>}
                     </div>
                   )}
@@ -2265,7 +2267,7 @@ function Onboarding({ onComplete }) {
             <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoAdd} />
             {form.photos.length < 6 && (
               <button onClick={() => photoRef.current?.click()}
-                style={{ width: "100%", padding: "13px", borderRadius: 14, border: "2px dashed #F7C49A", background: "#FFF4EC", color: "#B84A0F", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 8 }}>
+                style={{ width: "100%", padding: "13px", borderRadius: 14, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 8 }}>
                 📷 Ajouter des photos ({form.photos.length}/6)
               </button>
             )}
@@ -2273,7 +2275,7 @@ function Onboarding({ onComplete }) {
             <div style={{ marginTop: 24 }}>
               <button onClick={next}
                 style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
-                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                  background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
                 Continuer →
               </button>
               <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
@@ -2298,7 +2300,7 @@ function Onboarding({ onComplete }) {
             <div style={{ marginTop: 24 }}>
               <button onClick={next}
                 style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
-                  background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff" }}>
+                  background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
                 Continuer →
               </button>
               <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
@@ -2314,7 +2316,7 @@ function Onboarding({ onComplete }) {
 
             {/* Mini profile card */}
             <div style={{ borderRadius: 20, overflow: "hidden", border: "1px solid #E5E7EB", marginBottom: 20, boxShadow: "0 4px 16px rgba(0,0,0,.06)" }}>
-              <div style={{ height: 120, background: "linear-gradient(135deg,#B84A0F,#F26419)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+              <div style={{ height: 120, background: "linear-gradient(135deg,#8B3D28,#B25F46)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
                 {form.photos[0]
                   ? <img src={form.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : <span style={{ fontSize: 60 }}>{form.species === "cat" ? "🐱" : form.species === "dog" ? "🐕" : "🐾"}</span>}
@@ -2323,10 +2325,10 @@ function Onboarding({ onComplete }) {
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>
                   {form.petName || "—"} <span style={{ fontSize: 15, color: "#6B7280", fontWeight: 400 }}>{form.age} {form.gender === "M" ? "♂" : form.gender === "F" ? "♀" : ""}</span>
                 </div>
-                <div style={{ fontSize: 13, color: "#B84A0F", fontWeight: 600, marginBottom: 10 }}>{form.breed || "Race non précisée"}</div>
+                <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 10 }}>{form.breed || "Race non précisée"}</div>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
                   {form.temper.map(t => (
-                    <span key={t} style={{ background: "#FFF4EC", color: "#B84A0F", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>{t}</span>
+                    <span key={t} style={{ background: "#FAF0EB", color: "#8B3D28", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>{t}</span>
                   ))}
                   {form.vaccinated && <span style={{ background: "#E8F5E9", color: "#2E7D32", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>Vacciné·e ✓</span>}
                   {form.sterilized && <span style={{ background: "#E8F5E9", color: "#2E7D32", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>Stérilisé·e</span>}
@@ -2358,7 +2360,7 @@ function Onboarding({ onComplete }) {
       <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity","species"].includes(current) ? "none" : "block" }}>
         {current === "recap" ? (
           <button onClick={() => onComplete(form)}
-            style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#F26419,#F7931A)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(242,100,25,.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(178,95,70,.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <PawLogo size={24} color="#fff" /> Découvrir les profils !
           </button>
         ) : current === "owner" ? null : (
@@ -2369,10 +2371,10 @@ function Onboarding({ onComplete }) {
             }
             style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer", transition: "all .2s",
               background: (current === "species" && !form.species) || (current === "identity" && (!form.petName || !form.gender))
-                ? "#E5E7EB" : "linear-gradient(135deg,#F26419,#F7931A)",
+                ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)",
               color: (current === "species" && !form.species) || (current === "identity" && (!form.petName || !form.gender))
                 ? "#9CA3AF" : "#fff",
-              boxShadow: "0 6px 20px rgba(242,100,25,.2)" }}>
+              boxShadow: "0 6px 20px rgba(178,95,70,.2)" }}>
             Continuer →
           </button>
         )}
@@ -2423,7 +2425,7 @@ export default function PawMatch() {
         {/* Badge Premium uniquement si actif */}
         {isPremium && (
           <div style={{ position: "absolute", top: 8, right: 12, zIndex: 20 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#F26419", background: "#FFF4EC", padding: "2px 8px", borderRadius: 10 }}>👑 PREMIUM</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#B25F46", background: "#FAF0EB", padding: "2px 8px", borderRadius: 10 }}>👑 PREMIUM</span>
           </div>
         )}
 
@@ -2431,14 +2433,14 @@ export default function PawMatch() {
         {showHeader && (
           <div style={{ padding: "4px 20px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <PawLogo size={22} color="#F26419" />
-              <span style={{ fontSize: 20, fontWeight: 900, background: "linear-gradient(135deg,#B84A0F,#F26419)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>PawMatch</span>
+              <PawLogo size={22} color="#B25F46" />
+              <span style={{ fontSize: 20, fontWeight: 900, background: "linear-gradient(135deg,#8B3D28,#B25F46)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>PawMatch</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {!isPremium && (
-                <button onClick={openPremium} style={{ background: "linear-gradient(135deg,#F26419,#F7931A)", border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 700, padding: "5px 12px", cursor: "pointer" }}>👑 Premium</button>
+                <button onClick={openPremium} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 700, padding: "5px 12px", cursor: "pointer" }}>👑 Premium</button>
               )}
-              <button style={{ background: "#FFF4EC", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 15, cursor: "pointer" }}>🔔</button>
+              <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 15, cursor: "pointer" }}>🔔</button>
             </div>
           </div>
         )}
@@ -2466,9 +2468,9 @@ export default function PawMatch() {
             <div style={{ display: "flex", padding: "6px 0 14px", minWidth: "max-content" }}>
               {NAV.map(n => (
                 <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 10px", minWidth: 52 }}>
-                  {n.logo ? <PawLogo size={20} color={screen === n.id ? "#F26419" : "#9CA3AF"} /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
-                  <span style={{ fontSize: 9, fontWeight: screen === n.id ? 700 : 400, color: screen === n.id ? "#F26419" : "#9CA3AF", whiteSpace: "nowrap" }}>{n.label}</span>
-                  {screen === n.id && <div style={{ width: 16, height: 3, borderRadius: 2, background: "#F26419" }} />}
+                  {n.logo ? <PawLogo size={20} color={screen === n.id ? "#B25F46" : "#9CA3AF"} /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
+                  <span style={{ fontSize: 9, fontWeight: screen === n.id ? 700 : 400, color: screen === n.id ? "#B25F46" : "#9CA3AF", whiteSpace: "nowrap" }}>{n.label}</span>
+                  {screen === n.id && <div style={{ width: 16, height: 3, borderRadius: 2, background: "#B25F46" }} />}
                 </button>
               ))}
             </div>
