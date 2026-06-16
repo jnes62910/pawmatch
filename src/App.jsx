@@ -4,26 +4,19 @@ import { useState, useRef } from "react";
 // ── LOGO ──────────────────────────────────────────────────────────────────────
 function PawLogo({ size = 48, color = "#fff" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-      {/* Heart — trait fin et élégant */}
-      <path
-        d="M50 84 C50 84 12 60 12 33 C12 20 21 11 32 11 C39 11 45 15 50 21 C55 15 61 11 68 11 C79 11 88 20 88 33 C88 60 50 84 50 84Z"
-        stroke={color} strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      />
-      {/* Patte haut-droite — pad principal */}
-      <ellipse cx="65" cy="37" rx="8" ry="6.5" fill={color}/>
-      {/* Patte haut-droite — 4 orteils */}
-      <ellipse cx="55" cy="28" rx="3.8" ry="3.2" fill={color}/>
-      <ellipse cx="62" cy="25" rx="3.8" ry="3.2" fill={color}/>
-      <ellipse cx="69" cy="25" rx="3.8" ry="3.2" fill={color}/>
-      <ellipse cx="75" cy="29" rx="3.8" ry="3.2" fill={color}/>
-      {/* Patte bas-gauche — pad principal */}
-      <ellipse cx="38" cy="63" rx="9" ry="7.5" fill={color}/>
-      {/* Patte bas-gauche — 4 orteils */}
-      <ellipse cx="27" cy="54" rx="4" ry="3.4" fill={color}/>
-      <ellipse cx="34" cy="50" rx="4" ry="3.4" fill={color}/>
-      <ellipse cx="42" cy="49" rx="4" ry="3.4" fill={color}/>
-      <ellipse cx="49" cy="53" rx="4" ry="3.4" fill={color}/>
+    <svg width={size} height={size} viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      <path d="M200 115 C145 65 75 75 75 145 C75 195 125 225 200 285 C275 225 325 195 325 145 C325 75 255 65 200 115 Z"
+        fill="none" stroke={color} strokeWidth="32" strokeLinejoin="round"/>
+      <ellipse cx="265" cy="155" rx="19" ry="24" fill={color} transform="rotate(-35 265 155)"/>
+      <ellipse cx="285" cy="145" rx="14" ry="20" fill={color} transform="rotate(-25 285 145)"/>
+      <ellipse cx="305" cy="150" rx="14" ry="19" fill={color} transform="rotate(-40 305 150)"/>
+      <ellipse cx="322" cy="165" rx="13" ry="17" fill={color} transform="rotate(-50 322 165)"/>
+      <ellipse cx="280" cy="185" rx="29" ry="23" fill={color} transform="rotate(-35 280 185)"/>
+      <ellipse cx="155" cy="225" rx="17" ry="24" fill={color} transform="rotate(40 155 225)"/>
+      <ellipse cx="135" cy="235" rx="13" ry="20" fill={color} transform="rotate(35 135 235)"/>
+      <ellipse cx="175" cy="245" rx="15" ry="20" fill={color} transform="rotate(45 175 245)"/>
+      <ellipse cx="195" cy="255" rx="12" ry="18" fill={color} transform="rotate(50 195 255)"/>
+      <ellipse cx="170" cy="265" rx="30" ry="24" fill={color} transform="rotate(40 170 265)"/>
     </svg>
   );
 }
