@@ -24,11 +24,11 @@ function PawLogo({ size = 48, color = "#fff" }) {
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const PROFILES = [
-  { id: 1, name: "Luna", species: "cat", breed: "Chartreux", age: "3 ans", gender: "F", energy: 3, temper: ["Câline", "Joueuse", "Curieuse"], distance: "1,2 km", vaccinated: true, sterilized: true, owner: "Sophie M.", bio: "Luna adore les séances de jeu avec une canne à plumes. Elle est sociable avec les autres chats après une courte période d'adaptation.", seeking: ["Play date", "Compagnon de vie"], emoji: "🐱", color: "#B8A9C9", photos: ["🐱", "😸", "🐾"], lat: 48.833, lng: 2.362, pedigree: false },
-  { id: 2, name: "Rocky", species: "dog", breed: "Berger Australien", age: "2 ans", gender: "M", energy: 5, temper: ["Joueur", "Intelligent", "Énergique"], distance: "0,8 km", vaccinated: true, sterilized: false, owner: "Thomas D.", bio: "Rocky a besoin d'un compagnon pour ses balades quotidiennes au bois de Vincennes. Il est très sociable avec les autres chiens.", seeking: ["Balade", "Play date", "Reproduction"], emoji: "🐕", color: "#A9C4B8", photos: ["🐕", "🦮", "🐾"], lat: 48.840, lng: 2.358, pedigree: true },
-  { id: 3, name: "Mochi", species: "cat", breed: "Maine Coon", age: "5 ans", gender: "M", energy: 2, temper: ["Posé", "Affectueux", "Indépendant"], distance: "2,1 km", vaccinated: true, sterilized: true, owner: "Clara B.", bio: "Mochi est un grand gaillard au caractère doux. Il cherche un compagnon calme.", seeking: ["Compagnon de vie", "Play date"], emoji: "🐱", color: "#C9B8A9", photos: ["🐱", "😺", "🐾"], lat: 48.828, lng: 2.370, pedigree: true },
-  { id: 4, name: "Bella", species: "dog", breed: "Golden Retriever", age: "4 ans", gender: "F", energy: 4, temper: ["Douce", "Joueuse", "Affectueuse"], distance: "3,4 km", vaccinated: true, sterilized: false, owner: "Marc L.", bio: "Bella est une amoureuse des câlins et des balades en forêt.", seeking: ["Balade", "Reproduction", "Play date"], emoji: "🐕", color: "#C9C4A9", photos: ["🐕", "🦴", "🐾"], lat: 48.845, lng: 2.375, pedigree: true },
-  { id: 5, name: "Pixel", species: "cat", breed: "Siamois", age: "2 ans", gender: "F", energy: 4, temper: ["Bavarde", "Curieuse", "Vive"], distance: "0,5 km", vaccinated: true, sterilized: true, owner: "Léa P.", bio: "Pixel cherche une amie avec qui partager ses aventures.", seeking: ["Play date", "Cat date"], emoji: "🐱", color: "#A9B8C9", photos: ["🐱", "😼", "🐾"], lat: 48.836, lng: 2.355, pedigree: false },
+  { id: 1, name: "Luna", species: "cat", breed: "Chartreux", age: "3 ans", gender: "F", energy: 3, temper: ["Câline", "Joueuse", "Curieuse"], distance: "1,2 km", vaccinated: true, sterilized: true, owner: "Sophie M.", bio: "Luna adore les séances de jeu avec une canne à plumes. Elle est sociable avec les autres chats après une courte période d'adaptation.", seeking: ["Play date", "Compagnon de vie"], emoji: "🐱", color: "#B8A9C9", photos: ["🐱", "😸", "😻"], lat: 48.833, lng: 2.362, pedigree: false },
+  { id: 2, name: "Rocky", species: "dog", breed: "Berger Australien", age: "2 ans", gender: "M", energy: 5, temper: ["Joueur", "Intelligent", "Énergique"], distance: "0,8 km", vaccinated: true, sterilized: false, owner: "Thomas D.", bio: "Rocky a besoin d'un compagnon pour ses balades quotidiennes au bois de Vincennes. Il est très sociable avec les autres chiens.", seeking: ["Balade", "Play date", "Reproduction"], emoji: "🐕", color: "#A9C4B8", photos: ["🐕", "🦮", "🦴"], lat: 48.840, lng: 2.358, pedigree: true },
+  { id: 3, name: "Mochi", species: "cat", breed: "Maine Coon", age: "5 ans", gender: "M", energy: 2, temper: ["Posé", "Affectueux", "Indépendant"], distance: "2,1 km", vaccinated: true, sterilized: true, owner: "Clara B.", bio: "Mochi est un grand gaillard au caractère doux. Il cherche un compagnon calme.", seeking: ["Compagnon de vie", "Play date"], emoji: "🐱", color: "#C9B8A9", photos: ["🐱", "😺", "😸"], lat: 48.828, lng: 2.370, pedigree: true },
+  { id: 4, name: "Bella", species: "dog", breed: "Golden Retriever", age: "4 ans", gender: "F", energy: 4, temper: ["Douce", "Joueuse", "Affectueuse"], distance: "3,4 km", vaccinated: true, sterilized: false, owner: "Marc L.", bio: "Bella est une amoureuse des câlins et des balades en forêt.", seeking: ["Balade", "Reproduction", "Play date"], emoji: "🐕", color: "#C9C4A9", photos: ["🐕", "🦴", "🦮"], lat: 48.845, lng: 2.375, pedigree: true },
+  { id: 5, name: "Pixel", species: "cat", breed: "Siamois", age: "2 ans", gender: "F", energy: 4, temper: ["Bavarde", "Curieuse", "Vive"], distance: "0,5 km", vaccinated: true, sterilized: true, owner: "Léa P.", bio: "Pixel cherche une amie avec qui partager ses aventures.", seeking: ["Play date", "Cat date"], emoji: "🐱", color: "#A9B8C9", photos: ["🐱", "😼", "😺"], lat: 48.836, lng: 2.355, pedigree: false },
 ];
 
 const REPRO_PROFILES = [
@@ -67,7 +67,7 @@ const MATCHES = [
 const MESSAGES = {
   1: [
     { from: "them", text: "Bonjour ! Luna serait ravie de rencontrer votre chat 😸", time: "12:20" },
-    { from: "me", text: "Quelle bonne idée ! Ils ont l'air super compatibles 🐾", time: "12:25" },
+    { from: "me", text: "Quelle bonne idée ! Ils ont l'air super compatibles", time: "12:25" },
     { from: "them", text: "On pourrait se retrouver au parc Montsouris ?", time: "12:30" },
     { from: "me", text: "Parfait ! Samedi matin ?", time: "12:32" },
     { from: "them", text: "Super ! À samedi alors 😸", time: "12:34" },
@@ -172,7 +172,7 @@ function SwipeScreen({ onNav }) {
 
   if (!profile) return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <div style={{ fontSize: 64, marginBottom: 16 }}>🐾</div>
+      
       <div style={{ fontSize: 18, fontWeight: 700, color: "#8B3D28", marginBottom: 8 }}>Plus de profils ici !</div>
       <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF" }}>Élargis ta zone de recherche ou reviens plus tard.</div>
     </div>
@@ -183,7 +183,7 @@ function SwipeScreen({ onNav }) {
       onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
 
       <div style={{ display: "flex", gap: 8, padding: "12px 16px 0", background: "#fff", flexShrink: 0 }}>
-        {[["all","Tous 🐾"],["cats","Chats 🐱"],["dogs","Chiens 🐕"]].map(([v,l]) => (
+        {[["all","Tous"],["cats","Chats 🐱"],["dogs","Chiens 🐕"]].map(([v,l]) => (
           <button key={v} onClick={() => { setTab(v); setIdx(0); setPhoto(0); setDragX(0); }}
             style={{ padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: tab === v ? "#8B3D28" : "#FAF0EB", color: tab === v ? "#fff" : "#8B3D28" }}>{l}</button>
         ))}
@@ -254,7 +254,7 @@ function SwipeScreen({ onNav }) {
       </div>
 
       <div style={{ textAlign: "center", fontSize: 11, color: "#E8B89F", padding: "2px 0 4px" }}>
-        ← Glisse à gauche pour refuser · à droite pour liker 🐾 →
+        ← Glisse à gauche pour refuser · à droite pour liker →
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 24, padding: "8px 16px 20px" }}>
@@ -286,7 +286,7 @@ function SwipeScreen({ onNav }) {
             </div>
             <div style={{ display: "flex", gap: 12 }}>
               <button onClick={() => { setShowDetail(false); swipe("nope"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "2px solid #FCA5A5", background: "#fff", fontSize: 18, cursor: "pointer", fontWeight: 700 }}>❌ Passer</button>
-              <button onClick={() => { setShowDetail(false); swipe("like"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 15, cursor: "pointer", fontWeight: 700 }}>🐾 J'adore !</button>
+              <button onClick={() => { setShowDetail(false); swipe("like"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 15, cursor: "pointer", fontWeight: 700 }}>J'adore !</button>
             </div>
           </div>
         </div>
@@ -296,7 +296,7 @@ function SwipeScreen({ onNav }) {
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#B25F46)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
           <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
-          <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", marginBottom: 32, textAlign: "center" }}>{matchedWith.name} et votre animal s'adorent 🐾</div>
+          <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", marginBottom: 32, textAlign: "center" }}>{matchedWith.name} et votre animal s'adorent</div>
           <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}><PawLogo size={80} color="#fff" /><span>{matchedWith.emoji}</span></div>
           <button onClick={() => { closeMatch(); onNav("messages"); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#8B3D28", fontSize: 16, fontWeight: 800, cursor: "pointer", marginBottom: 12 }}>💬 Envoyer un message</button>
           <button onClick={closeMatch} style={{ background: "transparent", border: "2px solid rgba(255,255,255,.5)", color: "#fff", padding: "14px", borderRadius: 16, width: "100%", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Continuer à swiper</button>
@@ -860,7 +860,7 @@ function AgendaScreen() {
 // ── COMMUNITY SCREEN ──────────────────────────────────────────────────────────
 const INIT_COMMENTS = {
   1: [
-    { id: 1, author: "Marie L.", pet: "Caramel", emoji: "🐱", text: "Super ! Rocky est trop mignon, ça ferait une belle équipe 🐾", time: "Il y a 1h", likes: 5 },
+    { id: 1, author: "Marie L.", pet: "Caramel", emoji: "🐱", text: "Super ! Rocky est trop mignon, ça ferait une belle équipe", time: "Il y a 1h", likes: 5 },
     { id: 2, author: "Jean P.", pet: "Max", emoji: "🐕", text: "Vous trouvez des dog parks accessibles dans votre coin ?", time: "Il y a 45 min", likes: 2 },
   ],
   2: [
@@ -1250,7 +1250,7 @@ function ChatScreen({ matchId, onBack }) {
     setInput("");
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     setTimeout(() => {
-      setMsgs(m => [...m, { from: "them", text: "Super idée ! 🐾 On se retrouve quand ?", time: "À l'instant" }]);
+      setMsgs(m => [...m, { from: "them", text: "Super idée ! On se retrouve quand ?", time: "À l'instant" }]);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     }, 1200);
   }
@@ -1372,7 +1372,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
 
       {/* Tab switcher */}
       <div style={{ display: "flex", background: "#F9FAFB", padding: "8px 16px", gap: 8, flexShrink: 0, borderBottom: "1px solid #F3F4F6" }}>
-        {[["profil","🐾 Profil"],["repro","🌱 Reproduction"]].map(([v,l]) => (
+        {[["profil","Profil"],["repro","🌱 Reproduction"]].map(([v,l]) => (
           <button key={v} onClick={() => setEditTab(v)} style={{ flex: 1, padding: "9px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: editTab === v ? "#fff" : "transparent", color: editTab === v ? "#8B3D28" : "#9CA3AF", boxShadow: editTab === v ? "0 1px 6px rgba(0,0,0,.08)" : "none", transition: "all .2s" }}>{l}</button>
         ))}
       </div>
@@ -1670,7 +1670,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
             <div style={{ height: "100%", borderRadius: 3, background: "linear-gradient(90deg,#B25F46,#C97A5E)", width: `${(pet.photos.length > 0 ? 25 : 0) + (pet.video ? 20 : 0) + (pet.bio ? 20 : 0) + (pet.temper.length > 0 ? 15 : 0) + (pet.vaccinated ? 10 : 0) + (pet.repro.active && pet.repro.price ? 10 : 0)}%`, transition: "width .4s" }} />
           </div>
           <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6 }}>
-            {pet.photos.length === 0 ? "📷 Ajoute des photos pour +25%" : !pet.video ? "🎬 Ajoute une vidéo pour +20%" : !pet.repro.active ? "🌱 Active la reproduction pour +10%" : "🐾 Super profil !"}
+            {pet.photos.length === 0 ? "📷 Ajoute des photos pour +25%" : !pet.video ? "🎬 Ajoute une vidéo pour +20%" : !pet.repro.active ? "🌱 Active la reproduction pour +10%" : "Super profil !"}
           </div>
         </div>
 
@@ -1720,7 +1720,7 @@ const PLANS = [
 ];
 
 const FEATURES = [
-  ["🐾", "Swipes illimités"],
+  ["Swipes illimités"],
   ["👁️", "Voir qui a liké votre animal"],
   ["⚡", "Boost de visibilité x3"],
   ["🌱", "Accès reproduction complète"],
@@ -1944,7 +1944,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
             <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 8 }}>Bienvenue Premium !</div>
             <div style={{ fontSize: 15, color: "#6B7280", lineHeight: 1.7, marginBottom: 28 }}>
               Votre abonnement {selectedPlan.label} est activé.<br/>
-              <strong style={{ color: "#B25F46" }}>Toutes les fonctionnalités Premium</strong> sont maintenant disponibles pour votre animal 🐾
+              <strong style={{ color: "#B25F46" }}>Toutes les fonctionnalités Premium</strong> sont maintenant disponibles pour votre animal
             </div>
 
             <div style={{ width: "100%", background: "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 24 }}>
@@ -1964,7 +1964,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
 
             <button onClick={onSuccess}
               style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
-              C'est parti ! 🐾
+              C'est parti !
             </button>
           </div>
         )}
@@ -2030,7 +2030,7 @@ function Onboarding({ onComplete }) {
         La première app de rencontres pour chats & chiens.<br/>Créons ensemble le profil de votre animal en 2 minutes.
       </div>
       <button onClick={next} style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "#fff", color: "#8B3D28", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>
-        C'est parti ! 🐾
+        C'est parti !
       </button>
       <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 20, textAlign: "center" }}>Gratuit · Sans engagement · 2 minutes</div>
     </div>
@@ -2077,7 +2077,7 @@ function Onboarding({ onComplete }) {
         {/* ── SPECIES ── */}
         {current === "species" && (
           <div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Quel est votre animal ? 🐾</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Quel est votre animal ?</div>
             <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 28 }}>Le profil sera adapté à son espèce.</div>
             <div style={{ display: "flex", gap: 14, marginBottom: 40 }}>
               {[["cat","🐱","Chat"],["dog","🐕","Chien"]].map(([v,e,l]) => (
@@ -2313,7 +2313,7 @@ function Onboarding({ onComplete }) {
               <div style={{ height: 120, background: "linear-gradient(135deg,#8B3D28,#B25F46)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
                 {form.photos[0]
                   ? <img src={form.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span style={{ fontSize: 60 }}>{form.species === "cat" ? "🐱" : form.species === "dog" ? "🐕" : "🐾"}</span>}
+                  : <span style={{ fontSize: 60 }}>{form.species === "cat" ? "🐱" : form.species === "dog" ? "🐕" : "🐱"}</span>}
               </div>
               <div style={{ padding: "16px" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>
