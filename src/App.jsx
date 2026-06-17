@@ -297,7 +297,7 @@ function SwipeScreen({ onNav }) {
           <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
           <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
           <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", marginBottom: 32, textAlign: "center" }}>{matchedWith.name} et votre animal s'adorent</div>
-          <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 32 }}><PawLogo size={80} color="#fff" /><span>{matchedWith.emoji}</span></div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}><PawLogo size={100} color="#fff" /></div>
           <button onClick={() => { closeMatch(); onNav("messages"); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#8B3D28", fontSize: 16, fontWeight: 800, cursor: "pointer", marginBottom: 12 }}>💬 Envoyer un message</button>
           <button onClick={closeMatch} style={{ background: "transparent", border: "2px solid rgba(255,255,255,.5)", color: "#fff", padding: "14px", borderRadius: 16, width: "100%", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Continuer à swiper</button>
         </div>
