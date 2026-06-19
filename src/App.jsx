@@ -23,6 +23,61 @@ function PawLogo({ size = 48, color = "#fff" }) {
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
+const DOG_BREEDS = [
+  "Labrador Retriever","Berger Australien","Berger Allemand","Golden Retriever","Border Collie",
+  "Bouledogue Français","Caniche","Jack Russell Terrier","Cocker Spaniel","Yorkshire Terrier",
+  "Chihuahua","Beagle","Husky Sibérien","Rottweiler","Boxer",
+  "Shih Tzu","Bichon Frisé","Cavalier King Charles","Teckel","Westie",
+  "Setter Anglais","Épagneul Breton","Braque","Malinois","Berger des Pyrénées",
+  "Dogue Allemand","Saint-Bernard","Bouvier Bernois","Akita","Shiba Inu",
+  "Carlin","Schnauzer","Fox Terrier","Lhassa Apso","Maltais",
+  "Whippet","Greyhound","Basset Hound","Bullmastiff","American Staffordshire",
+  "Staffordshire Bull Terrier","Pitbull","Dalmatien","Spitz","Pomeranian",
+  "Léonberg","Terre-Neuve","Patou","Dogue de Bordeaux","Levrier Afghan",
+  "Croisé / Mixte","Non déterminé","Autre",
+];
+
+const CAT_BREEDS = [
+  "Européen","Chartreux","Siamois","Maine Coon","Persan",
+  "British Shorthair","Ragdoll","Bengal","Sphynx","Abyssin",
+  "Sacré de Birmanie","Scottish Fold","Norvégien","Sibérien","Devon Rex",
+  "Cornish Rex","Burmese","Bombay","Savannah","Angora Turc",
+  "Exotic Shorthair","Russian Blue","Manx","American Shorthair","Tonkinois",
+  "Himalayen","Oriental","Selkirk Rex",
+  "Croisé / Mixte","Non déterminé","Autre",
+];
+
+function BreedInput({ value, onChange, species, style }) {
+  const [open, setOpen] = useState(false);
+  const list = species === "dog" ? DOG_BREEDS : CAT_BREEDS;
+  const filtered = value
+    ? list.filter(b => b.toLowerCase().includes(value.toLowerCase()))
+    : list;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={species === "dog" ? "Ex: Labrador" : "Ex: Siamois"}
+        style={style}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 14, maxHeight: 220, overflowY: "auto", zIndex: 30, boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
+          {filtered.slice(0, 50).map(b => (
+            <div key={b} onMouseDown={() => { onChange(b); setOpen(false); }}
+              style={{ padding: "10px 14px", fontSize: 14, color: "#2D1200", cursor: "pointer", borderBottom: "1px solid #F3F4F6" }}>
+              {b}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const PROFILES = [
   { id: 1, name: "Luna", species: "cat", breed: "Chartreux", age: "3 ans", gender: "F", energy: 3, temper: ["Câline", "Joueuse", "Curieuse"], distance: "1,2 km", vaccinated: true, sterilized: true, owner: "Sophie M.", bio: "Luna adore les séances de jeu avec une canne à plumes. Elle est sociable avec les autres chats après une courte période d'adaptation.", seeking: ["Play date", "Compagnon de vie"], emoji: "🐱", color: "#B8A9C9", photos: ["🐱", "😸", "😻"], lat: 48.833, lng: 2.362, pedigree: false },
   { id: 2, name: "Rocky", species: "dog", breed: "Berger Australien", age: "2 ans", gender: "M", energy: 5, temper: ["Joueur", "Intelligent", "Énergique"], distance: "0,8 km", vaccinated: true, sterilized: false, owner: "Thomas D.", bio: "Rocky a besoin d'un compagnon pour ses balades quotidiennes au bois de Vincennes. Il est très sociable avec les autres chiens.", seeking: ["Balade", "Play date", "Reproduction"], emoji: "🐕", color: "#A9C4B8", photos: ["🐕", "🦮", "🦴"], lat: 48.840, lng: 2.358, pedigree: true },
@@ -678,21 +733,70 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
 }
 
 // ── REPRO SCREEN ──────────────────────────────────────────────────────────────
-function ReproScreen() {
+function ReproScreen({ isPremium = false, onPremium = () => {} }) {
   const [selected, setSelected] = useState(null);
   const [requested, setRequested] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
 
-  const filtered = REPRO_PROFILES.filter(p => filter === "all" || p.species === (filter === "cats" ? "cat" : "dog"));
+  // Filtres avancés (Premium uniquement)
+  const [advBreed, setAdvBreed] = useState("");
+  const [advAgeRange, setAdvAgeRange] = useState("all"); // all | young | adult | senior
+  const [advGender, setAdvGender] = useState("all"); // all | M | F
+  const [advTemper, setAdvTemper] = useState("all");
+  const [advDocs, setAdvDocs] = useState([]); // vaccinated | pedigree | testedGenes
+
+  function ageToRange(ageStr) {
+    const n = parseInt(ageStr, 10);
+    if (n <= 1) return "young";
+    if (n <= 5) return "adult";
+    return "senior";
+  }
+
+  function toggleDoc(doc) {
+    setAdvDocs(d => d.includes(doc) ? d.filter(x => x !== doc) : [...d, doc]);
+  }
+
+  function resetAdvanced() {
+    setAdvBreed(""); setAdvAgeRange("all"); setAdvGender("all"); setAdvTemper("all"); setAdvDocs([]);
+  }
+
+  function openAdvanced() {
+    if (!isPremium) { setShowPremiumPrompt(true); return; }
+    setShowAdvanced(true);
+  }
+
+  const allTempers = [...new Set(REPRO_PROFILES.flatMap(p => p.temper))];
+
+  const filtered = REPRO_PROFILES.filter(p => {
+    if (filter !== "all" && p.species !== (filter === "cats" ? "cat" : "dog")) return false;
+    if (!isPremium) return true; // les filtres avancés ne s'appliquent qu'en Premium
+    if (advBreed && !p.breed.toLowerCase().includes(advBreed.toLowerCase())) return false;
+    if (advAgeRange !== "all" && ageToRange(p.age) !== advAgeRange) return false;
+    if (advGender !== "all" && p.gender !== advGender) return false;
+    if (advTemper !== "all" && !p.temper.includes(advTemper)) return false;
+    if (advDocs.includes("vaccinated") && !p.vaccinated) return false;
+    if (advDocs.includes("pedigree") && !p.pedigree) return false;
+    if (advDocs.includes("testedGenes") && !p.testedGenes) return false;
+    return true;
+  });
+
+  const advancedActive = isPremium && (advBreed || advAgeRange !== "all" || advGender !== "all" || advTemper !== "all" || advDocs.length > 0);
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
         <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 10 }}>Reproduction vérifiée et sécurisée 🌱</div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {[["all","Tous"],["cats","Chats 🐱"],["dogs","Chiens 🐕"]].map(([v,l]) => (
             <button key={v} onClick={() => setFilter(v)} style={{ padding: "5px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
           ))}
+          <button onClick={openAdvanced}
+            style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${advancedActive ? "#B25F46" : "#E5E7EB"}`, background: advancedActive ? "#FAF0EB" : "#fff", color: advancedActive ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+            {!isPremium && <span>👑</span>}
+            🔎 Recherche {advancedActive && "•"}
+          </button>
         </div>
       </div>
 
@@ -705,6 +809,25 @@ function ReproScreen() {
             <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>Tous les profils sont vérifiés. Documents sanitaires validés. Paiement sécurisé via escrow.</div>
           </div>
         </div>
+
+        {!isPremium && (
+          <button onClick={() => setShowPremiumPrompt(true)}
+            style={{ margin: "0 16px 12px", width: "calc(100% - 32px)", padding: "12px 14px", background: "linear-gradient(135deg,#8B3D28,#B25F46)", borderRadius: 12, display: "flex", gap: 10, alignItems: "center", border: "none", cursor: "pointer", textAlign: "left" }}>
+            <span style={{ fontSize: 20 }}>👑</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>Recherche avancée Premium</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,.8)" }}>Filtrez par race, âge, sexe, caractère et documents</div>
+            </div>
+          </button>
+        )}
+
+        {filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "#9CA3AF" }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+            <div style={{ fontSize: 14 }}>Aucun profil ne correspond à ces critères</div>
+            <button onClick={resetAdvanced} style={{ marginTop: 10, background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Réinitialiser les filtres</button>
+          </div>
+        )}
 
         {filtered.map(p => (
           <div key={p.id} onClick={() => setSelected(p)} style={{ margin: "0 16px 12px", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,.05)" }}>
@@ -733,6 +856,89 @@ function ReproScreen() {
           </div>
         ))}
       </div>
+
+      {/* Sheet recherche avancée (Premium) */}
+      {showAdvanced && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 55, display: "flex", alignItems: "flex-end" }} onClick={() => setShowAdvanced(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 32px", width: "100%", maxHeight: "85%", overflowY: "auto" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>🔎 Recherche avancée</div>
+              <button onClick={resetAdvanced} style={{ background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Réinitialiser</button>
+            </div>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>RACE</label>
+            <input value={advBreed} onChange={e => setAdvBreed(e.target.value)} placeholder="Ex: Maine Coon"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit" }} />
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>TRANCHE D'ÂGE</label>
+            <div style={{ display: "flex", gap: 6, margin: "6px 0 16px" }}>
+              {[["all","Tous"],["young","Jeune (-1 an)"],["adult","Adulte (1-5 ans)"],["senior","Senior (5+ ans)"]].map(([v,l]) => (
+                <button key={v} onClick={() => setAdvAgeRange(v)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${advAgeRange === v ? "#B25F46" : "#E5E7EB"}`, background: advAgeRange === v ? "#FAF0EB" : "#fff", color: advAgeRange === v ? "#B25F46" : "#6B7280", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+              ))}
+            </div>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>SEXE</label>
+            <div style={{ display: "flex", gap: 6, margin: "6px 0 16px" }}>
+              {[["all","Tous"],["M","♂ Mâle"],["F","♀ Femelle"]].map(([v,l]) => (
+                <button key={v} onClick={() => setAdvGender(v)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1.5px solid ${advGender === v ? "#B25F46" : "#E5E7EB"}`, background: advGender === v ? "#FAF0EB" : "#fff", color: advGender === v ? "#B25F46" : "#6B7280", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+              ))}
+            </div>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>COMPORTEMENT</label>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "6px 0 16px" }}>
+              <button onClick={() => setAdvTemper("all")} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${advTemper === "all" ? "#B25F46" : "#E5E7EB"}`, background: advTemper === "all" ? "#FAF0EB" : "#fff", color: advTemper === "all" ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Tous</button>
+              {allTempers.map(t => (
+                <button key={t} onClick={() => setAdvTemper(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${advTemper === t ? "#B25F46" : "#E5E7EB"}`, background: advTemper === t ? "#FAF0EB" : "#fff", color: advTemper === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{t}</button>
+              ))}
+            </div>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DOCUMENTS</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "6px 0 20px" }}>
+              {[["vaccinated","Vacciné"],["pedigree","Pedigree officiel"],["testedGenes","Bilan génétique complet"]].map(([v,l]) => (
+                <button key={v} onClick={() => toggleDoc(v)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${advDocs.includes(v) ? "#B25F46" : "#E5E7EB"}`, background: advDocs.includes(v) ? "#FAF0EB" : "#fff", cursor: "pointer", textAlign: "left" }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${advDocs.includes(v) ? "#B25F46" : "#D1D5DB"}`, background: advDocs.includes(v) ? "#B25F46" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {advDocs.includes(v) && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#2D1200" }}>{l}</span>
+                </button>
+              ))}
+            </div>
+
+            <button onClick={() => setShowAdvanced(false)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+              Voir {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt Premium */}
+      {showPremiumPrompt && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowPremiumPrompt(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%" }}>
+            <div style={{ textAlign: "center", fontSize: 44, marginBottom: 12 }}>👑</div>
+            <div style={{ textAlign: "center", fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Recherche avancée</div>
+            <div style={{ textAlign: "center", fontSize: 14, color: "#6B7280", marginBottom: 20, lineHeight: 1.6 }}>
+              Filtrez les profils de reproduction par race, âge, sexe, comportement et documents — réservé aux membres Premium.
+            </div>
+            <div style={{ background: "#FAF0EB", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
+              {["Filtrer par race précise","Sélectionner une tranche d'âge","Choisir le sexe recherché","Filtrer par comportement","Exiger des documents spécifiques"].map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12, color: "#4B5563" }}>
+                  <span style={{ color: "#B25F46", fontWeight: 700 }}>✓</span> {item}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { setShowPremiumPrompt(false); onPremium(); }}
+              style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>
+              👑 Passer Premium
+            </button>
+            <button onClick={() => setShowPremiumPrompt(false)} style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "#F3F4F6", color: "#6B7280", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+              Pas maintenant
+            </button>
+          </div>
+        </div>
+      )}
 
       {selected && !requested && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 50, display: "flex", alignItems: "flex-end" }} onClick={() => setSelected(null)}>
@@ -1429,7 +1635,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
           <input value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} style={{ ...inputStyle, marginBottom: 14 }} placeholder="Prénom de votre animal" />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-            <div><label style={labelStyle}>RACE</label><input value={draft.breed} onChange={e => setDraft(d => ({ ...d, breed: e.target.value }))} style={inputStyle} placeholder="Ex: Siamois" /></div>
+            <div><label style={labelStyle}>RACE</label><BreedInput value={draft.breed} onChange={v => setDraft(d => ({ ...d, breed: v }))} species={draft.species} style={inputStyle} /></div>
             <div><label style={labelStyle}>ÂGE</label><input value={draft.age} onChange={e => setDraft(d => ({ ...d, age: e.target.value }))} style={inputStyle} placeholder="Ex: 3 ans" /></div>
           </div>
 
@@ -2111,7 +2317,7 @@ function Onboarding({ onComplete }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={labelStyle}>RACE</label>
-                <input value={form.breed} onChange={e => set("breed", e.target.value)} placeholder={form.species === "cat" ? "Ex: Siamois" : "Ex: Labrador"} style={inputStyle} />
+                <BreedInput value={form.breed} onChange={v => set("breed", v)} species={form.species} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>ÂGE</label>
@@ -2446,7 +2652,7 @@ export default function PawMatch() {
             : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} />}
                 {screen === "map" && <MapScreen onOpenChat={openChat} onNav={setScreen} />}
-                {screen === "repro" && <ReproScreen />}
+                {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} />}
