@@ -2614,7 +2614,7 @@ export default function PawMatch() {
     { id: "repro", label: "Reproduction", icon: "🌱" },
     { id: "community", label: "Communauté", icon: "🏆" },
     { id: "messages", label: "Messages", icon: "💬" },
-    { id: "profile", label: "Profil", icon: "🐱" },
+    { id: "profile", label: "Profil", icon: userProfile?.species === "dog" ? "🐕" : "🐱" },
   ];
   const showHeader = onboarded && !["chat","profile"].includes(screen);
 
