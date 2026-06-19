@@ -4,21 +4,22 @@ import { useState, useRef } from "react";
 // ── LOGO ──────────────────────────────────────────────────────────────────────
 function PawLogo({ size = 48, color = "#fff" }) {
   return (
-    <div style={{
-      width: size,
-      height: size,
-      flexShrink: 0,
-      display: "inline-block",
-      backgroundColor: color,
-      maskImage: "url(/logo2.png)",
-      maskSize: "contain",
-      maskRepeat: "no-repeat",
-      maskPosition: "center",
-      WebkitMaskImage: "url(/logo2.png)",
-      WebkitMaskSize: "contain",
-      WebkitMaskRepeat: "no-repeat",
-      WebkitMaskPosition: "center",
-    }} />
+    <div
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        backgroundColor: color,
+        maskImage: "url(/pawmatch-logo.png)",
+        maskSize: "contain",
+        maskRepeat: "no-repeat",
+        maskPosition: "center",
+        WebkitMaskImage: "url(/pawmatch-logo.png)",
+        WebkitMaskSize: "contain",
+        WebkitMaskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+      }}
+    />
   );
 }
 
