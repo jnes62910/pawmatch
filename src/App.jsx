@@ -156,7 +156,7 @@ function Badge({ children, color = "#FAF0EB", text = "#8B3D28" }) {
 }
 
 // ── SWIPE SCREEN ──────────────────────────────────────────────────────────────
-function SwipeScreen({ onNav }) {
+function SwipeScreen({ onNav, userProfile }) {
   const [idx, setIdx] = useState(0);
   const [matchedWith, setMatchedWith] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -358,7 +358,21 @@ function SwipeScreen({ onNav }) {
           <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
           <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
           <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", marginBottom: 32, textAlign: "center" }}>{matchedWith.name} et votre animal s'adorent</div>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}><PawLogo size={100} color="#fff" /></div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, marginBottom: 32 }}>
+            <div style={{ width: 92, height: 92, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", background: "#8B3D28", flexShrink: 0, boxShadow: "0 4px 16px rgba(0,0,0,.25)" }}>
+              {userProfile?.photos?.[0]
+                ? <img src={userProfile.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>{userProfile?.species === "dog" ? "🐕" : "🐱"}</div>
+              }
+            </div>
+            <PawLogo size={56} color="#fff" />
+            <div style={{ width: 92, height: 92, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", background: "#8B3D28", flexShrink: 0, boxShadow: "0 4px 16px rgba(0,0,0,.25)" }}>
+              {matchedWith.photos?.[0]?.startsWith?.("http")
+                ? <img src={matchedWith.photos[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>{matchedWith.emoji}</div>
+              }
+            </div>
+          </div>
           <button onClick={() => { closeMatch(); onNav("messages"); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#8B3D28", fontSize: 16, fontWeight: 800, cursor: "pointer", marginBottom: 12 }}>💬 Envoyer un message</button>
           <button onClick={closeMatch} style={{ background: "transparent", border: "2px solid rgba(255,255,255,.5)", color: "#fff", padding: "14px", borderRadius: 16, width: "100%", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Continuer à swiper</button>
         </div>
@@ -2656,7 +2670,7 @@ export default function PawMatch() {
           {!onboarded
             ? <Onboarding onComplete={completeOnboarding} />
             : <>
-                {screen === "swipe" && <SwipeScreen onNav={setScreen} />}
+                {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} />}
                 {screen === "map" && <MapScreen onOpenChat={openChat} onNav={setScreen} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} />}
                 
