@@ -1,6 +1,6 @@
 // api/create-payment.js
 // Crée un paiement (saillie, prestation...) avec :
-//  - répartition automatique de la commission PawMatch (application_fee_amount)
+//  - répartition automatique de la commission Miloute (application_fee_amount)
 //  - capture manuelle = "escrow" : l'argent est autorisé mais pas transféré
 //    tant que toi/l'app ne déclenches pas la confirmation (capture).
 //
@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
       transfer_data: {
         destination: connectedAccountId, // le compte Connect de l'éleveur/prestataire
       },
-      description: description || 'Paiement PawMatch',
+      description: description || 'Paiement Miloute',
     });
 
     return res.status(200).json({
