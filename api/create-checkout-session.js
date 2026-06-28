@@ -1,5 +1,5 @@
 // api/create-checkout-session.js
-// Crée une session Stripe Checkout pour l'abonnement Premium PawMatch.
+// Crée une session Stripe Checkout pour l'abonnement Premium Miloute.
 // L'argent va directement sur le compte de la plateforme — pas de Connect,
 // pas de commission à répartir, c'est un paiement classique.
 
@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: `PawMatch Premium — ${plan === 'monthly' ? 'Mensuel' : 'Annuel'}`,
+              name: `Miloute Premium — ${plan === 'monthly' ? 'Mensuel' : 'Annuel'}`,
               description: 'Swipes illimités, qui t\'a liké, boost de visibilité, reproduction complète',
             },
             unit_amount: PLAN_AMOUNTS[plan],
