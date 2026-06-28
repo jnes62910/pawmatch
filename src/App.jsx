@@ -156,6 +156,15 @@ function Badge({ children, color = "#FAF0EB", text = "#8B3D28" }) {
 }
 
 // ── SWIPE SCREEN ──────────────────────────────────────────────────────────────
+// ── DISTANCE HELPER ────────────────────────────────────────────────────────────
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371; // rayon terrestre en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function SwipeScreen({ onNav, userProfile }) {
   const [idx, setIdx] = useState(0);
   const [matchedWith, setMatchedWith] = useState(null);
@@ -164,11 +173,25 @@ function SwipeScreen({ onNav, userProfile }) {
   const [photo, setPhoto] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [searchRadius, setSearchRadius] = useState(15); // km
+  const [showRadiusSheet, setShowRadiusSheet] = useState(false);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const cardRef = useRef(null);
 
-  const filtered = PROFILES.filter(p => tab === "all" || p.species === (tab === "cats" ? "cat" : "dog"));
+  function getProfileDistance(p) {
+    if (userProfile?.location && p.lat && p.lng) {
+      return distanceKm(userProfile.location.lat, userProfile.location.lng, p.lat, p.lng);
+    }
+    // Repli : on parse la distance fictive ("1,2 km" → 1.2)
+    const parsed = parseFloat((p.distance || "0").replace(",", ".").replace(/[^\d.]/g, ""));
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  const filtered = PROFILES.filter(p =>
+    (tab === "all" || p.species === (tab === "cats" ? "cat" : "dog")) &&
+    getProfileDistance(p) <= searchRadius
+  );
   const profile = filtered[idx];
 
   const THRESHOLD = 80;
@@ -238,12 +261,42 @@ function SwipeScreen({ onNav, userProfile }) {
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
       onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
 
-      <div style={{ display: "flex", gap: 8, padding: "12px 16px 0", background: "#fff", flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: 8, padding: "12px 16px 0", background: "#fff", flexShrink: 0, alignItems: "center" }}>
         {[["all","Tous"],["cats","Chats 🐱"],["dogs","Chiens 🐕"]].map(([v,l]) => (
           <button key={v} onClick={() => { setTab(v); setIdx(0); setPhoto(0); setDragX(0); }}
             style={{ padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: tab === v ? "#8B3D28" : "#FAF0EB", color: tab === v ? "#fff" : "#8B3D28" }}>{l}</button>
         ))}
+        <button onClick={() => setShowRadiusSheet(true)}
+          style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+          📍 {searchRadius} km
+        </button>
       </div>
+
+      {/* Sheet — rayon de recherche */}
+      {showRadiusSheet && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setShowRadiusSheet(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%" }}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>Rayon de recherche</div>
+            <div style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", marginBottom: 24 }}>Affichez les animaux dans cette distance</div>
+            <div style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#B25F46", marginBottom: 16 }}>{searchRadius} km</div>
+            <input type="range" min="1" max="50" value={searchRadius} onChange={e => setSearchRadius(Number(e.target.value))}
+              style={{ width: "100%", marginBottom: 8, accentColor: "#B25F46" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginBottom: 24 }}>
+              <span>1 km</span><span>50 km</span>
+            </div>
+            {!userProfile?.location && (
+              <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
+                Activez votre position dans Profil pour des distances précises.
+              </div>
+            )}
+            <button onClick={() => { setIdx(0); setShowRadiusSheet(false); }}
+              style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+              Appliquer
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ flex: 1, padding: "12px 16px", display: "flex", flexDirection: "column", userSelect: "none" }}>
         <div ref={cardRef}
@@ -2298,7 +2351,39 @@ function Onboarding({ onComplete }) {
     energy: 3, vaccinated: false, sterilized: false,
     temper: [], seeking: [],
     bio: "", photos: [],
+    location: null, // { lat, lng }
   });
+  const [locationStatus, setLocationStatus] = useState("idle"); // idle | loading | done | error
+  const [locationError, setLocationError] = useState(null);
+
+  function requestOnboardingLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus("error");
+      setLocationError("La géolocalisation n'est pas supportée par votre navigateur.");
+      return;
+    }
+    setLocationStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        set("location", { lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocationStatus("done");
+      },
+      (error) => {
+        setLocationStatus("error");
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError("Vous avez refusé l'accès à votre position. Vous pourrez l'activer plus tard dans les paramètres.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationError("Position indisponible. Vérifiez votre GPS.");
+            break;
+          default:
+            setLocationError("Impossible de récupérer votre position.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
   function toggleArr(k, v) { setForm(f => ({ ...f, [k]: f[k].includes(v) ? f[k].filter(x => x !== v) : [...f[k], v] })); }
@@ -2315,7 +2400,7 @@ function Onboarding({ onComplete }) {
   function back() { setDirection(-1); setStep(s => s - 1); }
 
   const STEPS = [
-    "splash", "owner", "species", "identity", "health",
+    "splash", "owner", "location", "species", "identity", "health",
     "character", "seeking", "photos", "bio", "recap"
   ];
   const current = STEPS[step];
@@ -2374,6 +2459,58 @@ function Onboarding({ onComplete }) {
                 color: form.ownerName ? "#fff" : "#9CA3AF" }}>
               Continuer →
             </button>
+          </div>
+        )}
+
+        {/* ── LOCATION ── */}
+        {current === "location" && (
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Votre position 📍</div>
+            <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 24, lineHeight: 1.6 }}>Pour vous montrer les animaux les plus proches de vous dans l'onglet Découvrir.</div>
+
+            {locationStatus === "done" ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", borderRadius: 16, background: "#E8F5E9", border: "2px solid #2E7D32", marginBottom: 24 }}>
+                <span style={{ fontSize: 28 }}>✅</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#1B5E20" }}>Position enregistrée</div>
+                  <div style={{ fontSize: 12, color: "#2E7D32" }}>Vous verrez les distances réelles dans Découvrir</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: "20px", borderRadius: 16, background: "#FAF0EB", marginBottom: 16, textAlign: "center" }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>🗺️</div>
+                <div style={{ fontSize: 13, color: "#8B3D28", lineHeight: 1.6, marginBottom: 4 }}>
+                  Votre position exacte n'est jamais partagée — seule la distance approximative est visible par les autres utilisateurs.
+                </div>
+              </div>
+            )}
+
+            {locationStatus === "error" && (
+              <div style={{ display: "flex", gap: 8, padding: "12px 14px", borderRadius: 12, background: "#FEE2E2", marginBottom: 16 }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+                <div style={{ fontSize: 12, color: "#7F1D1D", lineHeight: 1.5 }}>{locationError}</div>
+              </div>
+            )}
+
+            {locationStatus !== "done" && (
+              <button onClick={requestOnboardingLocation} disabled={locationStatus === "loading"}
+                style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", marginBottom: 12, fontSize: 15, fontWeight: 800, cursor: locationStatus === "loading" ? "default" : "pointer",
+                  background: locationStatus === "loading" ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)",
+                  color: locationStatus === "loading" ? "#9CA3AF" : "#fff" }}>
+                {locationStatus === "loading" ? "Localisation en cours..." : "📍 Activer ma position"}
+              </button>
+            )}
+
+            <button onClick={next}
+              style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
+              Continuer →
+            </button>
+            {locationStatus !== "done" && (
+              <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>
+                Plus tard
+              </button>
+            )}
           </div>
         )}
 
@@ -2654,7 +2791,7 @@ function Onboarding({ onComplete }) {
       </div>
 
       {/* CTA */}
-      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity","species"].includes(current) ? "none" : "block" }}>
+      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","location","health","character","seeking","photos","bio","identity","species"].includes(current) ? "none" : "block" }}>
         {current === "recap" ? (
           <button onClick={() => onComplete(form)}
             style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(178,95,70,.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
