@@ -173,7 +173,7 @@ function SwipeScreen({ onNav, userProfile }) {
   const [photo, setPhoto] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [searchRadius, setSearchRadius] = useState(15); // km
+  const [searchRadius, setSearchRadius] = useState(100); // km — 100 = illimité (sentinelle), évite de filtrer les profils démo non géolocalisés réellement
   const [showRadiusSheet, setShowRadiusSheet] = useState(false);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
@@ -190,7 +190,7 @@ function SwipeScreen({ onNav, userProfile }) {
 
   const filtered = PROFILES.filter(p =>
     (tab === "all" || p.species === (tab === "cats" ? "cat" : "dog")) &&
-    getProfileDistance(p) <= searchRadius
+    (searchRadius >= 100 || getProfileDistance(p) <= searchRadius)
   );
   const profile = filtered[idx];
 
@@ -268,7 +268,7 @@ function SwipeScreen({ onNav, userProfile }) {
         ))}
         <button onClick={() => setShowRadiusSheet(true)}
           style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-          📍 {searchRadius} km
+          📍 {searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}
         </button>
       </div>
 
@@ -279,11 +279,11 @@ function SwipeScreen({ onNav, userProfile }) {
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%" }}>
             <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>Rayon de recherche</div>
             <div style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", marginBottom: 24 }}>Affichez les animaux dans cette distance</div>
-            <div style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#B25F46", marginBottom: 16 }}>{searchRadius} km</div>
-            <input type="range" min="1" max="50" value={searchRadius} onChange={e => setSearchRadius(Number(e.target.value))}
+            <div style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#B25F46", marginBottom: 16 }}>{searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}</div>
+            <input type="range" min="1" max="100" value={searchRadius} onChange={e => setSearchRadius(Number(e.target.value))}
               style={{ width: "100%", marginBottom: 8, accentColor: "#B25F46" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginBottom: 24 }}>
-              <span>1 km</span><span>50 km</span>
+              <span>1 km</span><span>100 km +</span>
             </div>
             {!userProfile?.location && (
               <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
