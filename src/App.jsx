@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 
 // ── LOGO ──────────────────────────────────────────────────────────────────────
@@ -2009,8 +2009,32 @@ function PremiumTunnel({ onClose, onSuccess }) {
   const [card, setCard] = useState({ number: "", expiry: "", cvc: "", name: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState(null);
 
   const selectedPlan = PLANS.find(p => p.id === plan);
+
+  async function goToStripeCheckout() {
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        setCheckoutError(data.error || "Erreur inconnue");
+        setCheckoutLoading(false);
+      }
+    } catch (err) {
+      setCheckoutError("Impossible de contacter le serveur de paiement.");
+      setCheckoutLoading(false);
+    }
+  }
 
   function formatCardNumber(v) {
     return v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
@@ -2092,13 +2116,17 @@ function PremiumTunnel({ onClose, onSuccess }) {
               </div>
             )}
 
-            <button onClick={() => setStep("payment")}
-              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", boxShadow: "0 6px 20px rgba(178,95,70,.35)" }}>
-              Continuer → {selectedPlan.price} € / {selectedPlan.period}
+            <button onClick={goToStripeCheckout} disabled={checkoutLoading}
+              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: checkoutLoading ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: checkoutLoading ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 16, cursor: checkoutLoading ? "default" : "pointer", boxShadow: checkoutLoading ? "none" : "0 6px 20px rgba(178,95,70,.35)" }}>
+              {checkoutLoading ? "Redirection vers Stripe..." : `Continuer → ${selectedPlan.price} € / ${selectedPlan.period}`}
             </button>
 
+            {checkoutError && (
+              <div style={{ textAlign: "center", fontSize: 12, color: "#DC2626", marginTop: 10 }}>{checkoutError}</div>
+            )}
+
             <div style={{ textAlign: "center", fontSize: 11, color: "#9CA3AF", marginTop: 12, lineHeight: 1.6 }}>
-              Résiliation à tout moment · Paiement sécurisé 🔒<br/>En continuant vous acceptez nos CGU et politique de confidentialité.
+              Résiliation à tout moment · Paiement sécurisé via Stripe 🔒<br/>En continuant vous acceptez nos CGU et politique de confidentialité.
             </div>
           </div>
         )}
@@ -2665,6 +2693,21 @@ export default function PawMatch() {
   const [chatId, setChatId] = useState(null);
   const [isPremium, setIsPremium] = useState(false);
   const [showPremiumTunnel, setShowPremiumTunnel] = useState(false);
+  const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
+
+  // Détecte le retour depuis Stripe Checkout (?premium=success ou ?premium=cancel)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("premium");
+    if (status === "success") {
+      setIsPremium(true);
+      setShowPremiumSuccess(true);
+    }
+    if (status === "success" || status === "cancel") {
+      // Nettoie l'URL pour ne pas re-déclencher au rafraîchissement
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   function completeOnboarding(form) {
     setUserProfile(form);
@@ -2749,6 +2792,22 @@ export default function PawMatch() {
         {/* Premium tunnel */}
         {showPremiumTunnel && (
           <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} onSuccess={onPremiumSuccess} />
+        )}
+
+        {/* Confirmation après retour de Stripe Checkout */}
+        {showPremiumSuccess && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+            onClick={() => setShowPremiumSuccess(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "32px 24px", width: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: 56, marginBottom: 12 }}>👑</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Bienvenue dans Premium !</div>
+              <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>Votre paiement a été confirmé par Stripe. Toutes les fonctionnalités Premium sont maintenant actives.</div>
+              <button onClick={() => setShowPremiumSuccess(false)}
+                style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Découvrir mes avantages 🐾
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
