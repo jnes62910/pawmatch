@@ -1038,7 +1038,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {} }) {
                 <span style={{ color: "#4B5563" }}>Saillie</span><span style={{ fontWeight: 700, color: "#2D1200" }}>{selected.price}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 6 }}>
-                <span style={{ color: "#4B5563" }}>Commission PawMatch</span><span style={{ fontWeight: 700, color: "#9CA3AF" }}>5%</span>
+                <span style={{ color: "#4B5563" }}>Commission Miloute</span><span style={{ fontWeight: 700, color: "#9CA3AF" }}>5%</span>
               </div>
               <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8 }}>💳 Paiement sécurisé. Libéré après confirmation de la rencontre.</div>
             </div>
@@ -1832,7 +1832,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                              email: draft.ownerEmail || "test@pawmatch.app",
+                              email: draft.ownerEmail || "test@miloute.app",
                               petId: draft.id || "draft",
                             }),
                           });
@@ -2028,7 +2028,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
           <button onClick={onPremium} style={{ width: "100%", background: "linear-gradient(135deg,#8B3D28,#B25F46)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
             <span style={{ fontSize: 26 }}>👑</span>
             <div style={{ flex: 1 }}>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>PawMatch Premium</div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Miloute Premium</div>
               <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Swipes illimités · Qui t'a liké · Boost</div>
             </div>
             <div style={{ background: "#fff", borderRadius: 10, color: "#8B3D28", fontWeight: 800, fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap" }}>4,99 €/mois</div>
@@ -2132,7 +2132,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
             {/* Header */}
             <div style={{ textAlign: "center", padding: "12px 0 20px" }}>
               <div style={{ fontSize: 44, marginBottom: 8 }}>👑</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "#2D1200", marginBottom: 6 }}>PawMatch Premium</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#2D1200", marginBottom: 6 }}>Miloute Premium</div>
               <div style={{ fontSize: 14, color: "#9CA3AF", lineHeight: 1.6 }}>Donnez à votre animal les meilleures chances de trouver son partenaire idéal.</div>
             </div>
 
@@ -2262,7 +2262,7 @@ function PremiumTunnel({ onClose, onSuccess }) {
             {/* Order summary */}
             <div style={{ background: "#F9FAFB", borderRadius: 14, padding: "14px 16px", marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontSize: 14, color: "#4B5563" }}>PawMatch Premium {selectedPlan.label}</span>
+                <span style={{ fontSize: 14, color: "#4B5563" }}>Miloute Premium {selectedPlan.label}</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{selectedPlan.price} €</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -2413,7 +2413,7 @@ function Onboarding({ onComplete }) {
   if (current === "splash") return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 28px", background: "linear-gradient(160deg,#8B3D28 0%,#B25F46 100%)" }}>
       <div style={{ marginBottom: 24 }}><PawLogo size={180} color="#fff" /></div>
-      <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 10, textAlign: "center", lineHeight: 1.2 }}>Bienvenue sur PawMatch</div>
+      <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 10, textAlign: "center", lineHeight: 1.2 }}>Bienvenue sur Miloute</div>
       <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", textAlign: "center", lineHeight: 1.7, marginBottom: 48 }}>
         La première app de rencontres pour chats & chiens.<br/>Créons ensemble le profil de votre animal en 2 minutes.
       </div>
@@ -2823,7 +2823,7 @@ function Onboarding({ onComplete }) {
 }
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
-export default function PawMatch() {
+export default function Miloute() {
   const [onboarded, setOnboarded] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [screen, setScreen] = useState("swipe");
@@ -2906,7 +2906,7 @@ export default function PawMatch() {
           <div style={{ padding: "4px 20px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <PawLogo size={22} color="#B25F46" />
-              <span style={{ fontSize: 20, fontWeight: 900, background: "linear-gradient(135deg,#8B3D28,#B25F46)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>PawMatch</span>
+              <span style={{ fontSize: 20, fontWeight: 900, background: "linear-gradient(135deg,#8B3D28,#B25F46)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Miloute</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {!isPremium && (
