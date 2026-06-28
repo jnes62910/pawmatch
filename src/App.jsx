@@ -101,14 +101,6 @@ const SPOTS = [
   { id: 5, name: "Wouf Dog Park", type: "dogpark", emoji: "🎾", animals: 11, open: true, lat: 48.870, lng: 2.360, distance: "5,1 km", desc: "Dog park premium avec agility" },
 ];
 
-const PROVIDERS = [
-  { id: 101, name: "Camille R.", service: "sitter", emoji: "🏠", rate: "18€/jour", rating: 4.9, reviews: 32, verified: true, x: 35, y: 30, distance: "0,6 km", desc: "Garde à domicile, 5 ans d'expérience, spécialisée chats et petits chiens." },
-  { id: 102, name: "Yanis T.", service: "walker", emoji: "🐕", rate: "12€/balade", rating: 4.7, reviews: 51, verified: true, x: 68, y: 48, distance: "1,1 km", desc: "Promeneur quotidien, groupes de 3 chiens max, GPS partagé en temps réel." },
-  { id: 103, name: "Salon ToiletToi", service: "groomer", emoji: "✂️", rate: "35€/séance", rating: 4.8, reviews: 89, verified: true, x: 50, y: 70, distance: "1,8 km", desc: "Toilettage complet, démêlage, coupe griffes. Sur rendez-vous." },
-  { id: 104, name: "Sofia M.", service: "sitter", emoji: "🏠", rate: "22€/jour", rating: 5.0, reviews: 14, verified: true, x: 22, y: 60, distance: "2,3 km", desc: "Garde chez moi, jardin clos, caméra accessible aux propriétaires." },
-  { id: 105, name: "PetTaxi Paris", service: "transport", emoji: "🚗", rate: "15€/trajet", rating: 4.6, reviews: 27, verified: false, x: 80, y: 28, distance: "3,0 km", desc: "Transport vétérinaire, aéroport, véhicule climatisé et sécurisé." },
-];
-
 const COMMUNITY_POSTS = [
   { id: 1, breed: "Berger Australien", emoji: "🐕", author: "Thomas D.", pet: "Rocky", time: "Il y a 2h", text: "Rocky a fait son premier agility aujourd'hui ! On cherche d'autres Aussies pour s'entraîner le dimanche matin à Vincennes 🏃", likes: 24, comments: 8, tag: "Événement" },
   { id: 2, breed: "Chartreux", emoji: "🐱", author: "Sophie M.", pet: "Luna", time: "Il y a 5h", text: "Petite question : Luna refuse de manger depuis 2 jours. Elle a pourtant l'air en forme... Quelqu'un a eu ça avec son chat ? 🤔", likes: 12, comments: 19, tag: "Conseil" },
@@ -415,13 +407,8 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
   const [showModeInfo, setShowModeInfo] = useState(false);
   const [userPos, setUserPos] = useState(null); // { lat, lng }
   const [geoError, setGeoError] = useState(null);
-  const [showBooking, setShowBooking] = useState(false);
-  const [bookingDate, setBookingDate] = useState("");
-  const [bookingConfirmed, setBookingConfirmed] = useState(false);
 
-  const filteredSpots = SPOTS.filter(s => (filter === "all" || s.type === filter) && filter !== "providers");
-  const showProviders = filter === "providers" || filter === "all";
-  const filteredProviders = filter === "providers" ? PROVIDERS : (filter === "all" ? PROVIDERS : []);
+  const filteredSpots = SPOTS.filter(s => filter === "all" || s.type === filter);
   const animals = mode === "rural" ? RURAL_ANIMALS : URBAN_ANIMALS;
   const liveAnimals = animals.filter(a => a.live);
   const offlineAnimals = animals.filter(a => !a.live);
@@ -510,16 +497,15 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
           </div>
         )}
 
-        {/* Filtres — spots (urbain) + prestataires (toujours) */}
-        <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto" }}>
-          {(!isRural
-            ? [["all","Tout 🗺️"],["park","Parcs 🌳"],["catcafe","Cafés chat ☕"],["dogpark","Dog parks 🏟️"],["providers","Prestataires 🧑‍🤝‍🧑"]]
-            : [["all","Tout"],["providers","Prestataires 🧑‍🤝‍🧑"]]
-          ).map(([v,l]) => (
-            <button key={v} onClick={() => setFilter(v)}
-              style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
-          ))}
-        </div>
+        {/* Filtres spots — uniquement en mode urbain */}
+        {!isRural && (
+          <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto" }}>
+            {[["all","Tout 🗺️"],["park","Parcs 🌳"],["catcafe","Cafés chat ☕"],["dogpark","Dog parks 🏟️"]].map(([v,l]) => (
+              <button key={v} onClick={() => setFilter(v)}
+                style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Map */}
@@ -587,17 +573,6 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
           );
         })}
 
-        {/* Prestataires de services — visibles en tout mode si filtre actif */}
-        {filter === "providers" && PROVIDERS.map(p => (
-          <div key={p.id} onClick={() => setSelected(p)}
-            style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%,-50%)", cursor: "pointer", zIndex: 9 }}>
-            <div style={{ background: "#fff", border: "2px solid #8B3D28", borderRadius: 12, padding: "4px 8px", fontSize: 16, boxShadow: "0 2px 8px rgba(0,0,0,.15)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
-              {p.emoji}
-              {p.verified && <span style={{ fontSize: 9 }}>✓</span>}
-            </div>
-          </div>
-        ))}
-
         {/* Légende */}
         <div style={{ position: "absolute", bottom: 10, left: 10, background: "rgba(255,255,255,.92)", borderRadius: 10, padding: "8px 12px", fontSize: 10, color: "#4B5563", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
@@ -605,8 +580,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22C55E" }} /> En live
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#9CA3AF" }} /> Hors ligne
           </div>
-          {!isRural && filter !== "providers" && <div style={{ display: "flex", gap: 8 }}>🌳 Parcs ☕ Cafés 🏟️ Dog parks</div>}
-          {filter === "providers" && <div style={{ display: "flex", gap: 8 }}>🧑‍🤝‍🧑 Prestataires vérifiés ✓</div>}
+          {!isRural && <div style={{ display: "flex", gap: 8 }}>🌳 Parcs ☕ Cafés 🏟️ Dog parks</div>}
         </div>
 
         {/* Compteur live */}
@@ -663,25 +637,6 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
         </div>
       )}
 
-      {/* Liste prestataires */}
-      {filter === "providers" && (
-        <div style={{ background: "#fff", maxHeight: 220, overflowY: "auto", flexShrink: 0 }}>
-          <div style={{ padding: "10px 16px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>PRESTATAIRES PROCHES</div>
-          {PROVIDERS.map(p => (
-            <div key={p.id} onClick={() => setSelected(p)}
-              style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{p.emoji}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
-                  {p.name} {p.verified && <span style={{ fontSize: 11, color: "#2E7D32" }}>✓ Vérifié</span>}
-                </div>
-                <div style={{ fontSize: 12, color: "#9CA3AF" }}>⭐ {p.rating} ({p.reviews}) · {p.distance}</div>
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#8B3D28" }}>{p.rate}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Sheet détail animal ou spot */}
       {selected && (
@@ -728,71 +683,10 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
                 <p style={{ fontSize: 13, color: "#4B5563", marginBottom: 14 }}>{selected.desc}</p>
               </>
             )}
-            {/* Prestataire */}
-            {selected.service && (
-              <>
-                <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 10 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>{selected.emoji}</div>
-                  <div>
-                    <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", display: "flex", alignItems: "center", gap: 6 }}>
-                      {selected.name}
-                      {selected.verified && <span style={{ fontSize: 11, fontWeight: 700, color: "#2E7D32", background: "#E8F5E9", padding: "2px 7px", borderRadius: 8 }}>✓ Vérifié</span>}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>⭐ {selected.rating} ({selected.reviews} avis) · {selected.distance}</div>
-                  </div>
-                </div>
-                <p style={{ fontSize: 13, color: "#4B5563", marginBottom: 14, lineHeight: 1.6 }}>{selected.desc}</p>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#FAF0EB", borderRadius: 12, marginBottom: 14 }}>
-                  <span style={{ fontSize: 13, color: "#6B7280", fontWeight: 600 }}>Tarif</span>
-                  <span style={{ fontSize: 17, fontWeight: 800, color: "#8B3D28" }}>{selected.rate}</span>
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => { setSelected(null); onOpenChat(1); onNav("chat"); }} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "2px solid #E5E7EB", background: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#8B3D28" }}>💬 Message</button>
-                  <button onClick={() => setShowBooking(true)} style={{ flex: 1, padding: "13px", borderRadius: 13, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>📅 Réserver</button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
 
-      {/* Booking sheet — prestataire */}
-      {showBooking && selected && (
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-          onClick={() => { setShowBooking(false); setBookingConfirmed(false); }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%" }}>
-            {!bookingConfirmed ? (
-              <>
-                <div style={{ textAlign: "center", fontSize: 44, marginBottom: 12 }}>{selected.emoji}</div>
-                <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>Réserver {selected.name}</div>
-                <div style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", marginBottom: 20 }}>{selected.rate} · ⭐ {selected.rating} ({selected.reviews} avis)</div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, display: "block", marginBottom: 6 }}>DATE SOUHAITÉE</label>
-                <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)}
-                  style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit" }} />
-                <div style={{ background: "#FAF0EB", borderRadius: 12, padding: "10px 14px", marginBottom: 20, fontSize: 12, color: "#8B3D28", lineHeight: 1.6 }}>
-                  🔒 Paiement sécurisé. Les fonds ne sont versés au prestataire qu'après confirmation de la prestation.
-                </div>
-                <button onClick={() => setBookingConfirmed(true)} disabled={!bookingDate}
-                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", fontWeight: 800, fontSize: 15, cursor: bookingDate ? "pointer" : "default",
-                    background: bookingDate ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", color: bookingDate ? "#fff" : "#9CA3AF", marginBottom: 10 }}>
-                  Confirmer et payer — {selected.rate}
-                </button>
-                <button onClick={() => setShowBooking(false)} style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "#F3F4F6", color: "#6B7280", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Annuler</button>
-              </>
-            ) : (
-              <>
-                <div style={{ textAlign: "center", fontSize: 56, marginBottom: 12 }}>✅</div>
-                <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 8, textAlign: "center" }}>Réservation confirmée !</div>
-                <div style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24, lineHeight: 1.6 }}>{selected.name} a été notifié·e de votre demande pour le {bookingDate}. Vous pouvez échanger les détails par message.</div>
-                <button onClick={() => { setShowBooking(false); setBookingConfirmed(false); setSelected(null); onOpenChat(1); onNav("chat"); }}
-                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
-                  💬 Ouvrir la conversation
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Geo error banner */}
       {geoError && (
@@ -1649,7 +1543,7 @@ const INIT_PET = {
     active: false, price: "", priceNegotiable: false,
     availableFrom: "", availableTo: "",
     pedigree: false, geneticTest: false,
-    reproDesc: "", docs: []
+    reproDesc: "", docs: [], stripeAccountId: null
   }
 };
 
@@ -1659,6 +1553,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
   const [draft, setDraft] = useState(pet);
   const [saved, setSaved] = useState(false);
   const [editTab, setEditTab] = useState("profil"); // "profil" | "repro"
+  const [stripeOnboardingLoading, setStripeOnboardingLoading] = useState(false);
   const photoRef = useRef(null);
   const videoRef = useRef(null);
   const docRef = useRef(null);
@@ -1860,6 +1755,53 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
                 </div>
                 Prix à discuter
               </button>
+
+              {/* Activation des paiements — Stripe Connect */}
+              <div style={{ marginBottom: 16, padding: "14px", borderRadius: 14, border: `2px solid ${draft.repro.stripeAccountId ? "#2E7D32" : "#E5E7EB"}`, background: draft.repro.stripeAccountId ? "#E8F5E9" : "#F9FAFB" }}>
+                {draft.repro.stripeAccountId ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>✅</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "#1B5E20" }}>Paiements activés</div>
+                      <div style={{ fontSize: 11, color: "#2E7D32" }}>Vous pouvez recevoir des règlements pour vos saillies</div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#2D1200", marginBottom: 4 }}>💳 Paiements non activés</div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Pour recevoir l'argent de vos saillies, activez un compte de paiement sécurisé (5 min, via Stripe).</div>
+                    <button
+                      disabled={stripeOnboardingLoading}
+                      onClick={async () => {
+                        setStripeOnboardingLoading(true);
+                        try {
+                          const res = await fetch("/api/create-connect-account", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              email: draft.ownerEmail || "test@pawmatch.app",
+                              petId: draft.id || "draft",
+                            }),
+                          });
+                          const data = await res.json();
+                          if (data.onboardingUrl) {
+                            setRepro("stripeAccountId", data.accountId);
+                            window.location.href = data.onboardingUrl;
+                          } else {
+                            alert("Erreur Stripe : " + (data.error || "inconnue"));
+                          }
+                        } catch (err) {
+                          alert("Impossible de contacter le serveur de paiement. (" + err.message + ")");
+                        } finally {
+                          setStripeOnboardingLoading(false);
+                        }
+                      }}
+                      style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: stripeOnboardingLoading ? "#E5E7EB" : "linear-gradient(135deg,#635BFF,#4338CA)", color: stripeOnboardingLoading ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: stripeOnboardingLoading ? "default" : "pointer" }}>
+                      {stripeOnboardingLoading ? "Connexion..." : "⚡ Activer les paiements avec Stripe"}
+                    </button>
+                  </>
+                )}
+              </div>
 
               {/* Disponibilité */}
               <label style={labelStyle}>PÉRIODE DE DISPONIBILITÉ</label>
