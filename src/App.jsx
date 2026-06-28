@@ -2831,15 +2831,38 @@ export default function PawMatch() {
   const [isPremium, setIsPremium] = useState(false);
   const [showPremiumTunnel, setShowPremiumTunnel] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [verifyError, setVerifyError] = useState(null);
 
-  // Détecte le retour depuis Stripe Checkout (?premium=success ou ?premium=cancel)
+  // Détecte le retour depuis Stripe Checkout, puis VÉRIFIE auprès de Stripe
+  // que le paiement a réellement eu lieu — on ne fait jamais confiance à
+  // l'URL seule (?premium=success peut être tapé par n'importe qui).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("premium");
-    if (status === "success") {
-      setIsPremium(true);
-      setShowPremiumSuccess(true);
+    const sessionId = params.get("session_id");
+
+    if (status === "success" && sessionId) {
+      setVerifyingPayment(true);
+      fetch(`/api/verify-session?session_id=${encodeURIComponent(sessionId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.paid) {
+            setIsPremium(true);
+            setShowPremiumSuccess(true);
+          } else {
+            setVerifyError("Le paiement n'a pas pu être confirmé. Si vous avez bien payé, contactez le support.");
+          }
+        })
+        .catch(() => {
+          setVerifyError("Impossible de vérifier le paiement. Réessayez ou contactez le support.");
+        })
+        .finally(() => setVerifyingPayment(false));
+    } else if (status === "success" && !sessionId) {
+      // Pas d'identifiant de session = tentative de contournement par URL → on ignore.
+      setVerifyError("Lien de confirmation invalide.");
     }
+
     if (status === "success" || status === "cancel") {
       // Nettoie l'URL pour ne pas re-déclencher au rafraîchissement
       window.history.replaceState({}, "", window.location.pathname);
@@ -2929,6 +2952,34 @@ export default function PawMatch() {
         {/* Premium tunnel */}
         {showPremiumTunnel && (
           <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} onSuccess={onPremiumSuccess} />
+        )}
+
+        {/* Vérification du paiement en cours */}
+        {verifyingPayment && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div style={{ background: "#fff", borderRadius: 24, padding: "32px 24px", width: "100%", textAlign: "center" }}>
+              <div style={{ width: 40, height: 40, border: "4px solid #FAF0EB", borderTopColor: "#B25F46", borderRadius: "50%", margin: "0 auto 16px", animation: "spin 0.8s linear infinite" }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#2D1200" }}>Vérification du paiement...</div>
+              <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 4 }}>Confirmation auprès de Stripe</div>
+            </div>
+          </div>
+        )}
+
+        {/* Erreur de vérification de paiement */}
+        {verifyError && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+            onClick={() => setVerifyError(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "32px 24px", width: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Paiement non confirmé</div>
+              <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>{verifyError}</div>
+              <button onClick={() => setVerifyError(null)}
+                style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "#F3F4F6", color: "#6B7280", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Fermer
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Confirmation après retour de Stripe Checkout */}
