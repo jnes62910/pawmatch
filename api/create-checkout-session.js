@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
           quantity: 1,
         },
       ],
-      success_url: successUrl || 'https://jnes62910-pawmatch.vercel.app/?premium=success',
+      success_url: successUrl || 'https://jnes62910-pawmatch.vercel.app/?premium=success&session_id={CHECKOUT_SESSION_ID}',
       cancel_url: cancelUrl || 'https://jnes62910-pawmatch.vercel.app/?premium=cancel',
     });
 
