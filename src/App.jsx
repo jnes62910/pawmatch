@@ -338,7 +338,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         <div ref={cardRef}
           onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
           onMouseDown={onMouseDown}
-          style={{ flex: 1, borderRadius: 24, overflow: "hidden", position: "relative",
+          style={{ flex: 1, borderRadius: 24, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column",
             background: `linear-gradient(160deg, ${profile.color}55 0%, #fff 100%)`,
             border: "1px solid #E5E7EB",
             cursor: dragging ? "grabbing" : "grab",
@@ -371,18 +371,18 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           </div>
 
           {/* Tap zones */}
-          <div style={{ position: "absolute", top: 0, left: 0, width: "50%", height: "55%", zIndex: 3 }}
+          <div style={{ position: "absolute", top: 0, left: 0, width: "50%", height: "72%", zIndex: 3 }}
             onClick={() => !dragging && setPhoto(p => Math.max(0, p - 1))} />
-          <div style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "55%", zIndex: 3 }}
+          <div style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "72%", zIndex: 3 }}
             onClick={() => { if (!dragging) { if (photo < profile.photos.length - 1) setPhoto(p => p + 1); else setShowDetail(true); }}} />
 
-          <div style={{ height: 240, pointerEvents: "none", overflow: "hidden", background: profile.color }}>
+          <div style={{ flex: 1, minHeight: 0, pointerEvents: "none", overflow: "hidden", background: profile.color }}>
             {profile.photos[photo].startsWith("http")
               ? <img src={profile.photos[photo]} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.photos[photo]}</div>
             }
           </div>
-          <div style={{ padding: "12px 20px 16px", pointerEvents: "none" }}>
+          <div style={{ padding: "12px 20px 16px", pointerEvents: "none", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
@@ -3094,8 +3094,8 @@ export default function Miloute() {
   const showHeader = onboarded && !["chat","profile"].includes(screen);
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100dvh", background: "#D1D5DB", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
-      <div style={{ width: "100%", maxWidth: 430, height: "100%", maxHeight: 844, background: "#fff", borderRadius: 40, boxShadow: "0 24px 80px rgba(0,0,0,.3)", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100dvh", background: "#fff", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
+      <div style={{ width: "100%", maxWidth: 430, height: "100%", background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
 
         {/* Badge Premium uniquement si actif */}
         {isPremium && (
