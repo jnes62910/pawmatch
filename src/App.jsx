@@ -79,6 +79,21 @@ function BreedInput({ value, onChange, species, style }) {
   );
 }
 
+const LIKES_RECEIVED = [
+  { name: "Nala", species: "cat", breed: "Bengal", emoji: "🐱", photo: null, time: "Il y a 2h" },
+  { name: "Filou", species: "dog", breed: "Border Collie", emoji: "🐕", photo: null, time: "Il y a 5h" },
+  { name: "Misty", species: "cat", breed: "Sacré de Birmanie", emoji: "🐱", photo: null, time: "Hier" },
+  { name: "Max", species: "dog", breed: "Labrador", emoji: "🐕", photo: null, time: "Hier" },
+  { name: "Tigrou", species: "cat", breed: "British Shorthair", emoji: "🐱", photo: null, time: "Il y a 2 jours" },
+  { name: "Nanouk", species: "dog", breed: "Husky Sibérien", emoji: "🐕", photo: null, time: "Il y a 3 jours" },
+  { name: "Choupette", species: "dog", breed: "Bouledogue Français", emoji: "🐕", photo: null, time: "Il y a 4 jours" },
+  { name: "Luna", species: "cat", breed: "Européen", emoji: "🐱", photo: null, time: "Il y a 5 jours" },
+  { name: "Rocky", species: "dog", breed: "Berger Australien", emoji: "🐕", photo: null, time: "Il y a 6 jours" },
+  { name: "Bella", species: "dog", breed: "Golden Retriever", emoji: "🐕", photo: null, time: "Il y a 1 semaine" },
+  { name: "Mochi", species: "cat", breed: "Maine Coon", emoji: "🐱", photo: "/photos/mochi-1.jpg", time: "Il y a 1 semaine" },
+  { name: "Pixel", species: "cat", breed: "Siamois", emoji: "🐱", photo: "/photos/pixel-1.jpg", time: "Il y a 1 semaine" },
+];
+
 const PROFILES = [
   { id: 1, name: "Luna", species: "cat", breed: "Européen", age: "3 ans", gender: "F", energy: 3, temper: ["Câline", "Joueuse", "Curieuse"], distance: "1,2 km", vaccinated: true, sterilized: true, owner: "Sophie M.", bio: "Luna adore les séances de jeu avec une canne à plumes et passe ses après-midis à surveiller les oiseaux par la fenêtre. Sociable avec les autres chats après une courte période d'adaptation, elle cherche surtout un copain de jeu qui n'a pas peur de courir partout dans l'appart.", seeking: ["Play date", "Compagnon de vie"], emoji: "🐱", color: "#B8A9C9", photos: ["https://cataas.com/cat?width=500&height=500&t=1", "https://cataas.com/cat?width=500&height=500&t=2", "https://cataas.com/cat?width=500&height=500&t=3"], lat: 48.833, lng: 2.362, pedigree: false },
   { id: 2, name: "Rocky", species: "dog", breed: "Berger Australien", age: "2 ans", gender: "M", energy: 5, temper: ["Joueur", "Intelligent", "Énergique"], distance: "0,8 km", vaccinated: true, sterilized: false, owner: "Thomas D.", bio: "Rocky a une énergie débordante et a besoin d'un compagnon pour ses balades quotidiennes au bois de Vincennes. Très sociable avec les autres chiens, il adore les jeux de poursuite et apprend de nouveaux tours en un temps record. Cherche partenaire aussi motivé que lui !", seeking: ["Balade", "Play date", "Reproduction"], emoji: "🐕", color: "#A9C4B8", photos: ["https://placedog.net/500/500?id=10", "https://placedog.net/500/500?id=11", "https://placedog.net/500/500?id=12"], lat: 48.840, lng: 2.358, pedigree: true },
@@ -1614,6 +1629,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
   const [saved, setSaved] = useState(false);
   const [editTab, setEditTab] = useState("profil"); // "profil" | "repro"
   const [stripeOnboardingLoading, setStripeOnboardingLoading] = useState(false);
+  const [showLikesModal, setShowLikesModal] = useState(false);
   const photoRef = useRef(null);
   const videoRef = useRef(null);
   const docRef = useRef(null);
@@ -2012,10 +2028,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
         <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 10, letterSpacing: 1 }}>STATISTIQUES</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            {[["12","Likes reçus"],["3","Matchs"],["5","Rencontres"]].map(([n,l]) => (
-              <div key={l} style={{ textAlign: "center" }}>
+            {[["12","Likes reçus",true],["3","Matchs",false],["5","Rencontres",false]].map(([n,l,clickable]) => (
+              <div key={l} onClick={() => clickable && setShowLikesModal(true)}
+                style={{ textAlign: "center", cursor: clickable ? "pointer" : "default", position: "relative" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>{n}</div>
-                <div style={{ fontSize: 11, color: "#9CA3AF" }}>{l}</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF" }}>{l} {clickable && "👁️"}</div>
               </div>
             ))}
           </div>
@@ -2042,6 +2059,49 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
           </button>
         )}
       </div>
+
+      {/* Modale "Qui a liké votre animal" */}
+      {showLikesModal && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setShowLikesModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+              <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>👁️ Qui a liké {pet.name}</div>
+                <button onClick={() => setShowLikesModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+              {LIKES_RECEIVED.map((like, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, filter: isPremium ? "none" : "blur(6px)" }}>
+                    {like.photo ? <img src={like.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : like.emoji}
+                  </div>
+                  <div style={{ flex: 1, filter: isPremium ? "none" : "blur(4px)" }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{isPremium ? like.name : "???"}</div>
+                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{like.breed} · {like.time}</div>
+                  </div>
+                  {!isPremium && <span style={{ fontSize: 16, flexShrink: 0 }}>🔒</span>}
+                </div>
+              ))}
+            </div>
+
+            {!isPremium && (
+              <div style={{ padding: "16px 20px 28px", flexShrink: 0, borderTop: "1px solid #F3F4F6" }}>
+                <button onClick={() => { setShowLikesModal(false); onPremium(); }}
+                  style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#8B3D28,#B25F46)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 20px rgba(139,61,40,.3)" }}>
+                  👑 Débloquer avec Premium
+                </button>
+                <div style={{ textAlign: "center", fontSize: 12, color: "#9CA3AF", marginTop: 10 }}>
+                  Découvrez qui s'intéresse déjà à {pet.name}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
