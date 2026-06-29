@@ -3094,8 +3094,8 @@ export default function Miloute() {
   const showHeader = onboarded && !["chat","profile"].includes(screen);
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#D1D5DB", fontFamily: "'Inter', -apple-system, sans-serif" }}>
-      <div style={{ width: 390, height: 844, background: "#fff", borderRadius: 40, boxShadow: "0 24px 80px rgba(0,0,0,.3)", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100dvh", background: "#D1D5DB", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
+      <div style={{ width: "100%", maxWidth: 430, height: "100%", maxHeight: 844, background: "#fff", borderRadius: 40, boxShadow: "0 24px 80px rgba(0,0,0,.3)", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
 
         {/* Badge Premium uniquement si actif */}
         {isPremium && (
