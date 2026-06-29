@@ -3006,13 +3006,30 @@ function Onboarding({ onComplete }) {
   );
 }
 
+// ── STOCKAGE LOCAL (à remplacer par de vrais appels API quand le backend sera prêt) ──
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem("miloute_user_profile");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveProfile(profile) {
+  try { localStorage.setItem("miloute_user_profile", JSON.stringify(profile)); } catch {}
+}
+function loadPremiumStatus() {
+  try { return localStorage.getItem("miloute_is_premium") === "true"; } catch { return false; }
+}
+function savePremiumStatus(value) {
+  try { localStorage.setItem("miloute_is_premium", value ? "true" : "false"); } catch {}
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function Miloute() {
-  const [onboarded, setOnboarded] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
+  const [onboarded, setOnboarded] = useState(() => loadProfile() !== null);
+  const [userProfile, setUserProfile] = useState(() => loadProfile());
   const [screen, setScreen] = useState("swipe");
   const [chatId, setChatId] = useState(null);
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(loadPremiumStatus);
   const [showPremiumTunnel, setShowPremiumTunnel] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
@@ -3033,6 +3050,7 @@ export default function Miloute() {
         .then(data => {
           if (data.paid) {
             setIsPremium(true);
+            savePremiumStatus(true);
             setShowPremiumSuccess(true);
           } else {
             setVerifyError("Le paiement n'a pas pu être confirmé. Si vous avez bien payé, contactez le support.");
@@ -3056,12 +3074,13 @@ export default function Miloute() {
   function completeOnboarding(form) {
     setUserProfile(form);
     setOnboarded(true);
+    saveProfile(form);
   }
 
   function openChat(id) { setChatId(id); setScreen("chat"); }
   function closeChat() { setChatId(null); setScreen("messages"); }
   function openPremium() { if (!isPremium) setShowPremiumTunnel(true); }
-  function onPremiumSuccess() { setIsPremium(true); setShowPremiumTunnel(false); }
+  function onPremiumSuccess() { setIsPremium(true); savePremiumStatus(true); setShowPremiumTunnel(false); }
 
   
   const NAV = [
