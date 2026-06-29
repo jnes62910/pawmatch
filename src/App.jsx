@@ -202,6 +202,11 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const cardRef = useRef(null);
+  const infoScrollRef = useRef(null);
+
+  useEffect(() => {
+    if (infoScrollRef.current) infoScrollRef.current.scrollTop = 0;
+  }, [idx, tab]);
 
   function getProfileDistance(p) {
     if (userProfile?.location && p.lat && p.lng) {
@@ -384,7 +389,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           </div>
 
           {/* Infos complètes — zone de scroll natif pur, AUCUN gestionnaire tactile JS ici */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "16px 20px 28px" }}>
+          <div ref={infoScrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "16px 20px 28px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
