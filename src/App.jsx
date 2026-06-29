@@ -236,27 +236,14 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   function closeMatch() { setMatchedWith(null); setIdx(i => Math.min(i + 1, filtered.length - 1)); }
 
   function onTouchStart(e) {
-    if (showDetail) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    // On ne décide pas encore si c'est un swipe ou un scroll — onTouchMove tranchera
-    // une fois le mouvement assez net pour ne pas bloquer le scroll vertical natif.
+    setDragging(true);
   }
   function onTouchMove(e) {
-    if (touchStartX.current === null) return;
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - touchStartY.current;
-
-    if (!dragging) {
-      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
-        setDragging(true); // mouvement clairement horizontal → c'est un swipe
-      } else if (Math.abs(dy) > 8) {
-        touchStartX.current = null; // mouvement clairement vertical → on laisse le scroll natif faire son travail
-      }
-      return;
-    }
+    if (!dragging || touchStartX.current === null) return;
     e.preventDefault();
-    setDragX(dx);
+    setDragX(e.touches[0].clientX - touchStartX.current);
   }
   function onTouchEnd() {
     if (!dragging) return;
@@ -266,7 +253,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     touchStartX.current = null;
   }
   function onMouseDown(e) {
-    if (showDetail) return;
     touchStartX.current = e.clientX;
     setDragging(true);
   }
@@ -343,22 +329,22 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       )}
 
 
-      <div style={{ flex: 1, padding: "12px 16px", display: "flex", flexDirection: "column", userSelect: "none" }}>
+      <div style={{ flex: 1, minHeight: 0, padding: "12px 16px", display: "flex", flexDirection: "column", userSelect: "none" }}>
         <div ref={cardRef}
-          onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-          onMouseDown={onMouseDown}
-          style={{ flex: 1, borderRadius: 24, position: "relative", display: "flex", flexDirection: "column",
+          style={{ flex: 1, minHeight: 0, borderRadius: 24, position: "relative", display: "flex", flexDirection: "column",
             background: `linear-gradient(160deg, ${profile.color}55 0%, #fff 100%)`,
             border: "1px solid #E5E7EB",
-            cursor: dragging ? "grabbing" : "grab",
             transform: `translateX(${dragX}px) rotate(${dragX * 0.08}deg)`,
             transition: dragging ? "none" : "transform .38s cubic-bezier(.25,.46,.45,.94)",
             boxShadow: "0 8px 32px rgba(178,95,70,.10)",
-            touchAction: "pan-y",
-            overflowY: "auto", overflowX: "hidden" }}>
+            overflow: "hidden" }}>
 
-          {/* Section photo — hauteur fixe, tout le reste défile dessous */}
-          <div style={{ position: "relative", height: 380, flexShrink: 0, overflow: "hidden", borderRadius: "24px 24px 0 0", background: profile.color }}>
+          {/* Section photo — gère le swipe (gauche/droite). touchAction "none" = zéro ambiguïté, JS gère tout ici. */}
+          <div
+            onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+            onMouseDown={onMouseDown}
+            style={{ position: "relative", height: 380, flexShrink: 0, overflow: "hidden", background: profile.color,
+              cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}>
 
             {/* LIKE stamp */}
             <div style={{ position: "absolute", top: 32, left: 20, zIndex: 10,
@@ -397,8 +383,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
           </div>
 
-          {/* Infos complètes — visibles en scrollant vers le bas */}
-          <div style={{ padding: "16px 20px 28px", pointerEvents: "none" }}>
+          {/* Infos complètes — zone de scroll natif pur, AUCUN gestionnaire tactile JS ici */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "16px 20px 28px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
