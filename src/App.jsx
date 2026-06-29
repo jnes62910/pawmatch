@@ -381,7 +381,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               onClick={() => !dragging && setPhoto(p => Math.min(profile.photos.length - 1, p + 1))} />
 
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-              {profile.photos[photo].startsWith("http")
+              {(profile.photos[photo].startsWith("http") || profile.photos[photo].startsWith("/"))
                 ? <img src={profile.photos[photo]} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.photos[photo]}</div>
               }
