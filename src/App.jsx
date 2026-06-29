@@ -239,13 +239,22 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     if (showDetail) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    setDragging(true);
+    // On ne décide pas encore si c'est un swipe ou un scroll — onTouchMove tranchera
+    // une fois le mouvement assez net pour ne pas bloquer le scroll vertical natif.
   }
   function onTouchMove(e) {
-    if (!dragging || touchStartX.current === null) return;
+    if (touchStartX.current === null) return;
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
-    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dragX) < 10) { setDragging(false); return; }
+
+    if (!dragging) {
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+        setDragging(true); // mouvement clairement horizontal → c'est un swipe
+      } else if (Math.abs(dy) > 8) {
+        touchStartX.current = null; // mouvement clairement vertical → on laisse le scroll natif faire son travail
+      }
+      return;
+    }
     e.preventDefault();
     setDragX(dx);
   }
@@ -338,51 +347,58 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         <div ref={cardRef}
           onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
           onMouseDown={onMouseDown}
-          style={{ flex: 1, borderRadius: 24, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column",
+          style={{ flex: 1, borderRadius: 24, position: "relative", display: "flex", flexDirection: "column",
             background: `linear-gradient(160deg, ${profile.color}55 0%, #fff 100%)`,
             border: "1px solid #E5E7EB",
             cursor: dragging ? "grabbing" : "grab",
             transform: `translateX(${dragX}px) rotate(${dragX * 0.08}deg)`,
             transition: dragging ? "none" : "transform .38s cubic-bezier(.25,.46,.45,.94)",
             boxShadow: "0 8px 32px rgba(178,95,70,.10)",
-            touchAction: "pan-y" }}>
+            touchAction: "pan-y",
+            overflowY: "auto", overflowX: "hidden" }}>
 
-          {/* LIKE stamp */}
-          <div style={{ position: "absolute", top: 32, left: 20, zIndex: 10,
-            opacity: isLiking ? dragRatio : 0, transform: "rotate(-15deg)", pointerEvents: "none" }}>
-            <div style={{ border: "4px solid #22C55E", borderRadius: 10, padding: "4px 14px" }}>
-              <span style={{ fontSize: 22, fontWeight: 900, color: "#22C55E", letterSpacing: 2, display: "flex", alignItems: "center", gap: 6 }}><PawLogo size={22} color="#22C55E" /> LIKE</span>
+          {/* Section photo — hauteur fixe, tout le reste défile dessous */}
+          <div style={{ position: "relative", height: 380, flexShrink: 0, overflow: "hidden", borderRadius: "24px 24px 0 0", background: profile.color }}>
+
+            {/* LIKE stamp */}
+            <div style={{ position: "absolute", top: 32, left: 20, zIndex: 10,
+              opacity: isLiking ? dragRatio : 0, transform: "rotate(-15deg)", pointerEvents: "none" }}>
+              <div style={{ border: "4px solid #22C55E", borderRadius: 10, padding: "4px 14px" }}>
+                <span style={{ fontSize: 22, fontWeight: 900, color: "#22C55E", letterSpacing: 2, display: "flex", alignItems: "center", gap: 6 }}><PawLogo size={22} color="#22C55E" /> LIKE</span>
+              </div>
+            </div>
+
+            {/* NOPE stamp */}
+            <div style={{ position: "absolute", top: 32, right: 20, zIndex: 10,
+              opacity: isNoping ? dragRatio : 0, transform: "rotate(15deg)", pointerEvents: "none" }}>
+              <div style={{ border: "4px solid #EF4444", borderRadius: 10, padding: "4px 14px" }}>
+                <span style={{ fontSize: 22, fontWeight: 900, color: "#EF4444", letterSpacing: 2 }}>NOPE ❌</span>
+              </div>
+            </div>
+
+            {/* Photo dots */}
+            <div style={{ display: "flex", justifyContent: "center", gap: 6, position: "absolute", top: 12, left: 0, right: 0, zIndex: 2, pointerEvents: "none" }}>
+              {profile.photos.map((_, i) => (
+                <div key={i} style={{ width: i === photo ? 24 : 16, height: 4, borderRadius: 2, background: i === photo ? "#B25F46" : "rgba(255,255,255,.6)", transition: "width .2s" }} />
+              ))}
+            </div>
+
+            {/* Tap zones — pile sur la zone photo */}
+            <div style={{ position: "absolute", top: 0, left: 0, width: "50%", height: "100%", zIndex: 3 }}
+              onClick={() => !dragging && setPhoto(p => Math.max(0, p - 1))} />
+            <div style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "100%", zIndex: 3 }}
+              onClick={() => !dragging && setPhoto(p => Math.min(profile.photos.length - 1, p + 1))} />
+
+            <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+              {profile.photos[photo].startsWith("http")
+                ? <img src={profile.photos[photo]} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.photos[photo]}</div>
+              }
             </div>
           </div>
 
-          {/* NOPE stamp */}
-          <div style={{ position: "absolute", top: 32, right: 20, zIndex: 10,
-            opacity: isNoping ? dragRatio : 0, transform: "rotate(15deg)", pointerEvents: "none" }}>
-            <div style={{ border: "4px solid #EF4444", borderRadius: 10, padding: "4px 14px" }}>
-              <span style={{ fontSize: 22, fontWeight: 900, color: "#EF4444", letterSpacing: 2 }}>NOPE ❌</span>
-            </div>
-          </div>
-
-          {/* Photo dots */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 6, position: "absolute", top: 12, left: 0, right: 0, zIndex: 2, pointerEvents: "none" }}>
-            {profile.photos.map((_, i) => (
-              <div key={i} style={{ width: i === photo ? 24 : 16, height: 4, borderRadius: 2, background: i === photo ? "#B25F46" : "rgba(255,255,255,.6)", transition: "width .2s" }} />
-            ))}
-          </div>
-
-          {/* Tap zones */}
-          <div style={{ position: "absolute", top: 0, left: 0, width: "50%", height: "72%", zIndex: 3 }}
-            onClick={() => !dragging && setPhoto(p => Math.max(0, p - 1))} />
-          <div style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "72%", zIndex: 3 }}
-            onClick={() => { if (!dragging) { if (photo < profile.photos.length - 1) setPhoto(p => p + 1); else setShowDetail(true); }}} />
-
-          <div style={{ flex: 1, minHeight: 0, pointerEvents: "none", overflow: "hidden", background: profile.color }}>
-            {profile.photos[photo].startsWith("http")
-              ? <img src={profile.photos[photo]} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.photos[photo]}</div>
-            }
-          </div>
-          <div style={{ padding: "12px 20px 16px", pointerEvents: "none", flexShrink: 0 }}>
+          {/* Infos complètes — visibles en scrollant vers le bas */}
+          <div style={{ padding: "16px 20px 28px", pointerEvents: "none" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
@@ -391,14 +407,24 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
               {profile.temper.map(t => <Badge key={t}>{t}</Badge>)}
               {profile.sterilized && <Badge color="#E8F5E9" text="#2E7D32">Stérilisé·e</Badge>}
+              {profile.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné·e ✓</Badge>}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
               <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>ÉNERGIE</span>
               <EnergyDots level={profile.energy} />
             </div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+
+            <div style={{ height: 1, background: "rgba(0,0,0,.06)", marginBottom: 14 }} />
+
+            <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>À PROPOS</div>
+            <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{profile.bio}</p>
+
+            <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>RECHERCHE</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 14 }}>
               {profile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#B25F46">{s}</Badge>)}
             </div>
+
+            <div style={{ fontSize: 12, color: "#9CA3AF" }}>Propriétaire : {profile.owner}</div>
           </div>
         </div>
       </div>
@@ -406,35 +432,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       <div style={{ textAlign: "center", fontSize: 11, color: "#E8B89F", padding: "2px 0 14px" }}>
         ← Glisse à gauche pour refuser · à droite pour liker →
       </div>
-
-      {showDetail && (
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 50, display: "flex", alignItems: "flex-end" }} onClick={() => setShowDetail(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 20px 36px", width: "100%", maxHeight: "80%", overflowY: "auto" }}>
-            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 20px" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
-              <div style={{ fontSize: 56 }}>{profile.emoji}</div>
-              <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{profile.name} <span style={{ fontSize: 15, color: "#6B7280" }}>{profile.age}</span></div>
-                <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{profile.breed} · {profile.distance}</div>
-                <div style={{ fontSize: 12, color: "#9CA3AF" }}>Propriétaire : {profile.owner}</div>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
-              {profile.temper.map(t => <Badge key={t}>{t}</Badge>)}
-              {profile.sterilized && <Badge color="#E8F5E9" text="#2E7D32">Stérilisé·e</Badge>}
-              {profile.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné·e ✓</Badge>}
-            </div>
-            <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{profile.bio}</p>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 20 }}>
-              {profile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#B25F46">{s}</Badge>)}
-            </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => { setShowDetail(false); swipe("nope"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "2px solid #FCA5A5", background: "#fff", fontSize: 18, cursor: "pointer", fontWeight: 700 }}>❌ Passer</button>
-              <button onClick={() => { setShowDetail(false); swipe("like"); }} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 15, cursor: "pointer", fontWeight: 700 }}>J'adore !</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {matchedWith && (
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#B25F46)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
