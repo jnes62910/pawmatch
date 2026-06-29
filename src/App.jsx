@@ -403,14 +403,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         </div>
       </div>
 
-      <div style={{ textAlign: "center", fontSize: 11, color: "#E8B89F", padding: "2px 0 4px" }}>
+      <div style={{ textAlign: "center", fontSize: 11, color: "#E8B89F", padding: "2px 0 14px" }}>
         ← Glisse à gauche pour refuser · à droite pour liker →
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 24, padding: "8px 16px 20px" }}>
-        <button onClick={() => swipe("nope")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #FCA5A5", background: "#FFF", fontSize: 26, cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>❌</button>
-        <button onClick={() => setShowDetail(true)} style={{ width: 48, height: 48, borderRadius: "50%", border: "2px solid #E8B89F", background: "#FAF0EB", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⭐</button>
-        <button onClick={() => swipe("like")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #B25F46", background: "linear-gradient(135deg,#B25F46,#C97A5E)", cursor: "pointer", boxShadow: "0 4px 16px rgba(178,95,70,.3)", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={28} color="#fff" /></button>
       </div>
 
       {showDetail && (
