@@ -187,7 +187,26 @@ function distanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function SwipeScreen({ onNav, userProfile }) {
+const FREE_DAILY_SWIPE_LIMIT = 20;
+const FREE_RADIUS_CAP = 20; // km
+
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function readSwipeUsage() {
+  try {
+    const raw = localStorage.getItem("miloute_swipe_usage");
+    if (!raw) return { date: getTodayKey(), count: 0 };
+    const parsed = JSON.parse(raw);
+    if (parsed.date !== getTodayKey()) return { date: getTodayKey(), count: 0 };
+    return parsed;
+  } catch {
+    return { date: getTodayKey(), count: 0 };
+  }
+}
+
+function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => {} }) {
   const [idx, setIdx] = useState(0);
   const [matchedWith, setMatchedWith] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -195,11 +214,23 @@ function SwipeScreen({ onNav, userProfile }) {
   const [photo, setPhoto] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [searchRadius, setSearchRadius] = useState(100); // km — 100 = illimité (sentinelle), évite de filtrer les profils démo non géolocalisés réellement
+  const [searchRadius, setSearchRadius] = useState(isPremium ? 100 : FREE_RADIUS_CAP);
   const [showRadiusSheet, setShowRadiusSheet] = useState(false);
+  const [swipeUsage, setSwipeUsage] = useState(readSwipeUsage);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const cardRef = useRef(null);
+
+  const swipesLeft = Math.max(0, FREE_DAILY_SWIPE_LIMIT - swipeUsage.count);
+  const limitReached = !isPremium && swipesLeft <= 0;
+
+  function recordSwipe() {
+    if (isPremium) return;
+    const updated = { date: getTodayKey(), count: swipeUsage.count + 1 };
+    setSwipeUsage(updated);
+    try { localStorage.setItem("miloute_swipe_usage", JSON.stringify(updated)); } catch {}
+  }
 
   function getProfileDistance(p) {
     if (userProfile?.location && p.lat && p.lng) {
@@ -222,6 +253,8 @@ function SwipeScreen({ onNav, userProfile }) {
   const isNoping = dragX < -20;
 
   function swipe(dir) {
+    if (limitReached) { setShowLimitModal(true); return; }
+    recordSwipe();
     const targetX = dir === "like" ? 440 : -440;
     setDragX(targetX);
     setTimeout(() => {
@@ -234,7 +267,7 @@ function SwipeScreen({ onNav, userProfile }) {
   function closeMatch() { setMatchedWith(null); setIdx(i => Math.min(i + 1, filtered.length - 1)); }
 
   function onTouchStart(e) {
-    if (showDetail) return;
+    if (showDetail || limitReached) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setDragging(true);
@@ -255,7 +288,7 @@ function SwipeScreen({ onNav, userProfile }) {
     touchStartX.current = null;
   }
   function onMouseDown(e) {
-    if (showDetail) return;
+    if (showDetail || limitReached) return;
     touchStartX.current = e.clientX;
     setDragging(true);
   }
@@ -288,8 +321,13 @@ function SwipeScreen({ onNav, userProfile }) {
           <button key={v} onClick={() => { setTab(v); setIdx(0); setPhoto(0); setDragX(0); }}
             style={{ padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: tab === v ? "#8B3D28" : "#FAF0EB", color: tab === v ? "#fff" : "#8B3D28" }}>{l}</button>
         ))}
+        {!isPremium && (
+          <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: swipesLeft <= 5 ? "#DC2626" : "#9CA3AF", whiteSpace: "nowrap" }}>
+            {swipesLeft} swipe{swipesLeft !== 1 ? "s" : ""}
+          </span>
+        )}
         <button onClick={() => setShowRadiusSheet(true)}
-          style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+          style={{ marginLeft: isPremium ? "auto" : 0, padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
           📍 {searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}
         </button>
       </div>
@@ -302,11 +340,22 @@ function SwipeScreen({ onNav, userProfile }) {
             <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>Rayon de recherche</div>
             <div style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", marginBottom: 24 }}>Affichez les animaux dans cette distance</div>
             <div style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#B25F46", marginBottom: 16 }}>{searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}</div>
-            <input type="range" min="1" max="100" value={searchRadius} onChange={e => setSearchRadius(Number(e.target.value))}
+            <input type="range" min="1" max={isPremium ? 100 : FREE_RADIUS_CAP} value={Math.min(searchRadius, isPremium ? 100 : FREE_RADIUS_CAP)}
+              onChange={e => setSearchRadius(Number(e.target.value))}
               style={{ width: "100%", marginBottom: 8, accentColor: "#B25F46" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginBottom: 24 }}>
-              <span>1 km</span><span>100 km +</span>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginBottom: isPremium ? 24 : 12 }}>
+              <span>1 km</span><span>{isPremium ? "100 km +" : `${FREE_RADIUS_CAP} km max`}</span>
             </div>
+            {!isPremium && (
+              <button onClick={() => { setShowRadiusSheet(false); onPremium(); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#FAF0EB", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left", marginBottom: 16 }}>
+                <span style={{ fontSize: 18 }}>👑</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>Rayon illimité avec Premium</div>
+                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>Gratuit limité à {FREE_RADIUS_CAP} km</div>
+                </div>
+              </button>
+            )}
             {!userProfile?.location && (
               <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
                 Activez votre position dans Profil pour des distances précises.
@@ -315,6 +364,27 @@ function SwipeScreen({ onNav, userProfile }) {
             <button onClick={() => { setIdx(0); setShowRadiusSheet(false); }}
               style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
               Appliquer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sheet — limite de swipes quotidienne atteinte */}
+      {showLimitModal && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setShowLimitModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "32px 24px", width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>⏳</div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Swipes du jour épuisés</div>
+            <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>
+              Vous avez utilisé vos {FREE_DAILY_SWIPE_LIMIT} swipes gratuits aujourd'hui. Revenez demain, ou passez Premium pour swiper sans limite.
+            </div>
+            <button onClick={() => { setShowLimitModal(false); onPremium(); }}
+              style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#8B3D28,#B25F46)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>
+              👑 Passer Premium — swipes illimités
+            </button>
+            <button onClick={() => setShowLimitModal(false)} style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "#F3F4F6", color: "#6B7280", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+              Revenir demain
             </button>
           </div>
         </div>
@@ -394,9 +464,9 @@ function SwipeScreen({ onNav, userProfile }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 24, padding: "8px 16px 20px" }}>
-        <button onClick={() => swipe("nope")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #FCA5A5", background: "#FFF", fontSize: 26, cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>❌</button>
+        <button onClick={() => swipe("nope")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #FCA5A5", background: "#FFF", fontSize: 26, cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,.08)", display: "flex", alignItems: "center", justifyContent: "center", opacity: limitReached ? 0.4 : 1 }}>❌</button>
         <button onClick={() => setShowDetail(true)} style={{ width: 48, height: 48, borderRadius: "50%", border: "2px solid #E8B89F", background: "#FAF0EB", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⭐</button>
-        <button onClick={() => swipe("like")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #B25F46", background: "linear-gradient(135deg,#B25F46,#C97A5E)", cursor: "pointer", boxShadow: "0 4px 16px rgba(178,95,70,.3)", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={28} color="#fff" /></button>
+        <button onClick={() => swipe("like")} style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #B25F46", background: "linear-gradient(135deg,#B25F46,#C97A5E)", cursor: "pointer", boxShadow: "0 4px 16px rgba(178,95,70,.3)", display: "flex", alignItems: "center", justifyContent: "center", opacity: limitReached ? 0.4 : 1 }}><PawLogo size={28} color="#fff" /></button>
       </div>
 
       {showDetail && (
@@ -2989,7 +3059,7 @@ export default function Miloute() {
           {!onboarded
             ? <Onboarding onComplete={completeOnboarding} />
             : <>
-                {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} />}
+                {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
                 {screen === "map" && <MapScreen onOpenChat={openChat} onNav={setScreen} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} />}
                 
