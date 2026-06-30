@@ -1707,7 +1707,190 @@ function readBoostEnd() {
   } catch { return null; }
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
+// ── À PROPOS / AIDE ──────────────────────────────────────────────────────────
+const FAQ_ITEMS = [
+  { q: "Comment fonctionne le matching sur Miloute ?", a: "Vous créez le profil de votre animal (race, caractère, ce qu'il recherche), puis vous parcourez les profils d'autres animaux à proximité. Si vous likez un profil et que son propriétaire vous like en retour, c'est un match ! Vous pouvez alors échanger des messages pour organiser une rencontre." },
+  { q: "L'application est-elle gratuite ?", a: "Oui, l'essentiel de Miloute est gratuit : créer un profil, swiper, matcher, discuter. L'abonnement Premium (4,99€/mois ou 39,99€/an) débloque des fonctionnalités de confort comme voir qui vous a liké, un rayon de recherche illimité, un boost de visibilité et des statistiques avancées." },
+  { q: "Comment fonctionne le module Reproduction ?", a: "C'est un espace dédié aux éleveurs et particuliers souhaitant faire reproduire leur animal. Chaque profil reproducteur peut afficher pedigree, bilan génétique et documents sanitaires. Les paiements de saillie passent par Stripe, avec une commission prélevée par la plateforme." },
+  { q: "Mes données sont-elles partagées avec d'autres utilisateurs ?", a: "Seules les informations que vous choisissez de rendre publiques (profil de votre animal, photos, distance approximative) sont visibles par les autres utilisateurs. Votre position exacte, votre email et vos données de paiement ne sont jamais partagés. Voir notre politique de confidentialité pour plus de détails." },
+  { q: "Comment supprimer mon compte ?", a: "Vous pouvez demander la suppression de votre compte et de toutes vos données à tout moment en nous contactant à l'adresse indiquée dans la section Contact. Nous traitons les demandes sous 30 jours maximum, conformément au RGPD." },
+  { q: "L'app est-elle disponible partout en France ?", a: "Miloute est lancée en priorité à Paris et en Île-de-France pour garantir une bonne densité d'utilisateurs. L'application reste accessible partout, mais le nombre de profils peut être plus limité en dehors de cette zone pour le moment." },
+  { q: "Comment fonctionne la géolocalisation ?", a: "Vous pouvez activer le partage de votre position depuis l'onglet Carte. Seule une distance approximative est visible par les autres utilisateurs — jamais votre adresse exacte. Vous pouvez désactiver le partage à tout moment." },
+];
+
+function AboutScreen({ onBack }) {
+  const [page, setPage] = useState("menu"); // menu | why | faq | privacy | terms | contact
+  const [openFaq, setOpenFaq] = useState(null);
+
+  const PAGES = {
+    why: { title: "Pourquoi Miloute ?", icon: "💛" },
+    faq: { title: "Questions fréquentes", icon: "❓" },
+    privacy: { title: "Politique de confidentialité", icon: "🔒" },
+    terms: { title: "Conditions Générales d'Utilisation", icon: "📄" },
+    contact: { title: "Nous contacter", icon: "✉️" },
+  };
+
+  if (page !== "menu") {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+          <button onClick={() => setPage("menu")} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200" }}>{PAGES[page].icon} {PAGES[page].title}</div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 40px" }}>
+
+          {page === "why" && (
+            <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.8 }}>
+              <p style={{ marginBottom: 16 }}>Nos animaux occupent une place immense dans notre vie quotidienne, mais on leur offre rarement l'occasion de vivre la leur — rencontrer d'autres animaux, jouer, se balader avec un copain, ou simplement exister socialement au-delà des murs de la maison.</p>
+              <p style={{ marginBottom: 16 }}><strong>Miloute</strong> est née de cette idée simple : et si trouver un compagnon de jeu, une amitié canine ou féline, ou un partenaire de reproduction sérieux pouvait être aussi simple que quelques gestes sur un téléphone ?</p>
+              <p style={{ marginBottom: 16 }}>Que vous cherchiez une rencontre ponctuelle pour votre chat curieux, un partenaire de balade fiable pour votre chien plein d'énergie, ou un éleveur vérifié pour une saillie sérieuse, Miloute a été pensée pour répondre à des besoins réels de propriétaires d'animaux, avec un vrai souci de sécurité et de transparence.</p>
+              <p>Nous lançons l'application à Paris en priorité, avec l'ambition de créer une vraie communauté locale avant de grandir. Merci de faire partie des premiers à nous faire confiance. 🐾</p>
+            </div>
+          )}
+
+          {page === "faq" && (
+            <div>
+              {FAQ_ITEMS.map((item, i) => (
+                <div key={i} style={{ marginBottom: 10, borderRadius: 14, border: "1px solid #E5E7EB", overflow: "hidden" }}>
+                  <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: openFaq === i ? "#FAF0EB" : "#fff", border: "none", cursor: "pointer", textAlign: "left" }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#2D1200", paddingRight: 10 }}>{item.q}</span>
+                    <span style={{ fontSize: 14, color: "#8B3D28", flexShrink: 0, transform: openFaq === i ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+                  </button>
+                  {openFaq === i && (
+                    <div style={{ padding: "0 16px 16px", fontSize: 13, color: "#6B7280", lineHeight: 1.7 }}>{item.a}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {page === "privacy" && (
+            <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8 }}>
+              <p style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>Dernière mise à jour : juin 2026</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>1. Qui sommes-nous ?</h3>
+              <p style={{ marginBottom: 12 }}>Miloute est une application de mise en relation entre propriétaires d'animaux, éditée par un auto-entrepreneur basé en France. Pour toute question relative à vos données, contactez-nous via la section Contact.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>2. Données collectées</h3>
+              <p style={{ marginBottom: 12 }}>Nous collectons : votre nom, votre email, les informations du profil de votre animal (race, âge, photos, caractère), votre position géographique approximative si vous l'activez, et les données de paiement (traitées exclusivement par Stripe, jamais stockées par nos soins).</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>3. Finalité du traitement</h3>
+              <p style={{ marginBottom: 12 }}>Ces données servent uniquement à : permettre le matching entre profils, afficher les distances approximatives, gérer votre abonnement Premium, et vous contacter en cas de besoin lié à votre compte.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>4. Base légale</h3>
+              <p style={{ marginBottom: 12 }}>Le traitement de vos données repose sur votre consentement (création de compte, activation de la géolocalisation) et sur l'exécution du contrat qui nous lie (fourniture du service Miloute).</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>5. Partage des données</h3>
+              <p style={{ marginBottom: 12 }}>Vos données ne sont jamais vendues à des tiers. Seules les informations que vous rendez publiques sur votre profil sont visibles par les autres utilisateurs. Les paiements sont traités par Stripe, soumis à sa propre politique de confidentialité.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>6. Durée de conservation</h3>
+              <p style={{ marginBottom: 12 }}>Vos données sont conservées tant que votre compte est actif. En cas de suppression de compte, elles sont effacées sous 30 jours, sauf obligation légale de conservation plus longue.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>7. Vos droits</h3>
+              <p style={{ marginBottom: 12 }}>Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de portabilité et d'opposition concernant vos données. Pour exercer ces droits, contactez-nous via la section Contact de l'application.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>8. Cookies et stockage local</h3>
+              <p style={{ marginBottom: 12 }}>L'application utilise le stockage local de votre navigateur pour mémoriser votre session et vos préférences, sans recourir à des cookies publicitaires tiers.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>9. Sécurité</h3>
+              <p style={{ marginBottom: 12 }}>Nous mettons en œuvre des mesures techniques raisonnables pour protéger vos données. Aucun système n'étant infaillible, nous vous invitons à utiliser un mot de passe robuste et à nous signaler toute activité suspecte.</p>
+
+              <p style={{ marginTop: 24, padding: 14, background: "#FFF9E6", borderRadius: 12, fontSize: 12, color: "#854D0E" }}>
+                ⚠️ Ce document est une version préliminaire en cours de rédaction. Il sera révisé par un professionnel du droit avant le lancement public de l'application.
+              </p>
+            </div>
+          )}
+
+          {page === "terms" && (
+            <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8 }}>
+              <p style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>Dernière mise à jour : juin 2026</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>1. Objet</h3>
+              <p style={{ marginBottom: 12 }}>Les présentes CGU régissent l'utilisation de l'application Miloute, plateforme de mise en relation entre propriétaires d'animaux de compagnie à des fins sociales ou de reproduction.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>2. Inscription</h3>
+              <p style={{ marginBottom: 12 }}>L'utilisation de Miloute nécessite la création d'un compte. Vous garantissez l'exactitude des informations fournies, tant sur votre identité que sur le profil de votre animal.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>3. Rôle de la plateforme</h3>
+              <p style={{ marginBottom: 12 }}>Miloute agit uniquement en tant qu'intermédiaire de mise en relation. Nous ne sommes pas responsables des interactions, rencontres ou transactions entre utilisateurs, y compris dans le cadre du module Reproduction. Chaque utilisateur reste seul responsable des accords qu'il conclut avec un autre utilisateur.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>4. Obligations de l'utilisateur</h3>
+              <p style={{ marginBottom: 12 }}>Vous vous engagez à : fournir des informations exactes, ne publier aucun contenu illicite, trompeur ou portant atteinte aux droits d'autrui, et respecter la réglementation applicable en matière de reproduction animale (notamment l'obligation de déclaration d'activité pour les éleveurs réalisant plusieurs portées par an).</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>5. Abonnement Premium</h3>
+              <p style={{ marginBottom: 12 }}>L'abonnement Premium est facturé mensuellement ou annuellement via Stripe. Il est résiliable à tout moment ; la résiliation prend effet à la fin de la période en cours, sans remboursement au prorata.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>6. Paiements et commissions</h3>
+              <p style={{ marginBottom: 12 }}>Les transactions liées au module Reproduction transitent par Stripe Connect. Miloute prélève une commission sur chaque transaction, clairement indiquée avant validation du paiement.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>7. Modération et suspension</h3>
+              <p style={{ marginBottom: 12 }}>Nous nous réservons le droit de suspendre ou supprimer tout compte ne respectant pas les présentes CGU, sans préavis en cas de manquement grave.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>8. Responsabilité</h3>
+              <p style={{ marginBottom: 12 }}>Miloute ne saurait être tenue responsable des dommages directs ou indirects résultant de l'utilisation de l'application, des rencontres organisées entre utilisateurs, ou de l'état de santé des animaux mis en relation.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>9. Modification des CGU</h3>
+              <p style={{ marginBottom: 12 }}>Ces CGU peuvent être modifiées à tout moment. Les utilisateurs seront informés de toute modification substantielle.</p>
+
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>10. Droit applicable</h3>
+              <p style={{ marginBottom: 12 }}>Les présentes CGU sont soumises au droit français. Tout litige relève de la compétence des tribunaux français.</p>
+
+              <p style={{ marginTop: 24, padding: 14, background: "#FFF9E6", borderRadius: 12, fontSize: 12, color: "#854D0E" }}>
+                ⚠️ Ce document est une version préliminaire en cours de rédaction. Il sera révisé par un professionnel du droit avant le lancement public de l'application.
+              </p>
+            </div>
+          )}
+
+          {page === "contact" && (
+            <div>
+              <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.8, marginBottom: 24 }}>
+                Une question, un problème technique, ou besoin d'exercer vos droits sur vos données ? Nous sommes là pour vous aider.
+              </p>
+              <div style={{ background: "#FAF0EB", borderRadius: 16, padding: 18, marginBottom: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 24 }}>✉️</span>
+                <div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600 }}>EMAIL</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>contact@miloute.app</div>
+                </div>
+              </div>
+              <div style={{ background: "#F9FAFB", borderRadius: 16, padding: 18, display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 24 }}>⏱️</span>
+                <div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600 }}>DÉLAI DE RÉPONSE</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>Sous 48h en moyenne</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+        <button onClick={onBack} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+        <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200" }}>ℹ️ À propos & Aide</div>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        {Object.entries(PAGES).map(([key, { title, icon }]) => (
+          <button key={key} onClick={() => setPage(key)}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px", borderRadius: 16, border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer", marginBottom: 10, textAlign: "left" }}>
+            <span style={{ fontSize: 22 }}>{icon}</span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{title}</span>
+            <span style={{ fontSize: 14, color: "#9CA3AF" }}>→</span>
+          </button>
+        ))}
+        <div style={{ textAlign: "center", fontSize: 11, color: "#C9B5A8", marginTop: 24 }}>Miloute · Version 1.0</div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileScreen({ onPremium = () => {}, isPremium = false, onShowAbout = () => {} }) {
   const [pet, setPet] = useState(INIT_PET);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
@@ -2217,6 +2400,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
         </div>
 
         <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
+        <button onClick={onShowAbout} style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>ℹ️ À propos & Aide</button>
         {isPremium ? (
           <div style={{ background: "linear-gradient(135deg,#2E7D32,#43A047)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 26 }}>👑</span>
@@ -3009,6 +3193,7 @@ export default function Miloute() {
   const [chatId, setChatId] = useState(null);
   const [isPremium, setIsPremium] = useState(loadPremiumStatus);
   const [showPremiumTunnel, setShowPremiumTunnel] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
@@ -3110,10 +3295,17 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onShowAbout={() => setShowAbout(true)} />}
               </>
           }
         </div>
+
+        {/* Écran À propos / Aide — overlay plein écran */}
+        {showAbout && (
+          <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 80, display: "flex", flexDirection: "column" }}>
+            <AboutScreen onBack={() => setShowAbout(false)} />
+          </div>
+        )}
 
         {/* Bottom nav — uniquement après onboarding */}
         {onboarded && screen !== "chat" && (
