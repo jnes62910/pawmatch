@@ -162,10 +162,10 @@ const SPOTS = [
 ];
 
 const COMMUNITY_POSTS = [
-  { id: 1, breed: "Berger Australien", emoji: "🐕", author: "Thomas D.", pet: "Rocky", time: "Il y a 2h", text: "Rocky a fait son premier agility aujourd'hui ! On cherche d'autres Aussies pour s'entraîner le dimanche matin à Vincennes 🏃", likes: 24, comments: 8, tag: "Événement" },
-  { id: 2, breed: "Chartreux", emoji: "🐱", author: "Sophie M.", pet: "Luna", time: "Il y a 5h", text: "Petite question : Luna refuse de manger depuis 2 jours. Elle a pourtant l'air en forme... Quelqu'un a eu ça avec son chat ? 🤔", likes: 12, comments: 19, tag: "Conseil" },
-  { id: 3, breed: "Maine Coon", emoji: "🐱", author: "Clara B.", pet: "Mochi", time: "Hier", text: "Mochi vient de fêter ses 5 ans ! 🎂 Le plus grand et le plus doux des chats parisiens. Il cherche toujours son âme sœur pour partager son canapé.", likes: 67, comments: 14, tag: "Anniversaire" },
-  { id: 4, breed: "Golden Retriever", emoji: "🐕", author: "Marc L.", pet: "Bella", time: "Hier", text: "Bella disponible pour reproduction printemps 2026. Pedigree SCC, bilan hanche A/A. Cherche mâle sain et équilibré uniquement.", likes: 9, comments: 5, tag: "Reproduction" },
+  { id: 1, breed: "Berger Australien", emoji: "🐕", photo: "/photos/rocky-1.jpg", author: "Thomas D.", pet: "Rocky", time: "Il y a 2h", text: "Rocky a fait son premier agility aujourd'hui ! On cherche d'autres Aussies pour s'entraîner le dimanche matin à Vincennes 🏃", likes: 24, comments: 8, tag: "Événement" },
+  { id: 2, breed: "Européen", emoji: "🐱", photo: "/photos/rosie-1.jpg", author: "Sophie M.", pet: "Rosie", time: "Il y a 5h", text: "Petite question : Rosie refuse de manger depuis 2 jours. Elle a pourtant l'air en forme... Quelqu'un a eu ça avec son chat ? 🤔", likes: 12, comments: 19, tag: "Conseil" },
+  { id: 3, breed: "Maine Coon", emoji: "🐱", photo: "/photos/mochi-1.jpg", author: "Clara B.", pet: "Mochi", time: "Hier", text: "Mochi vient de fêter ses 5 ans ! 🎂 Le plus grand et le plus doux des chats parisiens. Il cherche toujours son âme sœur pour partager son canapé.", likes: 67, comments: 14, tag: "Anniversaire" },
+  { id: 4, breed: "Golden Retriever", emoji: "🐕", photo: "/photos/bella-1.jpg", author: "Marc L.", pet: "Bella", time: "Hier", text: "Bella disponible pour reproduction printemps 2026. Pedigree SCC, bilan hanche A/A. Cherche mâle sain et équilibré uniquement.", likes: 9, comments: 5, tag: "Reproduction" },
 ];
 
 const AGENDA = [
@@ -1219,6 +1219,8 @@ const INIT_COMMENTS = {
 function CommunityScreen({ onPremium, isPremium }) {
   const [liked, setLiked] = useState({});
   const [breedFilter, setBreedFilter] = useState("all");
+  const [speciesForBreed, setSpeciesForBreed] = useState("cat"); // espèce affichée dans le menu déroulant
+  const [showBreedMenu, setShowBreedMenu] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [openComments, setOpenComments] = useState(null); // post id
   const [comments, setComments] = useState(INIT_COMMENTS);
@@ -1226,7 +1228,6 @@ function CommunityScreen({ onPremium, isPremium }) {
   const [commentLikes, setCommentLikes] = useState({});
   const commentsEndRef = useRef(null);
 
-  const breeds = ["all", "Berger Australien", "Chartreux", "Maine Coon", "Golden Retriever"];
   const filtered = COMMUNITY_POSTS.filter(p => breedFilter === "all" || p.breed === breedFilter);
 
   const TAG_COLORS = {
@@ -1262,14 +1263,42 @@ function CommunityScreen({ onPremium, isPremium }) {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Breed filter */}
-      <div style={{ overflowX: "auto", display: "flex", gap: 8, padding: "10px 16px", background: "#fff", flexShrink: 0 }}>
-        {breeds.map(b => (
-          <button key={b} onClick={() => setBreedFilter(b)}
-            style={{ padding: "5px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: breedFilter === b ? "#8B3D28" : "#FAF0EB", color: breedFilter === b ? "#fff" : "#8B3D28" }}>
-            {b === "all" ? "Toutes les races" : b}
-          </button>
-        ))}
+      {/* Filtre par race — menu déroulant */}
+      <div style={{ position: "relative", padding: "10px 16px", background: "#fff", flexShrink: 0, borderBottom: "1px solid #F3F4F6" }}>
+        <button onClick={() => setShowBreedMenu(m => !m)}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14,
+            border: `2px solid ${breedFilter !== "all" ? "#8B3D28" : "#E5E7EB"}`,
+            background: breedFilter !== "all" ? "#FAF0EB" : "#fff", cursor: "pointer" }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: breedFilter !== "all" ? "#8B3D28" : "#2D1200" }}>
+            {breedFilter === "all" ? "Toutes les races" : breedFilter}
+          </span>
+          <span style={{ fontSize: 12, color: "#9CA3AF", transform: showBreedMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+        </button>
+
+        {showBreedMenu && (
+          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 16, right: 16, background: "#fff", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,.15)", border: "1px solid #F3F4F6", zIndex: 30, overflow: "hidden" }}>
+            {/* Toggle espèce */}
+            <div style={{ display: "flex", padding: 6, gap: 6, borderBottom: "1px solid #F3F4F6" }}>
+              {[["cat","🐱 Chats"],["dog","🐕 Chiens"]].map(([v,l]) => (
+                <button key={v} onClick={() => setSpeciesForBreed(v)}
+                  style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: speciesForBreed === v ? "#8B3D28" : "#FAF0EB", color: speciesForBreed === v ? "#fff" : "#8B3D28" }}>{l}</button>
+              ))}
+            </div>
+            {/* Liste des races scrollable */}
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
+              <button onClick={() => { setBreedFilter("all"); setShowBreedMenu(false); }}
+                style={{ width: "100%", padding: "11px 14px", border: "none", background: breedFilter === "all" ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#8B3D28", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
+                Toutes les races
+              </button>
+              {(speciesForBreed === "cat" ? CAT_BREEDS : DOG_BREEDS).map(b => (
+                <button key={b} onClick={() => { setBreedFilter(b); setShowBreedMenu(false); }}
+                  style={{ width: "100%", padding: "11px 14px", border: "none", background: breedFilter === b ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: breedFilter === b ? 700 : 500, color: breedFilter === b ? "#8B3D28" : "#374151", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
@@ -1291,7 +1320,9 @@ function CommunityScreen({ onPremium, isPremium }) {
               <div style={{ padding: "14px 14px 10px" }}>
                 {/* Author */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${post.emoji === "🐱" ? "#B25F46,#C97A5E" : "#8B3D28,#8B3510"})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{post.emoji}</div>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${post.emoji === "🐱" ? "#B25F46,#C97A5E" : "#8B3D28,#8B3510"})`, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                    {post.photo ? <img src={post.photo} alt={post.pet} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : post.emoji}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{post.pet} <span style={{ fontWeight: 400, color: "#9CA3AF" }}>· {post.author}</span></div>
                     <div style={{ fontSize: 11, color: "#9CA3AF" }}>{post.breed} · {post.time}</div>
@@ -1472,9 +1503,11 @@ function MatchesScreen({ onOpenChat }) {
           <div style={{ overflowX: "auto", display: "flex", gap: 12, padding: "8px 16px 16px" }}>
             {MATCHES.map(m => (
               <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, position: "relative", boxShadow: "0 4px 12px rgba(242,100,25,.25)" }}>
-                  {m.photo ? <img src={m.photo} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : m.emoji}
-                  {m.unread > 0 && <div style={{ position: "absolute", top: 0, right: 0, width: 18, height: 18, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{m.unread}</div>}
+                <div style={{ width: 64, height: 64, position: "relative" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, boxShadow: "0 4px 12px rgba(242,100,25,.25)" }}>
+                    {m.photo ? <img src={m.photo} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : m.emoji}
+                  </div>
+                  {m.unread > 0 && <div style={{ position: "absolute", top: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{m.unread}</div>}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#2D1200", marginTop: 6 }}>{m.name}</div>
               </div>
