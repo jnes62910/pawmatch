@@ -23,6 +23,44 @@ function PawLogo({ size = 48, color = "#fff" }) {
   );
 }
 
+// ── ONBOARDING HINT (bulle contextuelle, affichée une seule fois par écran) ──────
+function hintSeen(key) {
+  try { return localStorage.getItem("miloute_hint_" + key) === "1"; } catch { return true; }
+}
+function markHintSeen(key) {
+  try { localStorage.setItem("miloute_hint_" + key, "1"); } catch {}
+}
+
+function OnboardingHint({ hintKey, icon, text, position = "bottom" }) {
+  const [visible, setVisible] = useState(() => !hintSeen(hintKey));
+
+  useEffect(() => {
+    if (!visible) return;
+    const timer = setTimeout(() => { setVisible(false); markHintSeen(hintKey); }, 4000);
+    return () => clearTimeout(timer);
+  }, [visible, hintKey]);
+
+  if (!visible) return null;
+
+  return (
+    <div onClick={() => { setVisible(false); markHintSeen(hintKey); }}
+      style={{
+        position: "absolute", left: 16, right: 16, zIndex: 40, cursor: "pointer",
+        [position]: 12,
+        display: "flex", alignItems: "center", gap: 10,
+        background: "linear-gradient(135deg,#8B3D28,#B25F46)", color: "#fff",
+        borderRadius: 16, padding: "12px 16px",
+        boxShadow: "0 8px 24px rgba(139,61,40,.35)",
+        animation: "hintFadeIn .3s ease",
+      }}>
+      <style>{`@keyframes hintFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, flex: 1 }}>{text}</span>
+      <span style={{ fontSize: 16, opacity: .8, flexShrink: 0 }}>✕</span>
+    </div>
+  );
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const DOG_BREEDS = [
   "Labrador Retriever","Berger Australien","Berger Allemand","Golden Retriever","Border Collie",
@@ -81,32 +119,32 @@ function BreedInput({ value, onChange, species, style }) {
 
 const LIKES_RECEIVED = [
   { name: "Nala", species: "cat", breed: "Bengal", emoji: "🐱", photo: "/photos/nala-1.jpg", time: "Il y a 2h" },
-  { name: "Filou", species: "dog", breed: "Border Collie", emoji: "🐕", photo: null, time: "Il y a 5h" },
+  { name: "Filou", species: "dog", breed: "Border Collie", emoji: "🐕", photo: "/photos/filou-1.jpg", time: "Il y a 5h" },
   { name: "Misty", species: "cat", breed: "Sacré de Birmanie", emoji: "🐱", photo: "/photos/misty-1.jpg", time: "Hier" },
-  { name: "Max", species: "dog", breed: "Labrador", emoji: "🐕", photo: null, time: "Hier" },
+  { name: "Max", species: "dog", breed: "Labrador", emoji: "🐕", photo: "/photos/max-1.jpg", time: "Hier" },
   { name: "Tigrou", species: "cat", breed: "Ragdoll", emoji: "🐱", photo: "/photos/tigrou-1.jpg", time: "Il y a 2 jours" },
-  { name: "Nanouk", species: "dog", breed: "Husky Sibérien", emoji: "🐕", photo: null, time: "Il y a 3 jours" },
-  { name: "Choupette", species: "dog", breed: "Bouledogue Français", emoji: "🐕", photo: null, time: "Il y a 4 jours" },
+  { name: "Nanouk", species: "dog", breed: "Husky Sibérien", emoji: "🐕", photo: "/photos/nanouk-1.jpg", time: "Il y a 3 jours" },
+  { name: "Choupette", species: "dog", breed: "Bouledogue Français", emoji: "🐕", photo: "/photos/choupette-1.jpg", time: "Il y a 4 jours" },
   { name: "Rosie", species: "cat", breed: "Européen", emoji: "🐱", photo: "/photos/rosie-1.jpg", time: "Il y a 5 jours" },
-  { name: "Rocky", species: "dog", breed: "Berger Australien", emoji: "🐕", photo: null, time: "Il y a 6 jours" },
-  { name: "Bella", species: "dog", breed: "Golden Retriever", emoji: "🐕", photo: null, time: "Il y a 1 semaine" },
+  { name: "Rocky", species: "dog", breed: "Berger Australien", emoji: "🐕", photo: "/photos/rocky-1.jpg", time: "Il y a 6 jours" },
+  { name: "Bella", species: "dog", breed: "Golden Retriever", emoji: "🐕", photo: "/photos/bella-1.jpg", time: "Il y a 1 semaine" },
   { name: "Mochi", species: "cat", breed: "Maine Coon", emoji: "🐱", photo: "/photos/mochi-1.jpg", time: "Il y a 1 semaine" },
   { name: "Pixel", species: "cat", breed: "Siamois", emoji: "🐱", photo: "/photos/pixel-1.jpg", time: "Il y a 1 semaine" },
 ];
 
 const PROFILES = [
   { id: 1, name: "Rosie", species: "cat", breed: "Européen", age: "3 ans", gender: "F", energy: 3, temper: ["Câline", "Joueuse", "Curieuse"], distance: "1,2 km", vaccinated: true, sterilized: true, owner: "Sophie M.", bio: "Rosie adore les séances de jeu avec une canne à plumes et passe ses après-midis à surveiller les oiseaux par la fenêtre. Sociable avec les autres chats après une courte période d'adaptation, elle cherche surtout un copain de jeu qui n'a pas peur de courir partout dans l'appart.", seeking: ["Play date", "Compagnon de vie"], emoji: "🐱", color: "#B8A9C9", photos: ["/photos/rosie-1.jpg", "/photos/rosie-2.jpg", "/photos/rosie-3.jpg"], lat: 48.833, lng: 2.362, pedigree: false },
-  { id: 2, name: "Rocky", species: "dog", breed: "Berger Australien", age: "2 ans", gender: "M", energy: 5, temper: ["Joueur", "Intelligent", "Énergique"], distance: "0,8 km", vaccinated: true, sterilized: false, owner: "Thomas D.", bio: "Rocky a une énergie débordante et a besoin d'un compagnon pour ses balades quotidiennes au bois de Vincennes. Très sociable avec les autres chiens, il adore les jeux de poursuite et apprend de nouveaux tours en un temps record. Cherche partenaire aussi motivé que lui !", seeking: ["Balade", "Play date", "Reproduction"], emoji: "🐕", color: "#A9C4B8", photos: ["https://placedog.net/500/500?id=10", "https://placedog.net/500/500?id=11", "https://placedog.net/500/500?id=12"], lat: 48.840, lng: 2.358, pedigree: true },
+  { id: 2, name: "Rocky", species: "dog", breed: "Berger Australien", age: "2 ans", gender: "M", energy: 5, temper: ["Joueur", "Intelligent", "Énergique"], distance: "0,8 km", vaccinated: true, sterilized: false, owner: "Thomas D.", bio: "Rocky a une énergie débordante et a besoin d'un compagnon pour ses balades quotidiennes au bois de Vincennes. Très sociable avec les autres chiens, il adore les jeux de poursuite et apprend de nouveaux tours en un temps record. Cherche partenaire aussi motivé que lui !", seeking: ["Balade", "Play date", "Reproduction"], emoji: "🐕", color: "#A9C4B8", photos: ["/photos/rocky-1.jpg", "/photos/rocky-2.jpg", "/photos/rocky-3.jpg"], lat: 48.840, lng: 2.358, pedigree: true },
   { id: 3, name: "Mochi", species: "cat", breed: "Maine Coon", age: "5 ans", gender: "M", energy: 2, temper: ["Posé", "Affectueux", "Indépendant"], distance: "2,1 km", vaccinated: true, sterilized: true, owner: "Clara B.", bio: "Mochi est un grand gaillard au caractère doux qui préfère les siestes au soleil aux courses-poursuites. Affectueux sans être collant, il cherche un compagnon tranquille pour partager le canapé — l'idéal serait un chat aussi zen que lui.", seeking: ["Compagnon de vie", "Play date"], emoji: "🐱", color: "#C9B8A9", photos: ["/photos/mochi-1.jpg", "/photos/mochi-2.jpg", "/photos/mochi-3.jpg"], lat: 48.828, lng: 2.370, pedigree: true },
-  { id: 4, name: "Bella", species: "dog", breed: "Golden Retriever", age: "4 ans", gender: "F", energy: 4, temper: ["Douce", "Joueuse", "Affectueuse"], distance: "3,4 km", vaccinated: true, sterilized: false, owner: "Marc L.", bio: "Bella est une amoureuse des câlins et des longues balades en forêt. Toujours de bonne humeur, elle s'entend avec absolument tout le monde — chiens, enfants, inconnus dans la rue. Cherche partenaire de balade régulier ou plus, si affinités.", seeking: ["Balade", "Reproduction", "Play date"], emoji: "🐕", color: "#C9C4A9", photos: ["https://placedog.net/500/500?id=20", "https://placedog.net/500/500?id=21", "https://placedog.net/500/500?id=22"], lat: 48.845, lng: 2.375, pedigree: true },
+  { id: 4, name: "Bella", species: "dog", breed: "Golden Retriever", age: "4 ans", gender: "F", energy: 4, temper: ["Douce", "Joueuse", "Affectueuse"], distance: "3,4 km", vaccinated: true, sterilized: false, owner: "Marc L.", bio: "Bella est une amoureuse des câlins et des longues balades en forêt. Toujours de bonne humeur, elle s'entend avec absolument tout le monde — chiens, enfants, inconnus dans la rue. Cherche partenaire de balade régulier ou plus, si affinités.", seeking: ["Balade", "Reproduction", "Play date"], emoji: "🐕", color: "#C9C4A9", photos: ["/photos/bella-1.jpg", "/photos/bella-2.jpg", "/photos/bella-3.jpg"], lat: 48.845, lng: 2.375, pedigree: true },
   { id: 5, name: "Pixel", species: "cat", breed: "Siamois", age: "2 ans", gender: "F", energy: 4, temper: ["Bavarde", "Curieuse", "Vive"], distance: "0,5 km", vaccinated: true, sterilized: true, owner: "Léa P.", bio: "Pixel ne tient jamais en place et a un avis sur tout (elle vous le fera savoir, miaulements à l'appui). Très curieuse, elle adore explorer chaque recoin et cherche une amie aussi vive qu'elle pour des sessions de jeu mémorables.", seeking: ["Play date", "Cat date"], emoji: "🐱", color: "#A9B8C9", photos: ["/photos/pixel-1.jpg", "/photos/pixel-2.jpg"], lat: 48.836, lng: 2.355, pedigree: false },
-  { id: 6, name: "Max", species: "dog", breed: "Labrador", age: "3 ans", gender: "M", energy: 4, temper: ["Gourmand", "Affectueux", "Sociable"], distance: "1,8 km", vaccinated: true, sterilized: true, owner: "Julie R.", bio: "Max ferait n'importe quoi pour une friandise, et c'est à peu près le seul vrai défaut qu'on lui trouve. Adorable avec tout le monde, il adore l'eau et ne refuse jamais une baignade improvisée. Cherche compagnon de balade pas trop difficile sur les activités, tant qu'il y a de l'affection à la clé.", seeking: ["Balade", "Play date"], emoji: "🐕", color: "#D4C4A8", photos: ["https://placedog.net/500/500?id=2", "https://placedog.net/500/500?id=3", "https://placedog.net/500/500?id=4"], lat: 48.838, lng: 2.345, pedigree: true },
+  { id: 6, name: "Max", species: "dog", breed: "Labrador", age: "3 ans", gender: "M", energy: 4, temper: ["Gourmand", "Affectueux", "Sociable"], distance: "1,8 km", vaccinated: true, sterilized: true, owner: "Julie R.", bio: "Max ferait n'importe quoi pour une friandise, et c'est à peu près le seul vrai défaut qu'on lui trouve. Adorable avec tout le monde, il adore l'eau et ne refuse jamais une baignade improvisée. Cherche compagnon de balade pas trop difficile sur les activités, tant qu'il y a de l'affection à la clé.", seeking: ["Balade", "Play date"], emoji: "🐕", color: "#D4C4A8", photos: ["/photos/max-1.jpg", "/photos/max-2.jpg"], lat: 48.838, lng: 2.345, pedigree: true },
   { id: 7, name: "Nala", species: "cat", breed: "Bengal", age: "2 ans", gender: "F", energy: 5, temper: ["Énergique", "Curieuse", "Indépendante"], distance: "1,4 km", vaccinated: true, sterilized: false, owner: "Karim B.", bio: "Nala a une énergie de félin sauvage et ne tient jamais en place plus de cinq minutes. Elle grimpe partout, observe tout, et adore les jeux qui imitent la chasse. Cherche une rencontre avec quelqu'un d'aussi vif qu'elle, ou éventuellement un partenaire de reproduction sérieux.", seeking: ["Play date", "Reproduction"], emoji: "🐱", color: "#E8C9A0", photos: ["/photos/nala-1.jpg", "/photos/nala-2.jpg", "/photos/nala-3.jpg"], lat: 48.825, lng: 2.378, pedigree: true },
-  { id: 8, name: "Filou", species: "dog", breed: "Border Collie", age: "1 an", gender: "M", energy: 5, temper: ["Intelligent", "Joueur", "Énergique"], distance: "2,5 km", vaccinated: true, sterilized: false, owner: "Anaïs T.", bio: "Filou apprend plus vite que ses maîtres n'ont le temps de lui enseigner. Toujours en mouvement, il a besoin d'un compagnon capable de tenir le rythme — frisbee, agility, longues balades, tout l'intéresse. Cherche partenaire de jeu endurant avant tout.", seeking: ["Play date", "Balade"], emoji: "🐕", color: "#B8C9B8", photos: ["https://placedog.net/500/500?id=14", "https://placedog.net/500/500?id=15", "https://placedog.net/500/500?id=16"], lat: 48.850, lng: 2.330, pedigree: true },
+  { id: 8, name: "Filou", species: "dog", breed: "Border Collie", age: "1 an", gender: "M", energy: 5, temper: ["Intelligent", "Joueur", "Énergique"], distance: "2,5 km", vaccinated: true, sterilized: false, owner: "Anaïs T.", bio: "Filou apprend plus vite que ses maîtres n'ont le temps de lui enseigner. Toujours en mouvement, il a besoin d'un compagnon capable de tenir le rythme — frisbee, agility, longues balades, tout l'intéresse. Cherche partenaire de jeu endurant avant tout.", seeking: ["Play date", "Balade"], emoji: "🐕", color: "#B8C9B8", photos: ["/photos/filou-1.jpg", "/photos/filou-2.jpg", "/photos/filou-3.jpg", "/photos/filou-4.jpg", "/photos/filou-5.jpg"], lat: 48.850, lng: 2.330, pedigree: true },
   { id: 9, name: "Misty", species: "cat", breed: "Sacré de Birmanie", age: "4 ans", gender: "F", energy: 2, temper: ["Calme", "Affectueuse", "Câline"], distance: "0,9 km", vaccinated: true, sterilized: true, owner: "Vincent L.", bio: "Misty est d'une douceur presque déconcertante — elle ne griffe jamais, miaule à peine, et passe ses journées à chercher les genoux disponibles. Idéale pour une vie tranquille à deux. Cherche compagnon paisible pour de longues siestes partagées.", seeking: ["Compagnon de vie"], emoji: "🐱", color: "#C9D4C9", photos: ["/photos/misty-1.jpg", "/photos/misty-2.jpg"], lat: 48.842, lng: 2.368, pedigree: true },
-  { id: 10, name: "Choupette", species: "dog", breed: "Bouledogue Français", age: "3 ans", gender: "F", energy: 2, temper: ["Calme", "Affectueuse", "Gourmande"], distance: "1,1 km", vaccinated: true, sterilized: true, owner: "Manon S.", bio: "Choupette ronfle plus fort que la plupart des humains et n'en a absolument pas honte. Câline et placide, elle préfère une sieste au soleil à n'importe quelle course effrénée. Cherche compagnon tranquille, de préférence aussi peu sportif qu'elle.", seeking: ["Compagnon de vie", "Play date"], emoji: "🐕", color: "#D4B8A8", photos: ["https://placedog.net/500/500?id=18", "https://placedog.net/500/500?id=19", "https://placedog.net/500/500?id=23"], lat: 48.831, lng: 2.388, pedigree: true },
+  { id: 10, name: "Choupette", species: "dog", breed: "Bouledogue Français", age: "3 mois", gender: "F", energy: 2, temper: ["Calme", "Affectueuse", "Gourmande"], distance: "1,1 km", vaccinated: true, sterilized: false, owner: "Manon S.", bio: "Choupette est une petite chipie qui ronfle déjà plus fort que la plupart des humains. Câline et placide pour son âge, elle préfère les câlins au soleil à n'importe quelle course effrénée. Cherche compagnon de jeu tout doux, à son rythme de chiot.", seeking: ["Compagnon de vie", "Play date"], emoji: "🐕", color: "#D4B8A8", photos: ["/photos/choupette-1.jpg", "/photos/choupette-2.jpg"], lat: 48.831, lng: 2.388, pedigree: true },
   { id: 11, name: "Tigrou", species: "cat", breed: "Ragdoll", age: "5 ans", gender: "M", energy: 3, temper: ["Indépendant", "Posé", "Joueur"], distance: "2,0 km", vaccinated: true, sterilized: true, owner: "Olivier F.", bio: "Tigrou a un regard perçant et un faux air sérieux, mais c'est un grand tendre une fois la confiance installée — typique des Ragdolls. Indépendant sans être distant, il apprécie la compagnie sur ses propres conditions. Cherche un copain de jeu qui respecte son rythme.", seeking: ["Play date", "Compagnon de vie"], emoji: "🐱", color: "#B8B8C9", photos: ["/photos/tigrou-1.jpg", "/photos/tigrou-2.jpg", "/photos/tigrou-3.jpg"], lat: 48.847, lng: 2.352, pedigree: false },
-  { id: 12, name: "Nanouk", species: "dog", breed: "Husky Sibérien", age: "2 ans", gender: "M", energy: 5, temper: ["Énergique", "Indépendant", "Sociable"], distance: "3,1 km", vaccinated: true, sterilized: false, owner: "Émilie C.", bio: "Nanouk a hérité de toute l'énergie de ses ancêtres traîneaux et adore courir sans limite. Très sociable avec les autres chiens, un peu théâtral aussi (préparez-vous aux vocalises). Cherche partenaire de balade endurant ou reproduction sérieuse selon profil.", seeking: ["Balade", "Reproduction"], emoji: "🐕", color: "#C9C9D4", photos: ["https://placedog.net/500/500?id=26", "https://placedog.net/500/500?id=27", "https://placedog.net/500/500?id=28"], lat: 48.819, lng: 2.341, pedigree: true },
+  { id: 12, name: "Nanouk", species: "dog", breed: "Husky Sibérien", age: "2 ans", gender: "M", energy: 5, temper: ["Énergique", "Indépendant", "Sociable"], distance: "3,1 km", vaccinated: true, sterilized: false, owner: "Émilie C.", bio: "Nanouk a hérité de toute l'énergie de ses ancêtres traîneaux et adore courir sans limite. Très sociable avec les autres chiens, un peu théâtral aussi (préparez-vous aux vocalises). Cherche partenaire de balade endurant ou reproduction sérieuse selon profil.", seeking: ["Balade", "Reproduction"], emoji: "🐕", color: "#C9C9D4", photos: ["/photos/nanouk-1.jpg", "/photos/nanouk-2.jpg", "/photos/nanouk-3.jpg"], lat: 48.819, lng: 2.341, pedigree: true },
 ];
 
 const REPRO_PROFILES = [
@@ -334,7 +372,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       )}
 
 
-      <div style={{ flex: 1, minHeight: 0, padding: "12px 16px", display: "flex", flexDirection: "column", userSelect: "none" }}>
+      <div style={{ flex: 1, minHeight: 0, padding: "12px 16px", display: "flex", flexDirection: "column", userSelect: "none", position: "relative" }}>
+        <OnboardingHint hintKey="swipe" icon="👆" text="Glisse la carte pour liker, scroll vers le bas pour voir tous les détails" position="top" />
         <div ref={cardRef}
           style={{ flex: 1, minHeight: 0, borderRadius: 24, position: "relative", display: "flex", flexDirection: "column",
             background: `linear-gradient(160deg, ${profile.color}55 0%, #fff 100%)`,
@@ -525,7 +564,8 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
   const isRural = mode === "rural";
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      <OnboardingHint hintKey="map" icon="📍" text="Activez votre position pour voir qui se trouve près de chez vous" position="top" />
 
       {/* Mode switcher + share toggle */}
       <div style={{ background: "#fff", padding: "10px 16px 8px", flexShrink: 0 }}>
@@ -877,7 +917,8 @@ function ReproScreen({ isPremium = false, onPremium = () => {} }) {
   const advancedActive = isPremium && (advBreed || advAgeRange !== "all" || advGender !== "all" || advTemper !== "all" || advDocs.length > 0);
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      <OnboardingHint hintKey="repro" icon="🌱" text="Tous les profils sont vérifiés (pedigree, documents sanitaires) pour des rencontres sereines" position="top" />
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
         <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 10 }}>Reproduction vérifiée et sécurisée 🌱</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
