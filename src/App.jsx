@@ -1890,7 +1890,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, onShowAbout = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
   const [pet, setPet] = useState(INIT_PET);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
@@ -2400,7 +2400,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, onShowAbout = 
         </div>
 
         <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
-        <button onClick={onShowAbout} style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>ℹ️ À propos & Aide</button>
         {isPremium ? (
           <div style={{ background: "linear-gradient(135deg,#2E7D32,#43A047)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 26 }}>👑</span>
@@ -3278,6 +3277,7 @@ export default function Miloute() {
               {!isPremium && (
                 <button onClick={openPremium} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 700, padding: "5px 12px", cursor: "pointer" }}>👑 Premium</button>
               )}
+              <button onClick={() => setShowAbout(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 15, cursor: "pointer", color: "#8B3D28" }}>ℹ️</button>
               <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 15, cursor: "pointer" }}>🔔</button>
             </div>
           </div>
@@ -3295,7 +3295,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onShowAbout={() => setShowAbout(true)} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} />}
               </>
           }
         </div>
