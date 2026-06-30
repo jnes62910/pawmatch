@@ -175,9 +175,9 @@ const AGENDA = [
 ];
 
 const MATCHES = [
-  { id: 1, name: "Luna", emoji: "🐱", owner: "Sophie M.", lastMsg: "Super ! À samedi alors 😸", time: "12:34", unread: 2 },
-  { id: 2, name: "Rocky", emoji: "🐕", owner: "Thomas D.", lastMsg: "Il adore le bois de Vincennes !", time: "Hier", unread: 0 },
-  { id: 5, name: "Pixel", emoji: "🐱", owner: "Léa P.", lastMsg: "Nouveau match ✨", time: "Lun.", unread: 1 },
+  { id: 1, name: "Rosie", emoji: "🐱", photo: "/photos/rosie-1.jpg", owner: "Sophie M.", lastMsg: "Super ! À samedi alors 😸", time: "12:34", unread: 2 },
+  { id: 2, name: "Rocky", emoji: "🐕", photo: "/photos/rocky-1.jpg", owner: "Thomas D.", lastMsg: "Il adore le bois de Vincennes !", time: "Hier", unread: 0 },
+  { id: 5, name: "Pixel", emoji: "🐱", photo: "/photos/pixel-1.jpg", owner: "Léa P.", lastMsg: "Nouveau match ✨", time: "Lun.", unread: 1 },
 ];
 
 const MESSAGES = {
@@ -477,7 +477,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
             <PawLogo size={56} color="#fff" />
             <div style={{ width: 92, height: 92, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", background: "#8B3D28", flexShrink: 0, boxShadow: "0 4px 16px rgba(0,0,0,.25)" }}>
-              {matchedWith.photos?.[0]?.startsWith?.("http")
+              {(matchedWith.photos?.[0]?.startsWith?.("http") || matchedWith.photos?.[0]?.startsWith?.("/"))
                 ? <img src={matchedWith.photos[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>{matchedWith.emoji}</div>
               }
@@ -1472,8 +1472,8 @@ function MatchesScreen({ onOpenChat }) {
           <div style={{ overflowX: "auto", display: "flex", gap: 12, padding: "8px 16px 16px" }}>
             {MATCHES.map(m => (
               <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, position: "relative", boxShadow: "0 4px 12px rgba(242,100,25,.25)" }}>
-                  {m.emoji}
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, position: "relative", boxShadow: "0 4px 12px rgba(242,100,25,.25)" }}>
+                  {m.photo ? <img src={m.photo} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : m.emoji}
                   {m.unread > 0 && <div style={{ position: "absolute", top: 0, right: 0, width: 18, height: 18, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{m.unread}</div>}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#2D1200", marginTop: 6 }}>{m.name}</div>
@@ -1486,7 +1486,9 @@ function MatchesScreen({ onOpenChat }) {
           </div>
           {MATCHES.map(m => (
             <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", cursor: "pointer", background: m.unread ? "#FAF0EB" : "#fff", borderBottom: "1px solid #F3F4F6" }}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>{m.emoji}</div>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>
+                {m.photo ? <img src={m.photo} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : m.emoji}
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontWeight: 700, color: "#2D1200", fontSize: 15 }}>{m.name}</span>
@@ -1598,7 +1600,9 @@ function ChatScreen({ matchId, onBack }) {
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid #F3F4F6", background: "#fff" }}>
         <button onClick={onBack} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer" }}>←</button>
-        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{match?.emoji}</div>
+        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+          {match?.photo ? <img src={match.photo} alt={match.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : match?.emoji}
+        </div>
         <div><div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div><div style={{ fontSize: 12, color: "#9CA3AF" }}>{match?.owner}</div></div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer" }}>📍</button>
