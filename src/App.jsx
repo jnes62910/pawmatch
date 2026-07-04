@@ -565,6 +565,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      <style>{`.miloute-hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
       <OnboardingHint hintKey="map" icon="📍" text="Activez votre position pour voir qui se trouve près de chez vous" position="top" />
 
       {/* Mode switcher + share toggle */}
@@ -610,7 +611,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
 
         {/* Filtres spots — uniquement en mode urbain */}
         {!isRural && (
-          <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto" }}>
+          <div className="miloute-hide-scrollbar" style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {[["all","Tout 🗺️"],["park","Parcs 🌳"],["catcafe","Cafés chat ☕"],["dogpark","Dog parks 🏟️"]].map(([v,l]) => (
               <button key={v} onClick={() => setFilter(v)}
                 style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
