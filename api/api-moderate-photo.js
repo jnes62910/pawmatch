@@ -1,41 +1,39 @@
-// /api/moderate-photo.js
-//
+// api/moderate-photo.js
 // Vérifie qu'une image (photo ou frame de vidéo) montre bien un chat ou un
 // chien, et que le contenu est approprié. Utilise l'API Claude (vision).
-//
 // Variable d'environnement requise sur Vercel : ANTHROPIC_API_KEY
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
-
-  const { image, mimeType } = req.body || {};
-  if (!image) {
-    return res.status(400).json({ error: "Image manquante" });
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
+    const { image, mimeType } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: 'image is required' });
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
         messages: [
           {
-            role: "user",
+            role: 'user',
             content: [
               {
-                type: "image",
-                source: { type: "base64", media_type: mimeType || "image/jpeg", data: image },
+                type: 'image',
+                source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: image },
               },
               {
-                type: "text",
+                type: 'text',
                 text:
                   "Tu es un modérateur de contenu pour une application de rencontre entre animaux (Miloute). " +
                   "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, au format exact : " +
@@ -50,13 +48,18 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    const textBlock = (data.content || []).find(b => b.type === "text");
+
+    if (!response.ok) {
+      console.error('Anthropic API error:', data);
+      return res.status(200).json({ approved: false, reason: 'Vérification indisponible, réessayez.' });
+    }
+
+    const textBlock = (data.content || []).find((b) => b.type === 'text');
     let parsed;
     try {
-      parsed = JSON.parse((textBlock?.text || "{}").trim());
+      parsed = JSON.parse((textBlock?.text || '{}').trim());
     } catch {
-      // Si le modèle n'a pas renvoyé un JSON strict, on refuse par prudence.
-      return res.status(200).json({ approved: false, reason: "Vérification impossible, réessayez." });
+      return res.status(200).json({ approved: false, reason: 'Vérification impossible, réessayez.' });
     }
 
     const approved = !!parsed.is_cat_or_dog && !!parsed.is_appropriate;
@@ -64,10 +67,10 @@ export default async function handler(req, res) {
       approved,
       reason: approved
         ? null
-        : parsed.reason || "Seules les photos de chats et chiens, au contenu approprié, sont autorisées.",
+        : parsed.reason || 'Seules les photos de chats et chiens, au contenu approprié, sont autorisées.',
     });
   } catch (err) {
-    console.error("moderate-photo error:", err);
-    return res.status(500).json({ approved: false, reason: "Erreur du service de vérification." });
+    console.error('moderate-photo error:', err);
+    return res.status(500).json({ approved: false, reason: 'Erreur du service de vérification.' });
   }
-}
+};
