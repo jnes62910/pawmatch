@@ -939,7 +939,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {} }) {
           <span style={{ fontSize: 18 }}>🔒</span>
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>REPRODUCTION SÉCURISÉE</div>
-            <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>Tous les profils sont vérifiés. Documents sanitaires validés. Paiement sécurisé via escrow.</div>
+            <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>Tous les profils sont vérifiés. Documents sanitaires validés. La mise en relation est réservée aux membres Premium.</div>
           </div>
         </div>
 
@@ -1096,15 +1096,18 @@ function ReproScreen({ isPremium = false, onPremium = () => {} }) {
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 6 }}>
                 <span style={{ color: "#4B5563" }}>Saillie</span><span style={{ fontWeight: 700, color: "#2D1200" }}>{selected.price}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 6 }}>
-                <span style={{ color: "#4B5563" }}>Commission Miloute</span><span style={{ fontWeight: 700, color: "#9CA3AF" }}>5%</span>
-              </div>
-              <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8 }}>💳 Paiement sécurisé. Libéré après confirmation de la rencontre.</div>
+              <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8 }}>💬 Montant à négocier directement avec {selected.owner} une fois le contact établi. Miloute ne gère pas ce paiement.</div>
             </div>
-            <button onClick={() => setRequested(selected)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>🌱 Envoyer une demande</button>
+
+            {!isPremium ? (
+              <button onClick={() => setShowPremiumPrompt(true)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>👑 Passer Premium pour contacter</button>
+            ) : (
+              <button onClick={() => setRequested(selected)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>🌱 Envoyer une demande</button>
+            )}
           </div>
         </div>
       )}
+
 
       {requested && (
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#1B5E3B)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
