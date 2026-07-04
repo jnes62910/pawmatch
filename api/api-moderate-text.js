@@ -1,35 +1,33 @@
-// /api/moderate-text.js
-//
+// api/moderate-text.js
 // Vérifie qu'un message ou commentaire ne contient pas de contenu
 // problématique (harcèlement, propos haineux, contenu explicite, arnaque,
 // partage abusif de coordonnées, etc.) et bloque automatiquement si besoin.
-//
 // Variable d'environnement requise sur Vercel : ANTHROPIC_API_KEY
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
-
-  const { text } = req.body || {};
-  if (!text || !text.trim()) {
-    return res.status(400).json({ error: "Texte manquant" });
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'text is required' });
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
         messages: [
           {
-            role: "user",
+            role: 'user',
             content:
               "Tu es un modérateur de contenu pour Miloute, une application de rencontre entre animaux (chats et chiens) " +
               "et de mise en relation entre leurs propriétaires. Analyse le message suivant, écrit par un utilisateur " +
@@ -47,23 +45,27 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    const textBlock = (data.content || []).find(b => b.type === "text");
+
+    if (!response.ok) {
+      console.error('Anthropic API error:', data);
+      // Panne du service : on laisse passer plutôt que de bloquer toute conversation.
+      return res.status(200).json({ approved: true, reason: null });
+    }
+
+    const textBlock = (data.content || []).find((b) => b.type === 'text');
     let parsed;
     try {
-      parsed = JSON.parse((textBlock?.text || "{}").trim());
+      parsed = JSON.parse((textBlock?.text || '{}').trim());
     } catch {
-      // En cas de doute sur le format, on n'empêche pas la conversation :
-      // mieux vaut un faux négatif ponctuel qu'une app qui bloque tout.
       return res.status(200).json({ approved: true, reason: null });
     }
 
     return res.status(200).json({
       approved: !!parsed.approved,
-      reason: parsed.approved ? null : parsed.reason || "Ce message enfreint les règles de Miloute.",
+      reason: parsed.approved ? null : parsed.reason || 'Ce message enfreint les règles de Miloute.',
     });
   } catch (err) {
-    console.error("moderate-text error:", err);
-    // Panne du service : on laisse passer plutôt que de bloquer toute conversation.
+    console.error('moderate-text error:', err);
     return res.status(200).json({ approved: true, reason: null });
   }
-}
+};
