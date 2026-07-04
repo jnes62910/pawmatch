@@ -3240,11 +3240,7 @@ export default function Miloute() {
               <span style={{ fontSize: 20, fontWeight: 900, background: "linear-gradient(135deg,#8B3D28,#B25F46)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Miloute</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              {!isPremium && (
-                <button onClick={openPremium} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 700, padding: "5px 12px", cursor: "pointer" }}>👑 Premium</button>
-              )}
-              <button onClick={() => setShowAbout(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 15, cursor: "pointer", color: "#8B3D28" }}>ℹ️</button>
-              <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 15, cursor: "pointer" }}>🔔</button>
+              <button onClick={() => setShowAbout(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 10, color: "#8B3D28", fontSize: 12, fontWeight: 700, padding: "5px 12px", cursor: "pointer" }}>À propos & aide</button>
             </div>
           </div>
         )}
