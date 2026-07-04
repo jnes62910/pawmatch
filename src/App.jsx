@@ -1225,6 +1225,7 @@ function CommunityScreen({ onPremium, isPremium }) {
   const [speciesForBreed, setSpeciesForBreed] = useState("cat"); // espèce affichée dans le menu déroulant
   const [showBreedMenu, setShowBreedMenu] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState("yearly");
   const [openComments, setOpenComments] = useState(null); // post id
   const [comments, setComments] = useState(INIT_COMMENTS);
   const [commentInputs, setCommentInputs] = useState({});
@@ -1380,16 +1381,18 @@ function CommunityScreen({ onPremium, isPremium }) {
             <div style={{ textAlign: "center", fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Fonction Premium</div>
             <div style={{ textAlign: "center", fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>Publiez dans la communauté, accédez à toutes les races et bien plus encore.</div>
             <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-              <div style={{ flex: 1, padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", textAlign: "center" }}>
-                <div style={{ fontWeight: 800, color: "#2D1200", fontSize: 16 }}>4,99 €</div>
-                <div style={{ fontSize: 12, color: "#9CA3AF" }}>par mois</div>
+              <div onClick={() => setPreviewPlan("monthly")}
+                style={{ flex: 1, padding: "14px", borderRadius: 14, cursor: "pointer", textAlign: "center", border: `2px solid ${previewPlan === "monthly" ? "#B25F46" : "#E5E7EB"}`, background: previewPlan === "monthly" ? "#FAF0EB" : "#fff" }}>
+                <div style={{ fontWeight: 800, color: previewPlan === "monthly" ? "#B25F46" : "#2D1200", fontSize: 16 }}>4,99 €</div>
+                <div style={{ fontSize: 12, color: previewPlan === "monthly" ? "#B25F46" : "#9CA3AF" }}>par mois</div>
               </div>
-              <div style={{ flex: 1, padding: "14px", borderRadius: 14, border: "2px solid #B25F46", textAlign: "center", background: "#FAF0EB" }}>
-                <div style={{ fontWeight: 800, color: "#B25F46", fontSize: 16 }}>39,99 €</div>
-                <div style={{ fontSize: 12, color: "#B25F46" }}>par an · -33%</div>
+              <div onClick={() => setPreviewPlan("yearly")}
+                style={{ flex: 1, padding: "14px", borderRadius: 14, cursor: "pointer", textAlign: "center", border: `2px solid ${previewPlan === "yearly" ? "#B25F46" : "#E5E7EB"}`, background: previewPlan === "yearly" ? "#FAF0EB" : "#fff" }}>
+                <div style={{ fontWeight: 800, color: previewPlan === "yearly" ? "#B25F46" : "#2D1200", fontSize: 16 }}>39,99 €</div>
+                <div style={{ fontSize: 12, color: previewPlan === "yearly" ? "#B25F46" : "#9CA3AF" }}>par an · -33%</div>
               </div>
             </div>
-            <button onClick={() => { setShowPremium(false); onPremium(); }}
+            <button onClick={() => { setShowPremium(false); onPremium(previewPlan); }}
               style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
               👑 Passer Premium
             </button>
@@ -2445,9 +2448,9 @@ const FEATURES = [
   ["📊", "Statistiques avancées"],
 ];
 
-function PremiumTunnel({ onClose, onSuccess }) {
+function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly" }) {
   const [step, setStep] = useState("plans"); // plans | payment | success
-  const [plan, setPlan] = useState("yearly");
+  const [plan, setPlan] = useState(initialPlan);
   const [card, setCard] = useState({ number: "", expiry: "", cvc: "", name: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -3154,6 +3157,7 @@ export default function Miloute() {
   const [chatId, setChatId] = useState(null);
   const [isPremium, setIsPremium] = useState(loadPremiumStatus);
   const [showPremiumTunnel, setShowPremiumTunnel] = useState(false);
+  const [premiumInitialPlan, setPremiumInitialPlan] = useState("yearly");
   const [showAbout, setShowAbout] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
@@ -3203,7 +3207,7 @@ export default function Miloute() {
 
   function openChat(id) { setChatId(id); setScreen("chat"); }
   function closeChat() { setChatId(null); setScreen("messages"); }
-  function openPremium() { if (!isPremium) setShowPremiumTunnel(true); }
+  function openPremium(preferredPlan = "yearly") { if (!isPremium) { setPremiumInitialPlan(preferredPlan); setShowPremiumTunnel(true); } }
   function onPremiumSuccess() { setIsPremium(true); savePremiumStatus(true); setShowPremiumTunnel(false); }
 
   
@@ -3286,7 +3290,7 @@ export default function Miloute() {
 
         {/* Premium tunnel */}
         {showPremiumTunnel && (
-          <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} onSuccess={onPremiumSuccess} />
+          <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} onSuccess={onPremiumSuccess} initialPlan={premiumInitialPlan} />
         )}
 
         {/* Vérification du paiement en cours */}
