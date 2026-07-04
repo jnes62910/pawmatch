@@ -225,6 +225,79 @@ function distanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── MODÉRATION ────────────────────────────────────────────────────────────────
+// Photos/vidéos : seuls les chats et chiens sont autorisés, contenu approprié
+// obligatoire. Messages/commentaires : blocage auto si contenu problématique.
+// Les vérifications réelles se font côté serveur (fonctions Vercel, voir
+// /api/moderate-photo et /api/moderate-text) via l'API Claude (vision + texte).
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]); // retire le préfixe data:...;base64,
+    reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Extrait la première image d'une vidéo (miniature) pour la faire passer par
+// la même vérification que les photos — évite d'avoir à analyser tout le flux.
+function extractVideoFrameBase64(file) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.src = URL.createObjectURL(file);
+    video.onloadeddata = () => {
+      video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
+    };
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 240;
+        canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+        const base64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+        URL.revokeObjectURL(video.src);
+        resolve(base64);
+      } catch (err) { reject(err); }
+    };
+    video.onerror = () => reject(new Error("Lecture de la vidéo impossible"));
+  });
+}
+
+// Retourne { approved: boolean, reason: string|null }. En cas d'erreur réseau,
+// on refuse par prudence plutôt que de laisser passer un contenu non vérifié.
+async function moderateImage(base64, mimeType = "image/jpeg") {
+  try {
+    const res = await fetch("/api/moderate-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, mimeType }),
+    });
+    if (!res.ok) return { approved: false, reason: "Vérification indisponible, réessayez." };
+    const data = await res.json();
+    return { approved: !!data.approved, reason: data.reason || null };
+  } catch {
+    return { approved: false, reason: "Vérification indisponible, réessayez." };
+  }
+}
+
+async function moderateText(text) {
+  try {
+    const res = await fetch("/api/moderate-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return { approved: true, reason: null }; // texte : on ne bloque pas si le service est indisponible
+    const data = await res.json();
+    return { approved: !!data.approved, reason: data.reason || null };
+  } catch {
+    return { approved: true, reason: null };
+  }
+}
+
 const FREE_RADIUS_CAP = 20; // km
 
 function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => {} }) {
@@ -1242,9 +1315,20 @@ function CommunityScreen({ onPremium, isPremium }) {
     "Reproduction": ["#E8F5E9","#2E7D32"]
   };
 
-  function submitComment(postId) {
+  const [moderatingComment, setModeratingComment] = useState({}); // { [postId]: bool }
+  const [commentModerationError, setCommentModerationError] = useState({}); // { [postId]: string }
+
+  async function submitComment(postId) {
     const text = (commentInputs[postId] || "").trim();
     if (!text) return;
+    setCommentModerationError(e => ({ ...e, [postId]: null }));
+    setModeratingComment(m => ({ ...m, [postId]: true }));
+    const result = await moderateText(text);
+    setModeratingComment(m => ({ ...m, [postId]: false }));
+    if (!result.approved) {
+      setCommentModerationError(e => ({ ...e, [postId]: result.reason || "Ce message enfreint les règles de la communauté et n'a pas été publié." }));
+      return;
+    }
     const newComment = {
       id: Date.now(),
       author: "Vous",
@@ -1456,17 +1540,21 @@ function CommunityScreen({ onPremium, isPremium }) {
             </div>
 
             {/* Input */}
+            {commentModerationError[openComments] && (
+              <div style={{ margin: "0 16px", padding: "8px 12px", background: "#FEF2F2", borderRadius: 10, fontSize: 12, color: "#DC2626" }}>{commentModerationError[openComments]}</div>
+            )}
             <div style={{ padding: "10px 16px 28px", borderTop: "1px solid #F3F4F6", display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🐱</div>
               <input
                 value={commentInputs[openComments] || ""}
                 onChange={e => setCommentInputs(i => ({ ...i, [openComments]: e.target.value }))}
                 onKeyDown={e => e.key === "Enter" && submitComment(openComments)}
-                placeholder="Ajouter un commentaire..."
+                placeholder={moderatingComment[openComments] ? "Vérification en cours..." : "Ajouter un commentaire..."}
+                disabled={!!moderatingComment[openComments]}
                 style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB", fontFamily: "inherit" }}
               />
-              <button onClick={() => submitComment(openComments)}
-                style={{ width: 38, height: 38, borderRadius: "50%", border: "none", background: (commentInputs[openComments] || "").trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", cursor: (commentInputs[openComments] || "").trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={18} color={(commentInputs[openComments] || "").trim() ? "#fff" : "#9CA3AF"} /></button>
+              <button onClick={() => submitComment(openComments)} disabled={!!moderatingComment[openComments]}
+                style={{ width: 38, height: 38, borderRadius: "50%", border: "none", background: (commentInputs[openComments] || "").trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", cursor: (commentInputs[openComments] || "").trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s" }}><PawLogo size={18} color={(commentInputs[openComments] || "").trim() ? "#fff" : "#9CA3AF"} /></button>
             </div>
           </div>
         </div>
@@ -1623,11 +1711,22 @@ function ChatScreen({ matchId, onBack }) {
   const match = MATCHES.find(m => m.id === matchId);
   const [msgs, setMsgs] = useState(MESSAGES[matchId] || []);
   const [input, setInput] = useState("");
+  const [moderating, setModerating] = useState(false);
+  const [moderationError, setModerationError] = useState(null);
   const bottomRef = useRef(null);
 
-  function send() {
-    if (!input.trim()) return;
-    setMsgs(m => [...m, { from: "me", text: input.trim(), time: "À l'instant" }]);
+  async function send() {
+    const text = input.trim();
+    if (!text) return;
+    setModerationError(null);
+    setModerating(true);
+    const result = await moderateText(text);
+    setModerating(false);
+    if (!result.approved) {
+      setModerationError(result.reason || "Ce message enfreint les règles de Miloute et n'a pas été envoyé.");
+      return;
+    }
+    setMsgs(m => [...m, { from: "me", text, time: "À l'instant" }]);
     setInput("");
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     setTimeout(() => {
@@ -1668,10 +1767,13 @@ function ChatScreen({ matchId, onBack }) {
         ))}
         <div ref={bottomRef} />
       </div>
+      {moderationError && (
+        <div style={{ margin: "0 16px 8px", padding: "8px 12px", background: "#FEF2F2", borderRadius: 10, fontSize: 12, color: "#DC2626" }}>{moderationError}</div>
+      )}
       <div style={{ display: "flex", gap: 10, padding: "12px 16px", borderTop: "1px solid #F3F4F6", background: "#fff" }}>
         <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>📷</button>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Écrire un message..." style={{ flex: 1, padding: "10px 16px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB" }} />
-        <button onClick={send} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={moderating ? "Vérification en cours..." : "Écrire un message..."} disabled={moderating} style={{ flex: 1, padding: "10px 16px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB" }} />
+        <button onClick={send} disabled={moderating} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
       </div>
     </div>
   );
@@ -1942,16 +2044,50 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
   function toggleSeeking(s) { setDraft(d => ({ ...d, seeking: d.seeking.includes(s) ? d.seeking.filter(x => x !== s) : [...d.seeking, s] })); }
   function setRepro(k, v) { setDraft(d => ({ ...d, repro: { ...d.repro, [k]: v } })); }
 
-  function handlePhotoAdd(e) {
-    const files = Array.from(e.target.files);
-    const toAdd = files.slice(0, 6 - draft.photos.length).map(f => ({ url: URL.createObjectURL(f), name: f.name }));
-    setDraft(d => ({ ...d, photos: [...d.photos, ...toAdd] }));
+  const [moderatingMedia, setModeratingMedia] = useState(false);
+  const [mediaModerationError, setMediaModerationError] = useState(null);
+
+  async function handlePhotoAdd(e) {
+    const files = Array.from(e.target.files).slice(0, 6 - draft.photos.length);
     e.target.value = "";
+    if (files.length === 0) return;
+    setMediaModerationError(null);
+    setModeratingMedia(true);
+    const approved = [];
+    for (const f of files) {
+      try {
+        const base64 = await fileToBase64(f);
+        const result = await moderateImage(base64, f.type || "image/jpeg");
+        if (result.approved) {
+          approved.push({ url: URL.createObjectURL(f), name: f.name });
+        } else {
+          setMediaModerationError(result.reason || "Photo refusée : seules les photos de chats et chiens, au contenu approprié, sont autorisées.");
+        }
+      } catch {
+        setMediaModerationError("Impossible de vérifier cette photo, réessayez.");
+      }
+    }
+    if (approved.length) setDraft(d => ({ ...d, photos: [...d.photos, ...approved] }));
+    setModeratingMedia(false);
   }
-  function handleVideoAdd(e) {
+  async function handleVideoAdd(e) {
     const f = e.target.files[0];
-    if (f) setDraft(d => ({ ...d, video: { url: URL.createObjectURL(f), name: f.name } }));
     e.target.value = "";
+    if (!f) return;
+    setMediaModerationError(null);
+    setModeratingMedia(true);
+    try {
+      const base64 = await extractVideoFrameBase64(f);
+      const result = await moderateImage(base64, "image/jpeg");
+      if (result.approved) {
+        setDraft(d => ({ ...d, video: { url: URL.createObjectURL(f), name: f.name } }));
+      } else {
+        setMediaModerationError(result.reason || "Vidéo refusée : seules les vidéos de chats et chiens, au contenu approprié, sont autorisées.");
+      }
+    } catch {
+      setMediaModerationError("Impossible de vérifier cette vidéo, réessayez.");
+    }
+    setModeratingMedia(false);
   }
   function handleDocAdd(e) {
     const files = Array.from(e.target.files);
@@ -1989,6 +2125,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
         {editTab === "profil" && <>
           {/* Photos */}
           <label style={labelStyle}>PHOTOS ({draft.photos.length}/6)</label>
+          {moderatingMedia && (
+            <div style={{ fontSize: 12, color: "#B25F46", marginBottom: 8 }}>🔎 Vérification du contenu en cours...</div>
+          )}
+          {mediaModerationError && (
+            <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>{mediaModerationError}</div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
             {photoSlots.map((p, i) => (
               <div key={i} onClick={() => !p && photoRef.current?.click()}
@@ -2751,11 +2893,31 @@ function Onboarding({ onComplete }) {
   function toggleArr(k, v) { setForm(f => ({ ...f, [k]: f[k].includes(v) ? f[k].filter(x => x !== v) : [...f[k], v] })); }
   function toggleTemper(t) { setForm(f => ({ ...f, temper: f.temper.includes(t) ? f.temper.filter(x => x !== t) : f.temper.length < 4 ? [...f.temper, t] : f.temper })); }
 
-  function handlePhotoAdd(e) {
-    const files = Array.from(e.target.files);
-    const toAdd = files.slice(0, 6 - form.photos.length).map(f => ({ url: URL.createObjectURL(f), name: f.name }));
-    setForm(f => ({ ...f, photos: [...f.photos, ...toAdd] }));
+  const [moderatingMedia, setModeratingMedia] = useState(false);
+  const [mediaModerationError, setMediaModerationError] = useState(null);
+
+  async function handlePhotoAdd(e) {
+    const files = Array.from(e.target.files).slice(0, 6 - form.photos.length);
     e.target.value = "";
+    if (files.length === 0) return;
+    setMediaModerationError(null);
+    setModeratingMedia(true);
+    const approved = [];
+    for (const f of files) {
+      try {
+        const base64 = await fileToBase64(f);
+        const result = await moderateImage(base64, f.type || "image/jpeg");
+        if (result.approved) {
+          approved.push({ url: URL.createObjectURL(f), name: f.name });
+        } else {
+          setMediaModerationError(result.reason || "Photo refusée : seules les photos de chats et chiens, au contenu approprié, sont autorisées.");
+        }
+      } catch {
+        setMediaModerationError("Impossible de vérifier cette photo, réessayez.");
+      }
+    }
+    if (approved.length) setForm(f => ({ ...f, photos: [...f.photos, ...approved] }));
+    setModeratingMedia(false);
   }
 
   function next() { setDirection(1); setStep(s => s + 1); }
@@ -2989,6 +3151,12 @@ function Onboarding({ onComplete }) {
           <div>
             <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Ses plus belles photos 📸</div>
             <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 20 }}>Ajoutez jusqu'à 6 photos. Les profils avec photos ont 5× plus de matchs !</div>
+            {moderatingMedia && (
+              <div style={{ fontSize: 12, color: "#B25F46", marginBottom: 10 }}>🔎 Vérification du contenu en cours...</div>
+            )}
+            {mediaModerationError && (
+              <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 10 }}>{mediaModerationError}</div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
               {[...form.photos, ...Array(Math.max(0, 6 - form.photos.length)).fill(null)].map((p, i) => (
                 <div key={i} onClick={() => !p && photoRef.current?.click()}
