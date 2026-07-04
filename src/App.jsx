@@ -1695,7 +1695,7 @@ const INIT_PET = {
     active: false, price: "", priceNegotiable: false,
     availableFrom: "", availableTo: "",
     pedigree: false, geneticTest: false,
-    reproDesc: "", docs: [], stripeAccountId: null
+    reproDesc: "", docs: []
   }
 };
 
@@ -1714,7 +1714,7 @@ function readBoostEnd() {
 const FAQ_ITEMS = [
   { q: "Comment fonctionne le matching sur Miloute ?", a: "Vous créez le profil de votre animal (race, caractère, ce qu'il recherche), puis vous parcourez les profils d'autres animaux à proximité. Si vous likez un profil et que son propriétaire vous like en retour, c'est un match ! Vous pouvez alors échanger des messages pour organiser une rencontre." },
   { q: "L'application est-elle gratuite ?", a: "Oui, l'essentiel de Miloute est gratuit : créer un profil, swiper, matcher, discuter. L'abonnement Premium (4,99€/mois ou 39,99€/an) débloque des fonctionnalités de confort comme voir qui vous a liké, un rayon de recherche illimité, un boost de visibilité et des statistiques avancées." },
-  { q: "Comment fonctionne le module Reproduction ?", a: "C'est un espace dédié aux éleveurs et particuliers souhaitant faire reproduire leur animal. Chaque profil reproducteur peut afficher pedigree, bilan génétique et documents sanitaires. Les paiements de saillie passent par Stripe, avec une commission prélevée par la plateforme." },
+  { q: "Comment fonctionne le module Reproduction ?", a: "C'est un espace dédié aux éleveurs et particuliers souhaitant faire reproduire leur animal. Chaque profil reproducteur peut afficher pedigree, bilan génétique et documents sanitaires. La mise en relation est réservée aux membres Premium ; le prix de la saillie se négocie ensuite directement entre les deux propriétaires, en dehors de l'application." },
   { q: "Mes données sont-elles partagées avec d'autres utilisateurs ?", a: "Seules les informations que vous choisissez de rendre publiques (profil de votre animal, photos, distance approximative) sont visibles par les autres utilisateurs. Votre position exacte, votre email et vos données de paiement ne sont jamais partagés. Voir notre politique de confidentialité pour plus de détails." },
   { q: "Comment supprimer mon compte ?", a: "Vous pouvez demander la suppression de votre compte et de toutes vos données à tout moment en nous contactant à l'adresse indiquée dans la section Contact. Nous traitons les demandes sous 30 jours maximum, conformément au RGPD." },
   { q: "L'app est-elle disponible partout en France ?", a: "Miloute est lancée en priorité à Paris et en Île-de-France pour garantir une bonne densité d'utilisateurs. L'application reste accessible partout, mais le nombre de profils peut être plus limité en dehors de cette zone pour le moment." },
@@ -1825,7 +1825,7 @@ function AboutScreen({ onBack }) {
               <p style={{ marginBottom: 12 }}>L'abonnement Premium est facturé mensuellement ou annuellement via Stripe. Il est résiliable à tout moment ; la résiliation prend effet à la fin de la période en cours, sans remboursement au prorata.</p>
 
               <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>6. Paiements et commissions</h3>
-              <p style={{ marginBottom: 12 }}>Les transactions liées au module Reproduction transitent par Stripe Connect. Miloute prélève une commission sur chaque transaction, clairement indiquée avant validation du paiement.</p>
+              <p style={{ marginBottom: 12 }}>Seul l'abonnement Premium fait l'objet d'un paiement sur Miloute. Le montant d'une éventuelle saillie, dans le cadre du module Reproduction, est négocié et réglé directement entre les utilisateurs concernés, en dehors de l'application ; Miloute ne perçoit aucune commission sur ces transactions et n'y intervient pas.</p>
 
               <h3 style={{ fontSize: 14, fontWeight: 800, color: "#2D1200", marginTop: 20, marginBottom: 8 }}>7. Modération et suspension</h3>
               <p style={{ marginBottom: 12 }}>Nous nous réservons le droit de suspendre ou supprimer tout compte ne respectant pas les présentes CGU, sans préavis en cas de manquement grave.</p>
@@ -1899,7 +1899,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
   const [draft, setDraft] = useState(pet);
   const [saved, setSaved] = useState(false);
   const [editTab, setEditTab] = useState("profil"); // "profil" | "repro"
-  const [stripeOnboardingLoading, setStripeOnboardingLoading] = useState(false);
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [boostEnd, setBoostEnd] = useState(readBoostEnd);
   const [boostTimeLeft, setBoostTimeLeft] = useState("");
@@ -2131,51 +2130,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
                 Prix à discuter
               </button>
 
-              {/* Activation des paiements — Stripe Connect */}
-              <div style={{ marginBottom: 16, padding: "14px", borderRadius: 14, border: `2px solid ${draft.repro.stripeAccountId ? "#2E7D32" : "#E5E7EB"}`, background: draft.repro.stripeAccountId ? "#E8F5E9" : "#F9FAFB" }}>
-                {draft.repro.stripeAccountId ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 20 }}>✅</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: "#1B5E20" }}>Paiements activés</div>
-                      <div style={{ fontSize: 11, color: "#2E7D32" }}>Vous pouvez recevoir des règlements pour vos saillies</div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "#2D1200", marginBottom: 4 }}>💳 Paiements non activés</div>
-                    <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Pour recevoir l'argent de vos saillies, activez un compte de paiement sécurisé (5 min, via Stripe).</div>
-                    <button
-                      disabled={stripeOnboardingLoading}
-                      onClick={async () => {
-                        setStripeOnboardingLoading(true);
-                        try {
-                          const res = await fetch("/api/create-connect-account", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              email: draft.ownerEmail || "test@miloute.app",
-                              petId: draft.id || "draft",
-                            }),
-                          });
-                          const data = await res.json();
-                          if (data.onboardingUrl) {
-                            setRepro("stripeAccountId", data.accountId);
-                            window.location.href = data.onboardingUrl;
-                          } else {
-                            alert("Erreur Stripe : " + (data.error || "inconnue"));
-                          }
-                        } catch (err) {
-                          alert("Impossible de contacter le serveur de paiement. (" + err.message + ")");
-                        } finally {
-                          setStripeOnboardingLoading(false);
-                        }
-                      }}
-                      style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: stripeOnboardingLoading ? "#E5E7EB" : "linear-gradient(135deg,#635BFF,#4338CA)", color: stripeOnboardingLoading ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: stripeOnboardingLoading ? "default" : "pointer" }}>
-                      {stripeOnboardingLoading ? "Connexion..." : "⚡ Activer les paiements avec Stripe"}
-                    </button>
-                  </>
-                )}
+              {/* Rappel : le prix de la saillie se négocie et se paie directement entre
+                  propriétaires, en dehors de l'app — aucune activation de paiement requise ici. */}
+              <div style={{ marginBottom: 16, padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB" }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#2D1200", marginBottom: 4 }}>💬 Paiement hors app</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF", lineHeight: 1.5 }}>Le montant de la saillie est à convenir directement avec l'autre propriétaire une fois le contact établi. Miloute ne gère aucun paiement pour cette étape.</div>
               </div>
 
               {/* Disponibilité */}
