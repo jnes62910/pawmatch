@@ -266,9 +266,15 @@ function extractVideoFrameBase64(file) {
   });
 }
 
+// Interrupteur global : passer à true une fois les endpoints /api/moderate-photo
+// et /api/moderate-text opérationnels sur Vercel. Tant que c'est false, tout
+// contenu est accepté sans appel réseau (aucun impact sur l'app en attendant).
+const MODERATION_ENABLED = false;
+
 // Retourne { approved: boolean, reason: string|null }. En cas d'erreur réseau,
 // on refuse par prudence plutôt que de laisser passer un contenu non vérifié.
 async function moderateImage(base64, mimeType = "image/jpeg") {
+  if (!MODERATION_ENABLED) return { approved: true, reason: null };
   try {
     const res = await fetch("/api/moderate-photo", {
       method: "POST",
@@ -284,6 +290,7 @@ async function moderateImage(base64, mimeType = "image/jpeg") {
 }
 
 async function moderateText(text) {
+  if (!MODERATION_ENABLED) return { approved: true, reason: null };
   try {
     const res = await fetch("/api/moderate-text", {
       method: "POST",
