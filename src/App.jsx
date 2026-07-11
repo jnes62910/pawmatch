@@ -508,25 +508,33 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               ))}
             </div>
 
-            {/* Bouton friandise ("super like" à thème) */}
-            <button onClick={e => { e.stopPropagation(); sendTreat(); }}
-              style={{ position: "absolute", top: 44, right: 12, zIndex: 6, width: 44, height: 44, borderRadius: "50%",
-                background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 20,
-                display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)",
-                transform: treatSentId === profile.id ? "scale(1.25)" : "scale(1)", transition: "transform .25s" }}>
-              🦴
-              {!isPremium && (
-                <span style={{ position: "absolute", bottom: -4, right: -4, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {Math.max(0, FREE_TREATS_PER_DAY - treatsToday)}
-                </span>
-              )}
-            </button>
+            {/* Boutons d'action — même taille, alignés en bas de la photo */}
+            <div style={{ position: "absolute", bottom: 14, left: 0, right: 0, zIndex: 6, display: "flex", justifyContent: "center", alignItems: "center", gap: 22, pointerEvents: "none" }}>
+              <button onClick={e => { e.stopPropagation(); swipe("nope"); }}
+                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 22, color: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
+                ✕
+              </button>
+              <button onClick={e => { e.stopPropagation(); sendTreat(); }}
+                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)", position: "relative",
+                  transform: treatSentId === profile.id ? "scale(1.2)" : "scale(1)", transition: "transform .25s" }}>
+                {profile.species === "cat" ? "🐟" : "🦴"}
+                {!isPremium && (
+                  <span style={{ position: "absolute", bottom: -3, right: -3, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {Math.max(0, FREE_TREATS_PER_DAY - treatsToday)}
+                  </span>
+                )}
+              </button>
+              <button onClick={e => { e.stopPropagation(); swipe("like"); }}
+                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(178,95,70,.35)" }}>
+                <PawLogo size={24} color="#fff" />
+              </button>
+            </div>
 
             {/* Confirmation d'envoi de friandise */}
             {treatToast && (
-              <div style={{ position: "absolute", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 6,
+              <div style={{ position: "absolute", bottom: 76, left: "50%", transform: "translateX(-50%)", zIndex: 6,
                 background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", pointerEvents: "none" }}>
-                🦴 Friandise envoyée à {treatToast} !
+                {profile.species === "cat" ? "🐟" : "🦴"} Friandise envoyée à {treatToast} !
               </div>
             )}
 
