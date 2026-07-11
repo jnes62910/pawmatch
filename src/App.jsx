@@ -525,8 +525,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 )}
               </button>
               <button onClick={e => { e.stopPropagation(); swipe("like"); }}
-                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(178,95,70,.35)" }}>
-                <PawLogo size={24} color="#fff" />
+                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
+                <PawLogo size={24} color="#B25F46" />
               </button>
             </div>
 
@@ -3371,8 +3371,24 @@ function savePremiumStatus(value) {
 }
 
 // ── FRIANDISES ("super like" à thème) ────────────────────────────────────────
-// 1 friandise gratuite par jour ; illimité pour les membres Premium.
-const FREE_TREATS_PER_DAY = 1;
+// Quota gratuit boosté au lancement pour maximiser l'engagement pendant la
+// phase critique, puis réduit une fois la base d'utilisateurs stabilisée.
+// 👉 À AJUSTER : mets ici la date réelle de ton lancement (la rentrée), le
+// boost s'arrêtera automatiquement 14 jours plus tard.
+const LAUNCH_DATE = "2026-09-01";
+const LAUNCH_BOOST_DAYS = 14;
+const FREE_TREATS_PER_DAY_LAUNCH = 3;
+const FREE_TREATS_PER_DAY_NORMAL = 1;
+
+function isLaunchBoostActive() {
+  const launch = new Date(LAUNCH_DATE);
+  const boostEnd = new Date(launch.getTime() + LAUNCH_BOOST_DAYS * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  return now >= launch && now < boostEnd;
+}
+// Quota du jour : 3/jour pendant les 14 jours suivant le lancement, puis 1/jour.
+const FREE_TREATS_PER_DAY = isLaunchBoostActive() ? FREE_TREATS_PER_DAY_LAUNCH : FREE_TREATS_PER_DAY_NORMAL;
+
 function todayKey() { return new Date().toISOString().slice(0, 10); } // "YYYY-MM-DD"
 function loadTreatsToday() {
   try {
