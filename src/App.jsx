@@ -855,9 +855,69 @@ async function fetchSpotsForCell(cellId) {
   if (error || !data) { console.error("fetchSpotsForCell error:", error); return []; }
   return data.map(row => ({
     id: row.id, name: row.name, city: row.city, type: row.type, species: row.species,
-    emoji: row.emoji, lat: row.lat, lng: row.lng, desc: row.description,
+    emoji: row.emoji, lat: row.lat, lng: row.lng, desc: row.description, phone: row.phone,
     metricLabel: row.metric_label, animals: row.metric_value || 0, open: row.open,
   }));
+}
+
+// ── PRESTATAIRES ──────────────────────────────────────────────────────────────
+const PROVIDER_TYPES = ["vet", "groomer", "boarding", "trainer", "petsitter", "petshop"];
+const PROVIDER_TYPE_INFO = {
+  vet: { label: "Vétérinaires", emoji: "🩺" },
+  groomer: { label: "Toiletteurs", emoji: "✂️" },
+  boarding: { label: "Pensions", emoji: "🏠" },
+  trainer: { label: "Éducateurs", emoji: "🎓" },
+  petsitter: { label: "Pet-sitters", emoji: "🐾" },
+  petshop: { label: "Boutiques", emoji: "🛍️" },
+};
+
+async function fetchProvidersForCell(cellId) {
+  const { data, error } = await supabase.from("spots").select("*").eq("cell_id", cellId).in("type", PROVIDER_TYPES);
+  if (error || !data) { console.error("fetchProvidersForCell error:", error); return []; }
+  return data.map(row => ({
+    id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
+    lat: row.lat, lng: row.lng, address: row.address, phone: row.phone, desc: row.description,
+    open: row.open, source: row.source,
+  }));
+}
+
+async function fetchReviewsForProviders(spotIds) {
+  if (!spotIds.length) return {};
+  const { data, error } = await supabase.from("provider_reviews").select("*").in("spot_id", spotIds);
+  if (error || !data) return {};
+  const bySpot = {};
+  data.forEach(r => { (bySpot[r.spot_id] = bySpot[r.spot_id] || []).push(r); });
+  return bySpot;
+}
+
+async function fetchReviewsForSpot(spotId) {
+  const { data, error } = await supabase.from("provider_reviews").select("*").eq("spot_id", spotId).order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map(r => ({
+    id: r.id, rating: r.rating, text: r.text, petName: r.pet_name,
+    emoji: r.species === "cat" ? "🐱" : "🐕",
+    time: formatRelativeTime(r.created_at),
+  }));
+}
+
+async function createProviderReview(userProfile, spotId, rating, text) {
+  const { error } = await supabase.from("provider_reviews").upsert({
+    spot_id: spotId, user_id: userProfile.userId, pet_name: userProfile.name, species: userProfile.species,
+    rating, text,
+  }, { onConflict: "spot_id,user_id" });
+  if (error) throw new Error(error.message);
+}
+
+async function createCommunityProvider(userProfile, { name, type, address, phone, description, lat, lng }) {
+  const { data, error } = await supabase.from("spots").insert({
+    cell_id: cellIdFor(lat, lng),
+    name, type, species: "both",
+    emoji: PROVIDER_TYPE_INFO[type]?.emoji || "📍",
+    lat, lng, address: address || null, phone: phone || null, description: description || null,
+    open: true, source: "community", added_by_user_id: userProfile.userId,
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null }) {
@@ -1265,6 +1325,270 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
 }
 
 // ── REPRO SCREEN ──────────────────────────────────────────────────────────────
+// ── PRESTATAIRES ──────────────────────────────────────────────────────────────
+function ProvidersScreen({ userProfile = null }) {
+  const [providers, setProviders] = useState([]);
+  const [reviewsBySpot, setReviewsBySpot] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState("all");
+  const [selected, setSelected] = useState(null);
+  const [selectedReviews, setSelectedReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+
+  const refLat = userProfile?.location?.lat ?? 48.8566;
+  const refLng = userProfile?.location?.lng ?? 2.3522;
+  const cellId = cellIdFor(refLat, refLng);
+
+  async function reload() {
+    setLoading(true);
+    await ensureSpotsForLocation(refLat, refLng, nearestCity(refLat, refLng));
+    const list = await fetchProvidersForCell(cellId);
+    const reviews = await fetchReviewsForProviders(list.map(p => p.id));
+    setProviders(list);
+    setReviewsBySpot(reviews);
+    setLoading(false);
+  }
+
+  useEffect(() => { reload(); }, [cellId]);
+
+  function ratingFor(spotId) {
+    const list = reviewsBySpot[spotId];
+    if (!list || list.length === 0) return null;
+    const avg = list.reduce((s, r) => s + r.rating, 0) / list.length;
+    return { avg, count: list.length };
+  }
+
+  const filtered = providers.filter(p => category === "all" || p.type === category);
+
+  async function openProvider(p) {
+    setSelected(p);
+    setLoadingReviews(true);
+    const list = await fetchReviewsForSpot(p.id);
+    setSelectedReviews(list);
+    setLoadingReviews(false);
+  }
+
+  async function submitReview() {
+    if (!reviewRating) { setReviewError("Choisissez une note."); return; }
+    setReviewError(null);
+    setSubmittingReview(true);
+    const modResult = await moderateText(reviewText || "");
+    if (!modResult.approved) {
+      setReviewError(modResult.reason || "Cet avis enfreint les règles de Miloute.");
+      setSubmittingReview(false);
+      return;
+    }
+    try {
+      await createProviderReview(userProfile, selected.id, reviewRating, reviewText.trim() || null);
+      const list = await fetchReviewsForSpot(selected.id);
+      setSelectedReviews(list);
+      const reviews = await fetchReviewsForProviders(providers.map(p => p.id));
+      setReviewsBySpot(reviews);
+      setShowReviewForm(false);
+      setReviewRating(0);
+      setReviewText("");
+    } catch (err) {
+      setReviewError("L'avis n'a pas pu être publié, réessayez.");
+    }
+    setSubmittingReview(false);
+  }
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: "#9CA3AF" }}>Prestataires vérifiés par la communauté 🐾</div>
+          <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter</button>
+        </div>
+        <div className="miloute-hide-scrollbar" style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+          <button onClick={() => setCategory("all")} style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: category === "all" ? "#8B3D28" : "#FAF0EB", color: category === "all" ? "#fff" : "#8B3D28" }}>Tout</button>
+          {PROVIDER_TYPES.map(t => (
+            <button key={t} onClick={() => setCategory(t)} style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: category === t ? "#8B3D28" : "#FAF0EB", color: category === t ? "#fff" : "#8B3D28" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 20px" }}>
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={32} color="#E8B89F" /></div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "#9CA3AF" }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+            <div style={{ fontSize: 14, marginBottom: 10 }}>Aucun prestataire connu ici pour l'instant</div>
+            <button onClick={() => setShowAddForm(true)} style={{ background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Soyez le premier à en ajouter un</button>
+          </div>
+        ) : filtered.map(p => {
+          const r = ratingFor(p.id);
+          return (
+            <div key={p.id} onClick={() => openProvider(p)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
+              <div style={{ fontSize: 26 }}>{p.emoji || PROVIDER_TYPE_INFO[p.type]?.emoji}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: "#9CA3AF" }}>{PROVIDER_TYPE_INFO[p.type]?.label}{p.address ? ` · ${p.address}` : ""}</div>
+              </div>
+              {r ? (
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#B25F46" }}>⭐ {r.avg.toFixed(1)}</div>
+                  <div style={{ fontSize: 10, color: "#9CA3AF" }}>{r.count} avis</div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: "#9CA3AF", flexShrink: 0 }}>Pas encore noté</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Détail d'un prestataire */}
+      {selected && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "flex-end" }} onClick={() => setSelected(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+              <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{selected.emoji} {selected.name}</div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.address ? ` · ${selected.address}` : ""}</div>
+                  {selected.phone && <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 4, fontWeight: 600 }}>📞 {selected.phone}</div>}
+                </div>
+                <button onClick={() => setSelected(null)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>✕</button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "14px 20px" }}>
+              <button onClick={() => setShowReviewForm(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>⭐ Laisser un avis</button>
+
+              {loadingReviews ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={24} color="#E8B89F" /></div>
+              ) : selectedReviews.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px 0", color: "#9CA3AF", fontSize: 13 }}>Aucun avis pour l'instant — soyez le premier !</div>
+              ) : selectedReviews.map(r => (
+                <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #F9FAFB" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <span>{r.emoji}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: "#2D1200" }}>{r.petName}</span>
+                    <span style={{ color: "#F59E0B", fontSize: 12 }}>{"⭐".repeat(r.rating)}</span>
+                    <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: "auto" }}>{r.time}</span>
+                  </div>
+                  {r.text && <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.5 }}>{r.text}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Formulaire d'avis */}
+      {showReviewForm && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 75, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => !submittingReview && setShowReviewForm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", width: "100%" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 14, textAlign: "center" }}>Votre avis sur {selected?.name}</div>
+            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
+              {[1,2,3,4,5].map(s => (
+                <button key={s} onClick={() => setReviewRating(s)} style={{ background: "none", border: "none", fontSize: 32, cursor: "pointer", opacity: reviewRating && s > reviewRating ? 0.3 : 1 }}>⭐</button>
+              ))}
+            </div>
+            <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} placeholder="Racontez votre expérience (optionnel)..." rows={3}
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB", fontFamily: "inherit", resize: "none", marginBottom: 12, boxSizing: "border-box" }} />
+            {reviewError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{reviewError}</div>}
+            <button onClick={submitReview} disabled={submittingReview}
+              style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: submittingReview ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: submittingReview ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 14, cursor: submittingReview ? "default" : "pointer" }}>
+              {submittingReview ? "Publication..." : "Publier l'avis"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Formulaire d'ajout de prestataire */}
+      {showAddForm && (
+        <AddProviderForm
+          userProfile={userProfile}
+          refLat={refLat}
+          refLng={refLng}
+          onClose={() => setShowAddForm(false)}
+          onAdded={() => { setShowAddForm(false); reload(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AddProviderForm({ userProfile, refLat, refLng, onClose, onAdded }) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState("petsitter");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function submit() {
+    if (!name.trim()) { setError("Le nom est requis."); return; }
+    setError(null);
+    setSubmitting(true);
+    if (description.trim()) {
+      const modResult = await moderateText(description);
+      if (!modResult.approved) {
+        setError(modResult.reason || "Ce texte enfreint les règles de Miloute.");
+        setSubmitting(false);
+        return;
+      }
+    }
+    try {
+      await createCommunityProvider(userProfile, { name: name.trim(), type, address: address.trim(), phone: phone.trim(), description: description.trim(), lat: refLat, lng: refLng });
+      onAdded();
+    } catch {
+      setError("L'ajout a échoué, réessayez.");
+    }
+    setSubmitting(false);
+  }
+
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 80, display: "flex", alignItems: "flex-end" }} onClick={() => !submitting && onClose()}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "90%", overflowY: "auto", padding: "20px 20px 32px" }}>
+        <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+        <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Ajouter un prestataire</div>
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>CATÉGORIE</label>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "6px 0 14px" }}>
+          {PROVIDER_TYPES.map(t => (
+            <button key={t} onClick={() => setType(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${type === t ? "#B25F46" : "#E5E7EB"}`, background: type === t ? "#FAF0EB" : "#fff", color: type === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
+          ))}
+        </div>
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>NOM *</label>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Julie, pet-sitter du 15e"
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 14px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>ADRESSE OU QUARTIER</label>
+        <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Ex: Paris 15e"
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 14px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>TÉLÉPHONE (optionnel)</label>
+        <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Ex: 06 12 34 56 78"
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 14px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DESCRIPTION (optionnel)</label>
+        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Ex: Garde à domicile, disponible week-ends..."
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", resize: "none", boxSizing: "border-box" }} />
+
+        {error && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{error}</div>}
+
+        <button onClick={submit} disabled={submitting}
+          style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: submitting ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: submitting ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: submitting ? "default" : "pointer" }}>
+          {submitting ? "Ajout en cours..." : "Ajouter"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = null }) {
   const [selected, setSelected] = useState(null);
   const [requested, setRequested] = useState(null);
@@ -3738,6 +4062,7 @@ function Onboarding({ onComplete, initialOwner = null }) {
     energy: 3, vaccinated: false, sterilized: false,
     temper: [], seeking: [],
     bio: "", photos: [],
+    providerInterest: null, // "provider" | "interested" | "no" | null
     location: null, // { lat, lng } — toujours dans le form pour compat, mais plus demandé en onboarding (voir bulle dans l'onglet Carte)
   });
 
@@ -3785,7 +4110,7 @@ function Onboarding({ onComplete, initialOwner = null }) {
 
   const STEPS = [
     "owner", "species", "identity", "health",
-    "character", "seeking", "photos", "bio", "recap"
+    "character", "seeking", "photos", "bio", "provider", "recap"
   ];
   const current = STEPS[step];
   const progress = step / (STEPS.length - 1);
@@ -4078,6 +4403,39 @@ function Onboarding({ onComplete, initialOwner = null }) {
           </div>
         )}
 
+        {/* ── PRESTATAIRE ── */}
+        {current === "provider" && (
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Une dernière chose 🐾</div>
+            <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 24, lineHeight: 1.6 }}>
+              Miloute propose aussi un annuaire de prestataires pour animaux (vétérinaires, toiletteurs, pet-sitters...). Et vous, dans tout ça ?
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 8 }}>
+              {[
+                ["provider", "🏥 Je suis moi-même prestataire", "Vétérinaire, toiletteur, éducateur, pet-sitter..."],
+                ["interested", "🙋 Non, mais ça m'intéresse", "Je serais partant pour proposer mes services plus tard"],
+                ["no", "🙅 Non, pas concerné", "Je suis juste ici pour mon compagnon"],
+              ].map(([v, label, desc]) => (
+                <button key={v} onClick={() => set("providerInterest", v)}
+                  style={{ width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 14, border: `2px solid ${form.providerInterest === v ? "#B25F46" : "#E5E7EB"}`, background: form.providerInterest === v ? "#FAF0EB" : "#fff", cursor: "pointer" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: form.providerInterest === v ? "#B25F46" : "#2D1200" }}>{label}</div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{desc}</div>
+                </button>
+              ))}
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <button onClick={next}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
+                Continuer →
+              </button>
+              {!form.providerInterest && (
+                <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── RECAP ── */}
         {current === "recap" && (
           <div>
@@ -4127,7 +4485,7 @@ function Onboarding({ onComplete, initialOwner = null }) {
       </div>
 
       {/* CTA */}
-      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity","species"].includes(current) ? "none" : "block" }}>
+      <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity","species","provider"].includes(current) ? "none" : "block" }}>
         {current === "recap" ? (
           <>
             {submitError && (
@@ -4787,6 +5145,7 @@ export default function Miloute() {
       seeking: form.seeking,
       bio: form.bio,
       photos: uploadedPhotos,
+      provider_interest: form.providerInterest,
     }).select().single();
 
     if (insertError) throw new Error(insertError.message);
@@ -4832,6 +5191,7 @@ export default function Miloute() {
   
   const NAV = [
     { id: "swipe", label: "Découvrir", icon: null, logo: true },
+    { id: "providers", label: "Prestataires", icon: "🏥" },
     { id: "repro", label: "Reproduction", icon: "🌱" },
     { id: "community", label: "Communauté", icon: "🏆" },
     { id: "messages", label: "Messages", icon: "💬" },
@@ -4869,6 +5229,7 @@ export default function Miloute() {
                 )
               : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
+                {screen === "providers" && <ProvidersScreen userProfile={userProfile} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
