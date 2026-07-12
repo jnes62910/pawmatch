@@ -1119,6 +1119,19 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
   const [requested, setRequested] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
+  const [reproDeck, setReproDeck] = useState([]);
+  const [loadingRepro, setLoadingRepro] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      setLoadingRepro(true);
+      const result = await fetchReproProfiles(userProfile);
+      if (active) { setReproDeck(result); setLoadingRepro(false); }
+    }
+    load();
+    return () => { active = false; };
+  }, [userProfile?.id, userProfile?.userId, userProfile?.species]);
 
   // Filtres avancés (Premium uniquement)
   const [advBreed, setAdvBreed] = useState("");
@@ -1147,10 +1160,9 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
     setShowAdvanced(true);
   }
 
-  const speciesReproProfiles = REPRO_PROFILES.filter(p => !userProfile?.species || p.species === userProfile.species);
-  const allTempers = [...new Set(speciesReproProfiles.flatMap(p => p.temper))];
+  const allTempers = [...new Set(reproDeck.flatMap(p => p.temper))];
 
-  const filtered = speciesReproProfiles.filter(p => {
+  const filtered = reproDeck.filter(p => {
     if (!isPremium) return true; // les filtres avancés ne s'appliquent qu'en Premium
     if (advBreed && !p.breed.toLowerCase().includes(advBreed.toLowerCase())) return false;
     if (advAgeRange !== "all" && ageToRange(p.age) !== advAgeRange) return false;
@@ -1201,9 +1213,17 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
 
         {filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: "#9CA3AF" }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-            <div style={{ fontSize: 14 }}>Aucun profil ne correspond à ces critères</div>
-            <button onClick={resetAdvanced} style={{ marginTop: 10, background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Réinitialiser les filtres</button>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>{loadingRepro ? "" : "🔍"}</div>
+            {loadingRepro ? (
+              <div style={{ display: "flex", justifyContent: "center" }}><PawLogo size={32} color="#E8B89F" /></div>
+            ) : (
+              <>
+                <div style={{ fontSize: 14 }}>Aucun profil reproducteur disponible pour le moment</div>
+                {(advBreed || advAgeRange !== "all" || advGender !== "all" || advTemper !== "all" || advDocs.length > 0) && (
+                  <button onClick={resetAdvanced} style={{ marginTop: 10, background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Réinitialiser les filtres</button>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -1734,13 +1754,25 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
   const [agendaData, setAgendaData] = useState(AGENDA);
   const [rating, setRating] = useState(null);
   const [ratingFor, setRatingFor] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [loadingMatches, setLoadingMatches] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      setLoadingMatches(true);
+      const result = await fetchMatchesForUser(userProfile);
+      if (active) { setMatches(result); setLoadingMatches(false); }
+    }
+    load();
+    return () => { active = false; };
+  }, [userProfile?.id, userProfile?.userId]);
 
   function submitRating(id, stars) {
     setAgendaData(a => a.map(ev => ev.id === id ? { ...ev, rating: stars } : ev));
     setRatingFor(null); setRating(null);
   }
 
-  const matches = MATCHES.filter(m => !userProfile?.species || m.species === userProfile.species);
   const agendaBySpecies = agendaData.filter(e => !userProfile?.species || e.species === userProfile.species);
   const upcoming = agendaBySpecies.filter(e => e.status !== "done" && e.status !== "cancelled");
   const past = agendaBySpecies.filter(e => e.status === "done");
@@ -1760,8 +1792,17 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
         <div style={{ flex: 1, overflowY: "auto" }}>
           <div style={{ padding: "14px 16px 8px" }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Vos matchs</div>
-            <div style={{ fontSize: 13, color: "#9CA3AF" }}>3 connexions en attente</div>
+            <div style={{ fontSize: 13, color: "#9CA3AF" }}>{matches.length} connexion{matches.length !== 1 ? "s" : ""}</div>
           </div>
+
+          {loadingMatches ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={32} color="#E8B89F" /></div>
+          ) : matches.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 32px", color: "#9CA3AF", fontSize: 14 }}>
+              Pas encore de match. Direction l'onglet Découvrir pour swiper des profils ! 🐾
+            </div>
+          ) : (
+            <>
           <div style={{ overflowX: "auto", display: "flex", gap: 12, padding: "8px 16px 16px" }}>
             {matches.map(m => (
               <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
@@ -1795,6 +1836,8 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
               {m.unread > 0 && <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.unread}</div>}
             </div>
           ))}
+            </>
+          )}
         </div>
       )}
 
@@ -1874,13 +1917,56 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
   );
 }
 
-function ChatScreen({ matchId, onBack }) {
-  const match = MATCHES.find(m => m.id === matchId);
-  const [msgs, setMsgs] = useState(MESSAGES[matchId] || []);
+function ChatScreen({ matchId, onBack, userProfile = null }) {
+  const [match, setMatch] = useState(null); // { name, emoji, photo, owner }
+  const [msgs, setMsgs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
   const [moderating, setModerating] = useState(false);
   const [moderationError, setModerationError] = useState(null);
   const bottomRef = useRef(null);
+
+  // Charge le match (profil en face) + l'historique des messages, puis reste
+  // à l'écoute en temps réel des nouveaux messages de cette conversation.
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      setLoading(true);
+      const matches = await fetchMatchesForUser(userProfile);
+      const found = matches.find(m => m.id === matchId);
+      if (active) setMatch(found || null);
+
+      const { data: history } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("match_id", matchId)
+        .order("created_at", { ascending: true });
+      if (active) {
+        setMsgs((history || []).map(m => ({
+          from: m.sender_user_id === userProfile.userId ? "me" : "them",
+          text: m.text,
+          time: formatRelativeTime(m.created_at),
+        })));
+        setLoading(false);
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "auto" }), 50);
+      }
+    }
+    load();
+
+    const channel = supabase
+      .channel(`messages-${matchId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` }, (payload) => {
+        setMsgs(m => [...m, {
+          from: payload.new.sender_user_id === userProfile.userId ? "me" : "them",
+          text: payload.new.text,
+          time: formatRelativeTime(payload.new.created_at),
+        }]);
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      })
+      .subscribe();
+
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, [matchId, userProfile?.userId]);
 
   async function send() {
     const text = input.trim();
@@ -1893,13 +1979,15 @@ function ChatScreen({ matchId, onBack }) {
       setModerationError(result.reason || "Ce message enfreint les règles de Miloute et n'a pas été envoyé.");
       return;
     }
-    setMsgs(m => [...m, { from: "me", text, time: "À l'instant" }]);
     setInput("");
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-    setTimeout(() => {
-      setMsgs(m => [...m, { from: "them", text: "Super idée ! On se retrouve quand ?", time: "À l'instant" }]);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-    }, 1200);
+    const { error } = await supabase.from("messages").insert({
+      match_id: matchId,
+      sender_user_id: userProfile.userId,
+      text,
+    });
+    // Pas besoin de mettre à jour msgs manuellement : le message revient via
+    // l'abonnement temps réel ci-dessus, pour soi comme pour l'autre personne.
+    if (error) setModerationError("Le message n'a pas pu être envoyé, réessayez.");
   }
 
   return (
@@ -1924,7 +2012,11 @@ function ChatScreen({ matchId, onBack }) {
         <button style={{ background: "#B25F46", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 700, padding: "5px 9px", cursor: "pointer" }}>Proposer</button>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-        {msgs.map((msg, i) => (
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={28} color="#E8B89F" /></div>
+        ) : msgs.length === 0 ? (
+          <div style={{ textAlign: "center", color: "#9CA3AF", fontSize: 13, padding: 24 }}>Vous avez matché ! Dites bonjour 👋</div>
+        ) : msgs.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
             <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
               {msg.text}
@@ -3520,6 +3612,95 @@ async function fetchProfileForUser(userId) {
   if (error) { console.error("fetchProfileForUser error:", error); return null; }
   return data ? profileFromRow(data) : null;
 }
+
+// Formatage relatif simple ("À l'instant", "12:34", "Hier", "Lun.")
+function formatRelativeTime(iso) {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMin = diffMs / 60000;
+  if (diffMin < 1) return "À l'instant";
+  if (diffMin < 60 * 24 && date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  }
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Hier";
+  return date.toLocaleDateString("fr-FR", { weekday: "short" });
+}
+
+// Récupère les matchs réels de l'utilisateur, avec le profil du match et le
+// dernier message échangé (pour l'aperçu affiché dans la liste).
+const REPRO_CARD_COLORS = ["#E8B89F", "#C9C4A9", "#B7D3C9", "#D7B8DA", "#F0C9A0"];
+function reproProfileFromRow(row, userProfile) {
+  const colorIdx = Math.abs([...String(row.id || "")].reduce((a, c) => a + c.charCodeAt(0), 0)) % REPRO_CARD_COLORS.length;
+  let distance = "—";
+  if (userProfile?.location && row.lat && row.lng) {
+    distance = distanceKm(userProfile.location.lat, userProfile.location.lng, row.lat, row.lng).toFixed(1).replace(".", ",") + " km";
+  }
+  return {
+    id: row.id, userId: row.user_id,
+    name: row.pet_name, species: row.species, breed: row.breed, age: row.age, gender: row.gender,
+    emoji: row.species === "cat" ? "🐱" : "🐕", color: REPRO_CARD_COLORS[colorIdx],
+    owner: row.owner_name, distance,
+    vaccinated: row.vaccinated, pedigree: row.repro?.pedigree, testedGenes: row.repro?.geneticTest,
+    price: row.repro?.price || "À négocier",
+    bio: row.repro?.reproDesc || row.bio || "",
+    temper: row.temper || [],
+  };
+}
+// Un "profil reproduction" est simplement un profil de la table `profiles`
+// qui a activé repro.active — pas besoin de table séparée.
+async function fetchReproProfiles(userProfile) {
+  if (!userProfile?.species || !userProfile?.userId) return [];
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("species", userProfile.species)
+    .neq("user_id", userProfile.userId);
+  if (error || !data) { console.error("fetchReproProfiles error:", error); return []; }
+  return data.filter(row => row.repro?.active).map(row => reproProfileFromRow(row, userProfile));
+}
+
+async function fetchMatchesForUser(userProfile) {
+  if (!userProfile?.userId) return [];
+  const { data: matchRows, error } = await supabase
+    .from("matches")
+    .select("*")
+    .or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`)
+    .order("created_at", { ascending: false });
+  if (error || !matchRows || matchRows.length === 0) return [];
+
+  const otherProfileIds = matchRows.map(m => (m.profile_a === userProfile.id ? m.profile_b : m.profile_a));
+  const { data: otherProfiles } = await supabase.from("profiles").select("*").in("id", otherProfileIds);
+  const profileById = Object.fromEntries((otherProfiles || []).map(p => [p.id, p]));
+
+  const { data: lastMessages } = await supabase
+    .from("messages")
+    .select("match_id, text, created_at")
+    .in("match_id", matchRows.map(m => m.id))
+    .order("created_at", { ascending: false });
+  const lastByMatch = {};
+  (lastMessages || []).forEach(msg => { if (!lastByMatch[msg.match_id]) lastByMatch[msg.match_id] = msg; });
+
+  return matchRows.map(m => {
+    const otherId = m.profile_a === userProfile.id ? m.profile_b : m.profile_a;
+    const other = profileById[otherId];
+    const last = lastByMatch[m.id];
+    return {
+      id: m.id,
+      otherUserId: m.user_a === userProfile.userId ? m.user_b : m.user_a,
+      name: other?.pet_name || "Profil",
+      species: other?.species,
+      emoji: other?.species === "cat" ? "🐱" : "🐕",
+      photo: other?.photos?.[0]?.url || null,
+      owner: other?.owner_name || "",
+      lastMsg: last?.text || "Vous avez matché ! Dites bonjour 👋",
+      time: last ? formatRelativeTime(last.created_at) : "",
+      unread: 0,
+    };
+  });
+}
+
 function loadPremiumStatus() {
   try { return localStorage.getItem("miloute_is_premium") === "true"; } catch { return false; }
 }
@@ -3830,7 +4011,7 @@ export default function Miloute() {
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
-                {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} />}
+                {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} />}
                 {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} />}
               </>
           }
