@@ -108,12 +108,18 @@ module.exports = async (req, res) => {
       }
     }
 
-    await supabase.from('spot_cells_sync').upsert({
-      cell_id: cellId,
-      cell_lat: lat,
-      cell_lng: lng,
-      last_synced_at: new Date().toISOString(),
-    });
+    // On ne marque la case comme "à jour" que si la synchronisation a
+    // vraiment réussi au moins partiellement — sinon on veut pouvoir
+    // réessayer au prochain chargement plutôt que de rester bloqué 30 jours
+    // sur un échec.
+    if (upserted > 0) {
+      await supabase.from('spot_cells_sync').upsert({
+        cell_id: cellId,
+        cell_lat: lat,
+        cell_lng: lng,
+        last_synced_at: new Date().toISOString(),
+      });
+    }
 
     return res.status(200).json({ cellId, refreshed: true, upserted, errors: errors.length ? errors : undefined });
   } catch (err) {
