@@ -2188,17 +2188,19 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
   );
 }
 
-function ChatScreen({ matchId, onBack, userProfile = null }) {
+function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () => {} }) {
   const [match, setMatch] = useState(null); // { name, emoji, photo, owner }
   const [msgs, setMsgs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
   const [moderating, setModerating] = useState(false);
   const [moderationError, setModerationError] = useState(null);
+  const [sendingPhoto, setSendingPhoto] = useState(false);
   const [suggestedSpot, setSuggestedSpot] = useState(null);
   const [loadingSpot, setLoadingSpot] = useState(true);
   const [proposing, setProposing] = useState(false);
   const bottomRef = useRef(null);
+  const photoInputRef = useRef(null);
 
   // Cherche un spot réel à proximité (parc en priorité, sinon n'importe
   // lequel) pour suggérer un lieu de rencontre concret dans la conversation.
@@ -2231,8 +2233,9 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
     setProposing(false);
   }
 
-  // Charge le match (profil en face) + l'historique des messages, puis reste
-  // à l'écoute en temps réel des nouveaux messages de cette conversation.
+  // Charge le match (profil en face) + l'historique des messages, marque les
+  // messages reçus comme lus, puis reste à l'écoute en temps réel des
+  // nouveaux messages de cette conversation.
   useEffect(() => {
     let active = true;
     async function load() {
@@ -2250,11 +2253,16 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
         setMsgs((history || []).map(m => ({
           from: m.sender_user_id === userProfile.userId ? "me" : "them",
           text: m.text,
+          imageUrl: m.image_url,
           time: formatRelativeTime(m.created_at),
         })));
         setLoading(false);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "auto" }), 50);
       }
+      // Marque comme lus les messages reçus dans cette conversation, et
+      // rafraîchit le badge de la barre de navigation en conséquence.
+      await markMessagesRead(matchId, userProfile.userId);
+      onMessagesRead();
     }
     load();
 
@@ -2264,9 +2272,14 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
         setMsgs(m => [...m, {
           from: payload.new.sender_user_id === userProfile.userId ? "me" : "them",
           text: payload.new.text,
+          imageUrl: payload.new.image_url,
           time: formatRelativeTime(payload.new.created_at),
         }]);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+        // La conversation est ouverte : ce nouveau message est vu tout de suite.
+        if (payload.new.sender_user_id !== userProfile.userId) {
+          markMessagesRead(matchId, userProfile.userId).then(onMessagesRead);
+        }
       })
       .subscribe();
 
@@ -2293,6 +2306,33 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
     // Pas besoin de mettre à jour msgs manuellement : le message revient via
     // l'abonnement temps réel ci-dessus, pour soi comme pour l'autre personne.
     if (error) setModerationError("Le message n'a pas pu être envoyé, réessayez.");
+  }
+
+  async function sendPhoto(e) {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setModerationError(null);
+    setSendingPhoto(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const result = await moderateImage(base64, file.type || "image/jpeg");
+      if (!result.approved) {
+        setModerationError(result.reason || "Photo refusée : contenu non approprié.");
+        setSendingPhoto(false);
+        return;
+      }
+      const imageUrl = await uploadPhotoToStorage(file, userProfile.userId);
+      const { error } = await supabase.from("messages").insert({
+        match_id: matchId,
+        sender_user_id: userProfile.userId,
+        image_url: imageUrl,
+      });
+      if (error) setModerationError("La photo n'a pas pu être envoyée, réessayez.");
+    } catch {
+      setModerationError("Impossible d'envoyer cette photo, réessayez.");
+    }
+    setSendingPhoto(false);
   }
 
   return (
@@ -2328,9 +2368,10 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
           <div style={{ textAlign: "center", color: "#9CA3AF", fontSize: 13, padding: 24 }}>Vous avez matché ! Dites bonjour 👋</div>
         ) : msgs.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
-            <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
-              {msg.text}
-              <div style={{ fontSize: 10, opacity: .6, marginTop: 4, textAlign: msg.from === "me" ? "right" : "left" }}>{msg.time}</div>
+            <div style={{ maxWidth: "75%", padding: msg.imageUrl ? 4 : "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
+              {msg.imageUrl && <img src={msg.imageUrl} alt="" style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 14, display: "block" }} />}
+              {msg.text && <div style={{ padding: msg.imageUrl ? "8px 8px 2px" : 0 }}>{msg.text}</div>}
+              <div style={{ fontSize: 10, opacity: .6, marginTop: 4, textAlign: msg.from === "me" ? "right" : "left", padding: msg.imageUrl ? "0 8px 4px" : 0 }}>{msg.time}</div>
             </div>
           </div>
         ))}
@@ -2340,9 +2381,10 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
         <div style={{ margin: "0 16px 8px", padding: "8px 12px", background: "#FEF2F2", borderRadius: 10, fontSize: 12, color: "#DC2626" }}>{moderationError}</div>
       )}
       <div style={{ display: "flex", gap: 10, padding: "12px 16px", borderTop: "1px solid #F3F4F6", background: "#fff" }}>
-        <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>📷</button>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={moderating ? "Vérification en cours..." : "Écrire un message..."} disabled={moderating} style={{ flex: 1, padding: "10px 16px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB" }} />
-        <button onClick={send} disabled={moderating} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
+        <input ref={photoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={sendPhoto} />
+        <button onClick={() => photoInputRef.current?.click()} disabled={sendingPhoto} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: sendingPhoto ? "default" : "pointer", flexShrink: 0, opacity: sendingPhoto ? .5 : 1 }}>📷</button>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={moderating ? "Vérification en cours..." : sendingPhoto ? "Envoi de la photo..." : "Écrire un message..."} disabled={moderating || sendingPhoto} style={{ flex: 1, padding: "10px 16px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB" }} />
+        <button onClick={send} disabled={moderating || sendingPhoto} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
       </div>
     </div>
   );
@@ -4173,6 +4215,21 @@ async function sendTreatToProfile(userProfile, targetProfile) {
   if (error) throw new Error(error.message);
 }
 
+async function fetchUnreadMessagesCount(userProfile) {
+  if (!userProfile?.userId) return 0;
+  const { count, error } = await supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .neq("sender_user_id", userProfile.userId)
+    .eq("read", false);
+  if (error) { console.error("fetchUnreadMessagesCount error:", error); return 0; }
+  return count || 0;
+}
+
+async function markMessagesRead(matchId, userId) {
+  await supabase.from("messages").update({ read: true }).eq("match_id", matchId).neq("sender_user_id", userId).eq("read", false);
+}
+
 async function fetchUnseenTreatsCount(userProfile) {
   if (!userProfile?.userId) return 0;
   const { count, error } = await supabase
@@ -4377,6 +4434,7 @@ function WelcomeScreen({ onStartEmailSignup, onLoggedIn }) {
 export default function Miloute() {
   const [onboarded, setOnboarded] = useState(() => loadProfile() !== null);
   const [unseenTreats, setUnseenTreats] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [userProfile, setUserProfile] = useState(() => loadProfile());
   const [authSession, setAuthSession] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -4401,6 +4459,19 @@ export default function Miloute() {
     }
     refresh();
     const interval = setInterval(refresh, 30000); // rafraîchi toutes les 30s
+    return () => { active = false; clearInterval(interval); };
+  }, [userProfile?.userId]);
+
+  // Badge de notification sur l'icône Messages : messages non lus.
+  useEffect(() => {
+    if (!userProfile?.userId) { setUnreadMessages(0); return; }
+    let active = true;
+    async function refresh() {
+      const count = await fetchUnreadMessagesCount(userProfile);
+      if (active) setUnreadMessages(count);
+    }
+    refresh();
+    const interval = setInterval(refresh, 30000);
     return () => { active = false; clearInterval(interval); };
   }, [userProfile?.userId]);
 
@@ -4608,7 +4679,7 @@ export default function Miloute() {
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
-                {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} />}
+                {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} />}
                 {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} />}
               </>
           }
@@ -4630,6 +4701,9 @@ export default function Miloute() {
                   {n.logo ? <PawLogo size={20} color={screen === n.id ? "#B25F46" : "#9CA3AF"} /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
                   {n.id === "profile" && unseenTreats > 0 && (
                     <span style={{ position: "absolute", top: 0, right: 6, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unseenTreats}</span>
+                  )}
+                  {n.id === "messages" && unreadMessages > 0 && (
+                    <span style={{ position: "absolute", top: 0, right: 6, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unreadMessages}</span>
                   )}
                   <span style={{ fontSize: 9, fontWeight: screen === n.id ? 700 : 400, color: screen === n.id ? "#B25F46" : "#9CA3AF", whiteSpace: "nowrap" }}>{n.label}</span>
                   {screen === n.id && <div style={{ width: 16, height: 3, borderRadius: 2, background: "#B25F46" }} />}
