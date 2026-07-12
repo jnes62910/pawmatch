@@ -2639,13 +2639,14 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onNav = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
   const [saved, setSaved] = useState(false);
   const [editTab, setEditTab] = useState("profil"); // "profil" | "repro"
   const [showLikesModal, setShowLikesModal] = useState(false);
+  const [selectedLike, setSelectedLike] = useState(null);
   const [treatsReceived, setTreatsReceived] = useState([]);
   const [unseenTreatsCount, setUnseenTreatsCount] = useState(0);
   const [showTreatsModal, setShowTreatsModal] = useState(false);
@@ -3257,7 +3258,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
               {LIKES_RECEIVED.map((like, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative" }}>
+                <div key={i} onClick={() => isPremium ? setSelectedLike(like) : onPremium()}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative", cursor: "pointer" }}>
                   <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, filter: isPremium ? "none" : "blur(6px)" }}>
                     {like.photo ? <img src={like.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : like.emoji}
                   </div>
@@ -3266,6 +3268,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     <div style={{ fontSize: 12, color: "#9CA3AF" }}>{like.breed} · {like.time}</div>
                   </div>
                   {!isPremium && <span style={{ fontSize: 16, flexShrink: 0 }}>🔒</span>}
+                  {isPremium && <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>}
                 </div>
               ))}
             </div>
@@ -3284,6 +3287,40 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
         </div>
       )}
+
+      {/* Détail d'un profil ayant liké */}
+      {selectedLike && (() => {
+        const fullProfile = PROFILES.find(p => p.name === selectedLike.name) || REPRO_PROFILES.find(p => p.name === selectedLike.name);
+        return (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "flex-end" }} onClick={() => setSelectedLike(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
+              <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+              <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>
+                  {photoUrl(selectedLike.photo) ? <img src={photoUrl(selectedLike.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : selectedLike.emoji}
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selectedLike.name}{fullProfile?.age ? ` · ${fullProfile.age}` : ""}</div>
+                  <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selectedLike.breed}</div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF" }}>A liké {pet.name} · {selectedLike.time}</div>
+                </div>
+              </div>
+              {fullProfile?.temper && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                  {fullProfile.temper.map(t => <Badge key={t} color="#FAF0EB" text="#8B3D28">{t}</Badge>)}
+                </div>
+              )}
+              {fullProfile?.bio && (
+                <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 18 }}>{fullProfile.bio}</p>
+              )}
+              <button onClick={() => { setSelectedLike(null); setShowLikesModal(false); onNav("swipe"); }}
+                style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Voir dans Découvrir
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modale Friandises reçues */}
       {showTreatsModal && (
@@ -4746,7 +4783,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onNav={setScreen} />}
               </>
           }
         </div>
