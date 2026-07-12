@@ -311,7 +311,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [idx, setIdx] = useState(0);
   const [matchedWith, setMatchedWith] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
-  const [tab, setTab] = useState("all");
   const [photo, setPhoto] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -320,6 +319,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [treatsToday, setTreatsToday] = useState(loadTreatsToday);
   const [treatSentId, setTreatSentId] = useState(null);
   const [treatToast, setTreatToast] = useState(null); // nom de l'animal
+  const [breedFilter, setBreedFilter] = useState("all");
+  const [showBreedMenu, setShowBreedMenu] = useState(false);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const cardRef = useRef(null);
@@ -327,7 +328,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
   useEffect(() => {
     if (infoScrollRef.current) infoScrollRef.current.scrollTop = 0;
-  }, [idx, tab]);
+  }, [idx]);
 
   function getProfileDistance(p) {
     if (userProfile?.location && p.lat && p.lng) {
@@ -338,8 +339,11 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     return isNaN(parsed) ? 0 : parsed;
   }
 
-  const filtered = PROFILES.filter(p =>
-    (tab === "all" || p.species === (tab === "cats" ? "cat" : "dog")) &&
+  const speciesProfiles = PROFILES.filter(p => !userProfile?.species || p.species === userProfile.species);
+  const availableBreeds = [...new Set(speciesProfiles.map(p => p.breed))].sort((a, b) => a.localeCompare(b));
+
+  const filtered = speciesProfiles.filter(p =>
+    (breedFilter === "all" || p.breed === breedFilter) &&
     (searchRadius >= 100 || getProfileDistance(p) <= searchRadius)
   );
   const profile = filtered[idx];
@@ -418,15 +422,33 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
       onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
 
-      <div style={{ display: "flex", gap: 8, padding: "12px 16px 0", background: "#fff", flexShrink: 0, alignItems: "center" }}>
-        {[["cats","Chats"],["dogs","Chiens"]].map(([v,l]) => (
-          <button key={v} onClick={() => { setTab(v); setIdx(0); setPhoto(0); setDragX(0); }}
-            style={{ padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: tab === v ? "#8B3D28" : "#FAF0EB", color: tab === v ? "#fff" : "#8B3D28" }}>{l}</button>
-        ))}
+      <div style={{ position: "relative", display: "flex", gap: 8, padding: "12px 16px 0", background: "#fff", flexShrink: 0, alignItems: "center", justifyContent: "space-between" }}>
+        <button onClick={() => setShowBreedMenu(m => !m)}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${breedFilter !== "all" ? "#8B3D28" : "#E5E7EB"}`, cursor: "pointer", fontSize: 12, fontWeight: 600, background: breedFilter !== "all" ? "#FAF0EB" : "#fff", color: "#8B3D28", whiteSpace: "nowrap" }}>
+          🐾 {breedFilter === "all" ? "Toutes les races" : breedFilter}
+          <span style={{ fontSize: 10, color: "#9CA3AF", transform: showBreedMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+        </button>
         <button onClick={() => setShowRadiusSheet(true)}
-          style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+          style={{ padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
           📍 {searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}
         </button>
+
+        {showBreedMenu && (
+          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 16, background: "#fff", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,.15)", border: "1px solid #F3F4F6", zIndex: 30, overflow: "hidden", minWidth: 200, maxHeight: 280 }}>
+            <div style={{ maxHeight: 280, overflowY: "auto" }}>
+              <button onClick={() => { setBreedFilter("all"); setShowBreedMenu(false); setIdx(0); setPhoto(0); setDragX(0); }}
+                style={{ width: "100%", padding: "11px 14px", border: "none", background: breedFilter === "all" ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#8B3D28", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
+                Toutes les races
+              </button>
+              {availableBreeds.map(b => (
+                <button key={b} onClick={() => { setBreedFilter(b); setShowBreedMenu(false); setIdx(0); setPhoto(0); setDragX(0); }}
+                  style={{ width: "100%", padding: "11px 14px", border: "none", background: breedFilter === b ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: breedFilter === b ? 700 : 500, color: breedFilter === b ? "#8B3D28" : "#374151", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sheet — rayon de recherche */}
