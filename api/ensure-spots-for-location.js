@@ -67,7 +67,7 @@ module.exports = async (req, res) => {
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.userRatingCount',
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.userRatingCount,places.types',
         },
         body: JSON.stringify({
           includedTypes: [cat.includedType],
@@ -84,7 +84,12 @@ module.exports = async (req, res) => {
         continue;
       }
 
-      for (const place of data.places || []) {
+      // Filtre strict : Google renvoie parfois des résultats approchants
+      // (ex. des pharmacies mélangées aux vétérinaires) même avec
+      // includedTypes — on ne garde que ceux dont le type exact est présent.
+      const places = (data.places || []).filter(p => (p.types || []).includes(cat.includedType));
+
+      for (const place of places) {
         const row = {
           cell_id: cellId,
           city: city || null, // simple étiquette d'affichage, optionnelle
