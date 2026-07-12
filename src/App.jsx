@@ -4388,7 +4388,7 @@ function WelcomeScreen({ onStartEmailSignup, onLoggedIn }) {
         <PawLogo size={64} color="#B25F46" />
         <span style={{ fontSize: 42, fontWeight: 900, color: "#B25F46" }}>Miloute</span>
       </div>
-      <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 36 }}>La rencontre, version chats & chiens</div>
+      <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 36 }}>La vraie rencontre pour chiens et chats</div>
 
       {error && (
         <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>{error}</div>
