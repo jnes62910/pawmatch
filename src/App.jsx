@@ -2195,7 +2195,41 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
   const [input, setInput] = useState("");
   const [moderating, setModerating] = useState(false);
   const [moderationError, setModerationError] = useState(null);
+  const [suggestedSpot, setSuggestedSpot] = useState(null);
+  const [loadingSpot, setLoadingSpot] = useState(true);
+  const [proposing, setProposing] = useState(false);
   const bottomRef = useRef(null);
+
+  // Cherche un spot réel à proximité (parc en priorité, sinon n'importe
+  // lequel) pour suggérer un lieu de rencontre concret dans la conversation.
+  useEffect(() => {
+    let active = true;
+    async function loadSpot() {
+      setLoadingSpot(true);
+      const lat = userProfile?.location?.lat ?? 48.8566;
+      const lng = userProfile?.location?.lng ?? 2.3522;
+      await ensureSpotsForLocation(lat, lng, nearestCity(lat, lng));
+      const spots = await fetchSpotsForCell(cellIdFor(lat, lng));
+      if (!active) return;
+      const best = spots.find(s => s.type === "park") || spots[0] || null;
+      setSuggestedSpot(best ? { ...best, distance: distanceKm(lat, lng, best.lat, best.lng).toFixed(1).replace(".", ",") + " km" } : null);
+      setLoadingSpot(false);
+    }
+    loadSpot();
+    return () => { active = false; };
+  }, [userProfile?.location?.lat, userProfile?.location?.lng]);
+
+  async function proposeSpot() {
+    if (!suggestedSpot || proposing) return;
+    setProposing(true);
+    const text = `📍 Et si on se retrouvait à ${suggestedSpot.name} (${suggestedSpot.distance}) ?`;
+    await supabase.from("messages").insert({
+      match_id: matchId,
+      sender_user_id: userProfile.userId,
+      text,
+    });
+    setProposing(false);
+  }
 
   // Charge le match (profil en face) + l'historique des messages, puis reste
   // à l'écoute en temps réel des nouveaux messages de cette conversation.
@@ -2278,9 +2312,14 @@ function ChatScreen({ matchId, onBack, userProfile = null }) {
         <span>📍</span>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#B25F46" }}>LIEU SUGGÉRÉ</div>
-          <div style={{ fontSize: 13, color: "#4B5563" }}>Parc Montsouris · 0,8 km · Ouvert</div>
+          <div style={{ fontSize: 13, color: "#4B5563" }}>
+            {loadingSpot ? "Recherche d'un lieu à proximité..." : suggestedSpot ? `${suggestedSpot.name} · ${suggestedSpot.distance} · ${suggestedSpot.open ? "Ouvert" : "Fermé"}` : "Aucun spot connu à proximité pour l'instant"}
+          </div>
         </div>
-        <button style={{ background: "#B25F46", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 700, padding: "5px 9px", cursor: "pointer" }}>Proposer</button>
+        <button onClick={proposeSpot} disabled={!suggestedSpot || proposing}
+          style={{ background: suggestedSpot ? "#B25F46" : "#E5E7EB", border: "none", borderRadius: 8, color: suggestedSpot ? "#fff" : "#9CA3AF", fontSize: 11, fontWeight: 700, padding: "5px 9px", cursor: suggestedSpot ? "pointer" : "default" }}>
+          {proposing ? "..." : "Proposer"}
+        </button>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         {loading ? (
@@ -4521,7 +4560,6 @@ export default function Miloute() {
   
   const NAV = [
     { id: "swipe", label: "Découvrir", icon: null, logo: true },
-    { id: "map", label: "Carte", icon: "🗺️" },
     { id: "repro", label: "Reproduction", icon: "🌱" },
     { id: "community", label: "Communauté", icon: "🏆" },
     { id: "messages", label: "Messages", icon: "💬" },
@@ -4566,7 +4604,6 @@ export default function Miloute() {
                 )
               : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
-                {screen === "map" && <MapScreen onOpenChat={openChat} onNav={setScreen} userProfile={userProfile} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
