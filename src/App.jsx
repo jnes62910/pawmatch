@@ -3315,7 +3315,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         </div>
       )}
 
-      {/* Détail d'un profil ayant liké */}
+      {/* Détail d'un profil ayant liké — affiché immédiatement, sans redirection */}
       {selectedLike && (() => {
         const fullProfile = !selectedLike.isDemo
           ? selectedLike
@@ -3325,26 +3325,56 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
               <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>
-                <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>
+                <div style={{ width: 72, height: 72, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, flexShrink: 0 }}>
                   {photoUrl(selectedLike.photo) ? <img src={photoUrl(selectedLike.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : selectedLike.emoji}
                 </div>
                 <div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selectedLike.name}{fullProfile?.age ? ` · ${fullProfile.age}` : ""}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>
+                    {selectedLike.name}{fullProfile?.age ? ` · ${fullProfile.age}` : ""}{fullProfile?.gender ? ` ${fullProfile.gender === "F" ? "♀" : "♂"}` : ""}
+                  </div>
                   <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selectedLike.breed}</div>
                   <div style={{ fontSize: 12, color: "#9CA3AF" }}>A liké {pet.name} · {selectedLike.time}</div>
                 </div>
               </div>
-              {fullProfile?.temper && (
+
+              {(fullProfile?.vaccinated || fullProfile?.sterilized) && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                  {fullProfile.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné ✓</Badge>}
+                  {fullProfile.sterilized && <Badge color="#F3E5F5" text="#7B1FA2">Stérilisé ✓</Badge>}
+                </div>
+              )}
+
+              {fullProfile?.temper?.length > 0 && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
                   {fullProfile.temper.map(t => <Badge key={t} color="#FAF0EB" text="#8B3D28">{t}</Badge>)}
                 </div>
               )}
-              {fullProfile?.bio && (
-                <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 18 }}>{fullProfile.bio}</p>
+
+              {typeof fullProfile?.energy === "number" && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 4 }}>ÉNERGIE</div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[1,2,3,4,5].map(i => <div key={i} style={{ width: 20, height: 6, borderRadius: 3, background: i <= fullProfile.energy ? "#B25F46" : "#F3F4F6" }} />)}
+                  </div>
+                </div>
               )}
-              <button onClick={() => { setSelectedLike(null); setShowLikesModal(false); onNav("swipe"); }}
+
+              {fullProfile?.bio && (
+                <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{fullProfile.bio}</p>
+              )}
+
+              {fullProfile?.seeking?.length > 0 && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 6 }}>CHERCHE</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {fullProfile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#8B3D28">{s}</Badge>)}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => setSelectedLike(null)}
                 style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
-                Voir dans Découvrir
+                🔎 Découvrir le profil
               </button>
             </div>
           </div>
@@ -4360,10 +4390,11 @@ async function fetchLikesReceived(userProfile) {
     const p = byUserId[l.swiper_user_id];
     if (!p) return null;
     return {
-      name: p.pet_name, species: p.species, breed: p.breed, age: p.age,
+      name: p.pet_name, species: p.species, breed: p.breed, age: p.age, gender: p.gender,
       emoji: p.species === "cat" ? "🐱" : "🐕",
       photo: p.photos?.[0]?.url || null,
-      bio: p.bio, temper: p.temper || [],
+      bio: p.bio, temper: p.temper || [], seeking: p.seeking || [],
+      energy: p.energy, vaccinated: p.vaccinated, sterilized: p.sterilized,
       time: formatRelativeTime(l.created_at),
       isDemo: false,
     };
