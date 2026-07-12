@@ -326,6 +326,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [treatToast, setTreatToast] = useState(null); // nom de l'animal
   const [breedFilter, setBreedFilter] = useState("all");
   const [showBreedMenu, setShowBreedMenu] = useState(false);
+  const [deck, setDeck] = useState([]);
+  const [loadingDeck, setLoadingDeck] = useState(true);
+  const [deckError, setDeckError] = useState(null);
+  const [swiping, setSwiping] = useState(false);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const cardRef = useRef(null);
@@ -334,6 +338,38 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   useEffect(() => {
     if (infoScrollRef.current) infoScrollRef.current.scrollTop = 0;
   }, [idx]);
+
+  // Charge la pile de profils à swiper depuis Supabase : même espèce, pas soi-même,
+  // pas déjà swipé. Se recharge si le profil (donc l'id/espèce) de l'utilisateur change.
+  useEffect(() => {
+    let active = true;
+    async function loadDeck() {
+      if (!userProfile?.id) { setLoadingDeck(false); return; }
+      setLoadingDeck(true);
+      setDeckError(null);
+      try {
+        const [{ data: candidates, error: candErr }, { data: mySwipes, error: swErr }] = await Promise.all([
+          supabase.from("profiles").select("*").eq("species", userProfile.species).neq("user_id", userProfile.userId),
+          supabase.from("swipes").select("target_profile_id").eq("swiper_user_id", userProfile.userId),
+        ]);
+        if (candErr) throw candErr;
+        if (swErr) throw swErr;
+        if (!active) return;
+        const alreadySwiped = new Set((mySwipes || []).map(s => s.target_profile_id));
+        const fresh = (candidates || [])
+          .filter(row => !alreadySwiped.has(row.id))
+          .map(profileFromRow);
+        setDeck(fresh);
+      } catch (err) {
+        if (active) setDeckError("Impossible de charger les profils. Réessayez.");
+        console.error("loadDeck error:", err);
+      } finally {
+        if (active) setLoadingDeck(false);
+      }
+    }
+    loadDeck();
+    return () => { active = false; };
+  }, [userProfile?.id, userProfile?.species, userProfile?.userId]);
 
   function getProfileDistance(p) {
     if (userProfile?.location && p.lat && p.lng) {
@@ -344,10 +380,9 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     return isNaN(parsed) ? 0 : parsed;
   }
 
-  const speciesProfiles = PROFILES.filter(p => !userProfile?.species || p.species === userProfile.species);
-  const availableBreeds = [...new Set(speciesProfiles.map(p => p.breed))].sort((a, b) => a.localeCompare(b));
+  const availableBreeds = [...new Set(deck.map(p => p.breed).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
-  const filtered = speciesProfiles.filter(p =>
+  const filtered = deck.filter(p =>
     (breedFilter === "all" || p.breed === breedFilter) &&
     (searchRadius >= 100 || getProfileDistance(p) <= searchRadius)
   );
@@ -358,12 +393,44 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const isLiking = dragX > 20;
   const isNoping = dragX < -20;
 
-  function swipe(dir) {
+  async function swipe(dir) {
+    if (swiping) return;
+    const swipedProfile = profile;
     const targetX = dir === "like" ? 440 : -440;
     setDragX(targetX);
+    setSwiping(true);
+
+    // Enregistre le swipe et détecte un éventuel match mutuel pendant l'animation.
+    let matched = false;
+    try {
+      await supabase.from("swipes").insert({
+        swiper_user_id: userProfile.userId,
+        target_profile_id: swipedProfile.id,
+        direction: dir,
+      });
+      if (dir === "like") {
+        const { data: reciprocal } = await supabase
+          .from("swipes")
+          .select("id")
+          .eq("swiper_user_id", swipedProfile.userId)
+          .eq("target_profile_id", userProfile.id)
+          .eq("direction", "like")
+          .maybeSingle();
+        if (reciprocal) {
+          matched = true;
+          await supabase.from("matches").insert({
+            user_a: userProfile.userId, user_b: swipedProfile.userId,
+            profile_a: userProfile.id, profile_b: swipedProfile.id,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("swipe error:", err); // on n'interrompt pas l'UI pour une erreur d'enregistrement
+    }
+
     setTimeout(() => {
-      setDragX(0); setDragging(false); setPhoto(0);
-      if (dir === "like" && Math.random() > 0.4) setMatchedWith(profile);
+      setDragX(0); setDragging(false); setPhoto(0); setSwiping(false);
+      if (matched) setMatchedWith(swipedProfile);
       else setIdx(i => Math.min(i + 1, filtered.length - 1));
     }, 380);
   }
@@ -414,6 +481,19 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     else { setDragX(0); setDragging(false); }
     touchStartX.current = null;
   }
+
+  if (loadingDeck) return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <PawLogo size={40} color="#E8B89F" />
+    </div>
+  );
+
+  if (deckError) return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <div style={{ fontSize: 18, fontWeight: 700, color: "#8B3D28", marginBottom: 8 }}>Oups !</div>
+      <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF" }}>{deckError}</div>
+    </div>
+  );
 
   if (!profile) return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -3424,6 +3504,7 @@ function saveProfile(profile) {
 // format utilisé partout ailleurs dans l'app (camelCase, comme le form d'onboarding).
 function profileFromRow(row) {
   return {
+    id: row.id, userId: row.user_id,
     ownerName: row.owner_name, ownerEmail: row.owner_email,
     petName: row.pet_name, name: row.pet_name,
     species: row.species, breed: row.breed, age: row.age, gender: row.gender,
@@ -3665,7 +3746,7 @@ export default function Miloute() {
       }
     }
 
-    const { error: insertError } = await supabase.from("profiles").insert({
+    const { data: insertedRow, error: insertError } = await supabase.from("profiles").insert({
       user_id: userId,
       owner_name: form.ownerName,
       owner_email: form.ownerEmail,
@@ -3681,11 +3762,11 @@ export default function Miloute() {
       seeking: form.seeking,
       bio: form.bio,
       photos: form.photos,
-    });
+    }).select().single();
 
     if (insertError) throw new Error(insertError.message);
 
-    const normalized = { ...form, name: form.petName };
+    const normalized = { ...form, name: form.petName, id: insertedRow.id, userId: insertedRow.user_id };
     setUserProfile(normalized);
     setOnboarded(true);
     saveProfile(normalized); // cache local — utile pour un chargement instantané au prochain lancement
