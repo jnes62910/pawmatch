@@ -419,7 +419,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
 
       <div style={{ display: "flex", gap: 8, padding: "12px 16px 0", background: "#fff", flexShrink: 0, alignItems: "center" }}>
-        {[["all","Tous"],["cats","Chats"],["dogs","Chiens"]].map(([v,l]) => (
+        {[["cats","Chats"],["dogs","Chiens"]].map(([v,l]) => (
           <button key={v} onClick={() => { setTab(v); setIdx(0); setPhoto(0); setDragX(0); }}
             style={{ padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: tab === v ? "#8B3D28" : "#FAF0EB", color: tab === v ? "#fff" : "#8B3D28" }}>{l}</button>
         ))}
@@ -2051,8 +2051,8 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false }) {
-  const [pet, setPet] = useState(INIT_PET);
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null }) {
+  const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
   const [saved, setSaved] = useState(false);
@@ -3454,9 +3454,10 @@ export default function Miloute() {
   }, []);
 
   function completeOnboarding(form) {
-    setUserProfile(form);
+    const normalized = { ...form, name: form.petName };
+    setUserProfile(normalized);
     setOnboarded(true);
-    saveProfile(form);
+    saveProfile(normalized);
   }
 
   function openChat(id) { setChatId(id); setScreen("chat"); }
