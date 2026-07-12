@@ -154,11 +154,15 @@ const REPRO_PROFILES = [
 ];
 
 const SPOTS = [
-  { id: 1, name: "Parc Montsouris", type: "park", emoji: "🌳", animals: 8, open: true, lat: 48.821, lng: 2.337, distance: "0,9 km", desc: "Grand parc avec zone chiens sans laisse" },
-  { id: 2, name: "Café des Chats Marais", type: "catcafe", emoji: "☕", animals: 12, open: true, lat: 48.857, lng: 2.354, distance: "2,1 km", desc: "Café-chat avec 12 résidents, accueil 10h–20h" },
-  { id: 3, name: "Dog Park Nation", type: "dogpark", emoji: "🏟️", animals: 5, open: false, lat: 48.848, lng: 2.396, distance: "3,4 km", desc: "Espace clos 800m², ouverture 8h–21h" },
-  { id: 4, name: "Jardins du Palais Royal", type: "park", emoji: "🌸", animals: 3, open: true, lat: 48.864, lng: 2.337, distance: "4,2 km", desc: "Jardin historique pet-friendly" },
-  { id: 5, name: "Wouf Dog Park", type: "dogpark", emoji: "🎾", animals: 11, open: true, lat: 48.870, lng: 2.360, distance: "5,1 km", desc: "Dog park premium avec agility" },
+  { id: 1, name: "Parc Montsouris", type: "park", species: "both", emoji: "🌳", animals: 8, open: true, lat: 48.821, lng: 2.337, distance: "0,9 km", desc: "Grand parc avec zone chiens sans laisse" },
+  { id: 2, name: "Café des Chats Marais", type: "catcafe", species: "cat", emoji: "☕", animals: 12, open: true, lat: 48.857, lng: 2.354, distance: "2,1 km", desc: "Café-chat avec 12 résidents, accueil 10h–20h" },
+  { id: 3, name: "Dog Park Nation", type: "dogpark", species: "dog", emoji: "🏟️", animals: 5, open: false, lat: 48.848, lng: 2.396, distance: "3,4 km", desc: "Espace clos 800m², ouverture 8h–21h" },
+  { id: 4, name: "Jardins du Palais Royal", type: "park", species: "both", emoji: "🌸", animals: 3, open: true, lat: 48.864, lng: 2.337, distance: "4,2 km", desc: "Jardin historique pet-friendly" },
+  { id: 5, name: "Wouf Dog Park", type: "dogpark", species: "dog", emoji: "🎾", animals: 11, open: true, lat: 48.870, lng: 2.360, distance: "5,1 km", desc: "Dog park premium avec agility" },
+  { id: 6, name: "Vétérinaire du Marais", type: "vet", species: "both", emoji: "🩺", animals: 128, metricLabel: "avis vérifiés", open: true, lat: 48.859, lng: 2.362, distance: "2,4 km", desc: "Vétérinaire partenaire Miloute — consultations chats et chiens, urgences 7j/7" },
+  { id: 7, name: "Chez Marcel", type: "terrace", species: "dog", emoji: "🍽️", animals: 0, metricLabel: "terrasse chien-friendly", open: true, lat: 48.872, lng: 2.365, distance: "3,8 km", desc: "Bistrot avec grande terrasse, gamelle d'eau offerte, bords du Canal Saint-Martin" },
+  { id: 8, name: "La Chatterie", type: "petshop", species: "cat", emoji: "🛍️", animals: 0, metricLabel: "boutique spécialisée", open: true, lat: 48.853, lng: 2.349, distance: "1,7 km", desc: "Arbres à chat, jouets et alimentation premium — ateliers découverte le week-end" },
+  { id: 9, name: "Bassin de la Villette", type: "walk", species: "dog", emoji: "🚶", animals: 6, open: true, lat: 48.884, lng: 2.373, distance: "6,2 km", desc: "Balade au bord de l'eau, très fréquentée par les chiens du quartier" },
 ];
 
 const COMMUNITY_POSTS = [
@@ -665,7 +669,8 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
   const [userPos, setUserPos] = useState(null); // { lat, lng }
   const [geoError, setGeoError] = useState(null);
 
-  const filteredSpots = SPOTS.filter(s => filter === "all" || s.type === filter);
+  const spotsBySpecies = SPOTS.filter(s => s.species === "both" || !userProfile?.species || s.species === userProfile.species);
+  const filteredSpots = spotsBySpecies.filter(s => filter === "all" || s.type === filter);
   const animalsBySpecies = (mode === "rural" ? RURAL_ANIMALS : URBAN_ANIMALS).filter(a => !userProfile?.species || a.species === userProfile.species);
   const liveAnimals = animalsBySpecies.filter(a => a.live);
   const offlineAnimals = animalsBySpecies.filter(a => !a.live);
@@ -759,7 +764,21 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
         {/* Filtres spots — uniquement en mode urbain */}
         {!isRural && (
           <div className="miloute-hide-scrollbar" style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
-            {[["all","Tout 🗺️"],["park","Parcs 🌳"],["catcafe","Cafés chat ☕"],["dogpark","Dog parks 🏟️"]].map(([v,l]) => (
+            {[
+              ["all","Tout 🗺️"],
+              ["park","Parcs 🌳"],
+              ["catcafe","Cafés chat ☕"],
+              ["dogpark","Dog parks 🏟️"],
+              ["vet","Vétérinaires 🩺"],
+              ["terrace","Terrasses 🍽️"],
+              ["petshop","Boutiques 🛍️"],
+              ["walk","Balades 🚶"],
+            ]
+              .filter(([v]) => v !== "catcafe" || userProfile?.species !== "dog")
+              .filter(([v]) => v !== "dogpark" || userProfile?.species !== "cat")
+              .filter(([v]) => v !== "petshop" || userProfile?.species !== "dog")
+              .filter(([v]) => (v !== "terrace" && v !== "walk") || userProfile?.species !== "cat")
+              .map(([v,l]) => (
               <button key={v} onClick={() => setFilter(v)}
                 style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
             ))}
@@ -819,6 +838,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
         {!isRural && [
           { id: 1, x: 28, y: 68 }, { id: 2, x: 58, y: 22 }, { id: 3, x: 78, y: 38 },
           { id: 4, x: 45, y: 15 }, { id: 5, x: 72, y: 12 },
+          { id: 6, x: 52, y: 50 }, { id: 7, x: 20, y: 30 }, { id: 8, x: 62, y: 70 }, { id: 9, x: 85, y: 78 },
         ].filter(sp => filteredSpots.find(s => s.id === sp.id)).map(sp => {
           const spot = SPOTS.find(s => s.id === sp.id);
           return (
@@ -888,7 +908,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
               <div style={{ fontSize: 26 }}>{spot.emoji}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{spot.name}</div>
-                <div style={{ fontSize: 12, color: "#9CA3AF" }}>{spot.distance} · {spot.animals} animaux maintenant</div>
+                <div style={{ fontSize: 12, color: "#9CA3AF" }}>{spot.distance} · {spot.metricLabel ? spot.metricLabel : `${spot.animals} animaux maintenant`}</div>
               </div>
               <div style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 10, background: spot.open ? "#E8F5E9" : "#FEE2E2", color: spot.open ? "#2E7D32" : "#DC2626" }}>{spot.open ? "Ouvert" : "Fermé"}</div>
             </div>
@@ -935,7 +955,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
                   <div style={{ fontSize: 40 }}>{selected.emoji}</div>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selected.name}</div>
-                    <div style={{ fontSize: 13, color: "#8B3D28" }}>{selected.distance} · {selected.animals} animaux maintenant</div>
+                    <div style={{ fontSize: 13, color: "#8B3D28" }}>{selected.distance} · {selected.metricLabel ? selected.metricLabel : `${selected.animals} animaux maintenant`}</div>
                   </div>
                   <div style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 10, background: selected.open ? "#E8F5E9" : "#FEE2E2", color: selected.open ? "#2E7D32" : "#DC2626" }}>{selected.open ? "Ouvert" : "Fermé"}</div>
                 </div>
