@@ -1531,7 +1531,6 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
 
   useEffect(() => {
     reloadPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.id, userProfile?.species]);
 
   const availableBreeds = [...new Set(posts.map(p => p.breed).filter(Boolean))].sort((a, b) => a.localeCompare(b));
