@@ -2394,7 +2394,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
@@ -2954,6 +2954,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ background: "#fff", borderRadius: 10, color: "#8B3D28", fontWeight: 800, fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap" }}>4,99 €/mois</div>
           </button>
         )}
+
+        <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
+          Se déconnecter
+        </button>
       </div>
 
       {/* Modale "Qui a liké votre animal" */}
@@ -4223,6 +4227,15 @@ export default function Miloute() {
     setUserProfile(updated);
     saveProfile(updated);
   }
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setUserProfile(null);
+    setOnboarded(false);
+    setAuthSession(null);
+    setAuthView("welcome");
+    setScreen("swipe");
+    try { localStorage.removeItem("miloute_user_profile"); } catch {}
+  }
   function closeChat() { setChatId(null); setScreen("messages"); }
   function openPremium(preferredPlan = "yearly") { if (!isPremium) { setPremiumInitialPlan(preferredPlan); setShowPremiumTunnel(true); } }
   function onPremiumSuccess() { setIsPremium(true); savePremiumStatus(true); setShowPremiumTunnel(false); }
@@ -4281,7 +4294,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} />}
               </>
           }
         </div>
