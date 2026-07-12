@@ -861,7 +861,7 @@ async function fetchSpotsForCell(cellId) {
 }
 
 // ── PRESTATAIRES ──────────────────────────────────────────────────────────────
-const PROVIDER_TYPES = ["vet", "groomer", "boarding", "trainer", "petsitter", "petshop"];
+const PROVIDER_TYPES = ["groomer", "petsitter", "trainer", "boarding", "vet", "petshop"];
 const PROVIDER_TYPE_INFO = {
   vet: { label: "Vétérinaires", emoji: "🩺" },
   groomer: { label: "Toiletteurs", emoji: "✂️" },
@@ -1326,7 +1326,9 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
 
 // ── REPRO SCREEN ──────────────────────────────────────────────────────────────
 // ── PRESTATAIRES ──────────────────────────────────────────────────────────────
-function ProvidersScreen({ userProfile = null }) {
+function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
+  const [sharingLocation, setSharingLocation] = useState(false);
+  const [locationError, setLocationError] = useState(null);
   const [providers, setProviders] = useState([]);
   const [reviewsBySpot, setReviewsBySpot] = useState({});
   const [loading, setLoading] = useState(true);
@@ -1344,6 +1346,26 @@ function ProvidersScreen({ userProfile = null }) {
   const refLat = userProfile?.location?.lat ?? 48.8566;
   const refLng = userProfile?.location?.lng ?? 2.3522;
   const cellId = cellIdFor(refLat, refLng);
+
+  function shareLocation() {
+    if (!navigator.geolocation) { setLocationError("La géolocalisation n'est pas supportée par ce navigateur."); return; }
+    setSharingLocation(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude, lng = position.coords.longitude;
+        if (userProfile?.id) await updateProfileLocation(userProfile.id, lat, lng);
+        onProfileUpdated({ ...userProfile, location: { lat, lng } });
+        setSharingLocation(false);
+      },
+      (error) => {
+        setLocationError(error.code === error.PERMISSION_DENIED
+          ? "Position refusée — activez-la dans les paramètres de votre navigateur pour trouver des prestataires près de chez vous."
+          : "Impossible de récupérer votre position.");
+        setSharingLocation(false);
+      }
+    );
+  }
 
   async function reload() {
     setLoading(true);
@@ -1364,7 +1386,14 @@ function ProvidersScreen({ userProfile = null }) {
     return { avg, count: list.length };
   }
 
-  const filtered = providers.filter(p => category === "all" || p.type === category);
+  const filtered = providers
+    .filter(p => category === "all" || p.type === category)
+    .sort((a, b) => {
+      const typeDiff = PROVIDER_TYPES.indexOf(a.type) - PROVIDER_TYPES.indexOf(b.type);
+      if (typeDiff !== 0) return typeDiff;
+      const ratingA = ratingFor(a.id)?.avg || 0, ratingB = ratingFor(b.id)?.avg || 0;
+      return ratingB - ratingA;
+    });
 
   async function openProvider(p) {
     setSelected(p);
@@ -1412,6 +1441,20 @@ function ProvidersScreen({ userProfile = null }) {
             <button key={t} onClick={() => setCategory(t)} style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: category === t ? "#8B3D28" : "#FAF0EB", color: category === t ? "#fff" : "#8B3D28" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
           ))}
         </div>
+
+        {!userProfile?.location && (
+          <button onClick={shareLocation} disabled={sharingLocation}
+            style={{ width: "100%", marginTop: 10, display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#FAF0EB", borderRadius: 12, border: "none", cursor: sharingLocation ? "default" : "pointer", textAlign: "left" }}>
+            <span style={{ fontSize: 18 }}>📍</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>{sharingLocation ? "Localisation en cours..." : "Partager ma position"}</div>
+              <div style={{ fontSize: 11, color: "#9CA3AF" }}>Pour trouver des prestataires vraiment près de chez vous</div>
+            </div>
+          </button>
+        )}
+        {locationError && (
+          <div style={{ marginTop: 8, fontSize: 11, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px" }}>{locationError}</div>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 20px" }}>
@@ -4798,6 +4841,11 @@ async function checkConnectStatus(profileId) {
   return !!data.onboarded;
 }
 
+async function updateProfileLocation(profileId, lat, lng) {
+  const { error } = await supabase.from("profiles").update({ lat, lng }).eq("id", profileId);
+  if (error) console.error("updateProfileLocation error:", error);
+}
+
 async function setPremiumInDb(profileId, value) {
   if (!profileId) return;
   const { error } = await supabase.from("profiles").update({ is_premium: value }).eq("id", profileId);
@@ -5470,7 +5518,7 @@ export default function Miloute() {
                 )
               : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
-                {screen === "providers" && <ProvidersScreen userProfile={userProfile} />}
+                {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
