@@ -2896,7 +2896,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             </div>
           </div>
           {!isPremium && (
-            <button onClick={onPremium}
+            <button onClick={() => onPremium()}
               style={{ position: "absolute", inset: 0, background: "rgba(249,250,251,.3)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ background: "linear-gradient(135deg,#8B3D28,#B25F46)", color: "#fff", fontWeight: 800, fontSize: 12, padding: "8px 16px", borderRadius: 20, boxShadow: "0 4px 12px rgba(0,0,0,.15)" }}>
                 👑 Débloquer
@@ -2921,7 +2921,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VISIBILITÉ</div>
                 {!isPremium && <span style={{ fontSize: 11 }}>👑</span>}
               </div>
-              <button onClick={isPremium ? startBoost : onPremium}
+              <button onClick={() => (isPremium ? startBoost() : onPremium())}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#fff", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
                 <span style={{ fontSize: 22 }}>🚀</span>
                 <div style={{ flex: 1 }}>
@@ -2945,7 +2945,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ background: "rgba(255,255,255,.2)", borderRadius: 10, color: "#fff", fontWeight: 800, fontSize: 11, padding: "6px 10px" }}>Actif ✓</div>
           </div>
         ) : (
-          <button onClick={onPremium} style={{ width: "100%", background: "linear-gradient(135deg,#8B3D28,#B25F46)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
+          <button onClick={() => onPremium()} style={{ width: "100%", background: "linear-gradient(135deg,#8B3D28,#B25F46)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
             <span style={{ fontSize: 26 }}>👑</span>
             <div style={{ flex: 1 }}>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Miloute Premium</div>
