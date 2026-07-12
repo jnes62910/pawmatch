@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { supabase } from "./lib/supabaseClient";
 
 
 // ── LOGO ──────────────────────────────────────────────────────────────────────
@@ -2963,13 +2964,15 @@ const OB_SEEKING = [
   { id: "Reproduction",     icon: "🌱", label: "Reproduction",       desc: "Saillie sérieuse et vérifiée" },
 ];
 
-function Onboarding({ onComplete }) {
+function Onboarding({ onComplete, initialOwner = null }) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1); // 1=forward -1=back
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const photoRef = useRef(null);
 
   const [form, setForm] = useState({
-    ownerName: "", ownerEmail: "",
+    ownerName: initialOwner?.name || "", ownerEmail: initialOwner?.email || "", ownerPassword: "",
     petName: "", species: "", breed: "", age: "", gender: "",
     energy: 3, vaccinated: false, sterilized: false,
     temper: [], seeking: [],
@@ -2978,6 +2981,12 @@ function Onboarding({ onComplete }) {
   });
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.ownerEmail);
+  // Avec Google, le compte est déjà authentifié : pas besoin de mot de passe ni de re-vérifier l'email.
+  const canSubmitOwner = initialOwner
+    ? form.ownerName.trim()
+    : form.ownerName.trim() && isValidEmail && form.ownerPassword.length >= 6;
   function toggleArr(k, v) { setForm(f => ({ ...f, [k]: f[k].includes(v) ? f[k].filter(x => x !== v) : [...f[k], v] })); }
   function toggleTemper(t) { setForm(f => ({ ...f, temper: f.temper.includes(t) ? f.temper.filter(x => x !== t) : f.temper.length < 4 ? [...f.temper, t] : f.temper })); }
 
@@ -3060,15 +3069,27 @@ function Onboarding({ onComplete }) {
           <div>
             <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Parlez-nous de vous 👤</div>
             <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 16, lineHeight: 1.6 }}>Ces informations restent privées et ne sont pas visibles sur le profil de votre animal.</div>
+            {initialOwner && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#166534", fontWeight: 600 }}>
+                ✅ Connecté avec Google ({initialOwner.email})
+              </div>
+            )}
             <label style={labelStyle}>VOTRE PRÉNOM</label>
             <input value={form.ownerName} onChange={e => set("ownerName", e.target.value)} placeholder="Ex: Marie" style={{ ...inputStyle, marginBottom: 16 }} />
-            <label style={labelStyle}>VOTRE EMAIL</label>
-            <input value={form.ownerEmail} onChange={e => set("ownerEmail", e.target.value)} placeholder="marie@email.com" type="email" style={{ ...inputStyle, marginBottom: 6 }} />
-            <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 24 }}>Pour recevoir vos matchs et notifications.</div>
-            <button onClick={next} disabled={!form.ownerName}
-              style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: form.ownerName ? "pointer" : "default",
-                background: form.ownerName ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB",
-                color: form.ownerName ? "#fff" : "#9CA3AF" }}>
+            {!initialOwner && (
+              <>
+                <label style={labelStyle}>VOTRE EMAIL</label>
+                <input value={form.ownerEmail} onChange={e => set("ownerEmail", e.target.value)} placeholder="marie@email.com" type="email" style={{ ...inputStyle, marginBottom: 6 }} />
+                <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 16 }}>Pour recevoir vos matchs et notifications.</div>
+                <label style={labelStyle}>MOT DE PASSE</label>
+                <input value={form.ownerPassword} onChange={e => set("ownerPassword", e.target.value)} placeholder="6 caractères minimum" type="password" style={{ ...inputStyle, marginBottom: 6 }} />
+                <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 24 }}>Pour retrouver votre compte sur un autre appareil.</div>
+              </>
+            )}
+            <button onClick={next} disabled={!canSubmitOwner}
+              style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: canSubmitOwner ? "pointer" : "default",
+                background: canSubmitOwner ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB",
+                color: canSubmitOwner ? "#fff" : "#9CA3AF" }}>
               Continuer →
             </button>
           </div>
@@ -3360,10 +3381,25 @@ function Onboarding({ onComplete }) {
       {/* CTA */}
       <div style={{ padding: "12px 24px 32px", background: "#fff", flexShrink: 0, display: ["owner","health","character","seeking","photos","bio","identity","species"].includes(current) ? "none" : "block" }}>
         {current === "recap" ? (
-          <button onClick={() => onComplete(form)}
-            style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 6px 20px rgba(178,95,70,.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-            <PawLogo size={24} color="#fff" /> Découvrir les profils !
-          </button>
+          <>
+            {submitError && (
+              <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>{submitError}</div>
+            )}
+            <button onClick={async () => {
+                setSubmitError(null);
+                setSubmitting(true);
+                try {
+                  await onComplete(form);
+                } catch (err) {
+                  setSubmitError(err.message || "Une erreur est survenue, réessayez.");
+                  setSubmitting(false);
+                }
+              }}
+              disabled={submitting}
+              style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: submitting ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: submitting ? "#9CA3AF" : "#fff", fontSize: 17, fontWeight: 900, cursor: submitting ? "default" : "pointer", boxShadow: submitting ? "none" : "0 6px 20px rgba(178,95,70,.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              {submitting ? "Création de votre compte..." : <><PawLogo size={24} color="#fff" /> Découvrir les profils !</>}
+            </button>
+          </>
         ) : current === "owner" ? null : (
           <button onClick={next}
             disabled={
@@ -3398,6 +3434,25 @@ function loadProfile() {
 }
 function saveProfile(profile) {
   try { localStorage.setItem("miloute_user_profile", JSON.stringify(profile)); } catch {}
+}
+// Convertit une ligne de la table Supabase `profiles` (snake_case) vers le
+// format utilisé partout ailleurs dans l'app (camelCase, comme le form d'onboarding).
+function profileFromRow(row) {
+  return {
+    ownerName: row.owner_name, ownerEmail: row.owner_email,
+    petName: row.pet_name, name: row.pet_name,
+    species: row.species, breed: row.breed, age: row.age, gender: row.gender,
+    energy: row.energy, vaccinated: row.vaccinated, sterilized: row.sterilized,
+    temper: row.temper || [], seeking: row.seeking || [],
+    bio: row.bio, photos: row.photos || [], video: row.video || null,
+    location: (row.lat && row.lng) ? { lat: row.lat, lng: row.lng } : null,
+    repro: row.repro || { active: false, price: "", priceNegotiable: false, availableFrom: "", availableTo: "", pedigree: false, geneticTest: false, reproDesc: "", docs: [] },
+  };
+}
+async function fetchProfileForUser(userId) {
+  const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle();
+  if (error) { console.error("fetchProfileForUser error:", error); return null; }
+  return data ? profileFromRow(data) : null;
 }
 function loadPremiumStatus() {
   try { return localStorage.getItem("miloute_is_premium") === "true"; } catch { return false; }
@@ -3437,10 +3492,92 @@ function saveTreatsToday(count) {
   try { localStorage.setItem("miloute_treats_today", JSON.stringify({ date: todayKey(), count })); } catch {}
 }
 
+// ── ÉCRAN D'ACCUEIL (connexion / inscription) ───────────────────────────────────
+function WelcomeScreen({ onStartEmailSignup, onLoggedIn }) {
+  const [mode, setMode] = useState("choice"); // choice | login
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleGoogle() {
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) setError(error.message);
+    // En cas de succès, la page est redirigée vers Google puis revient ici —
+    // la session est alors récupérée automatiquement par le listener au niveau App.
+  }
+
+  async function handleLogin() {
+    setError(null);
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      setError(error.message.includes("Invalid login") ? "Email ou mot de passe incorrect." : error.message);
+      return;
+    }
+    onLoggedIn(data.session);
+  }
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "32px 28px", background: "#fff" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center", marginBottom: 8 }}>
+        <PawLogo size={40} color="#B25F46" />
+        <span style={{ fontSize: 30, fontWeight: 900, color: "#B25F46" }}>Miloute</span>
+      </div>
+      <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 36 }}>La rencontre, version chats & chiens 🐾</div>
+
+      {error && (
+        <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>{error}</div>
+      )}
+
+      {mode === "choice" ? (
+        <>
+          <button onClick={handleGoogle}
+            style={{ width: "100%", padding: "15px", borderRadius: 16, border: "1.5px solid #E5E7EB", background: "#fff", color: "#2D1200", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.12-.84 2.07-1.8 2.71v2.26h2.9C16.66 14.2 17.64 11.9 17.64 9.2z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33C2.46 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.95 10.7c-.18-.54-.28-1.11-.28-1.7s.1-1.16.28-1.7V4.97H.98A8.996 8.996 0 000 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.46 2.02.98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+            Continuer avec Google
+          </button>
+          <button onClick={onStartEmailSignup}
+            style={{ width: "100%", padding: "15px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 20 }}>
+            Créer un compte avec un email
+          </button>
+          <div style={{ textAlign: "center", fontSize: 13, color: "#9CA3AF" }}>
+            Déjà un compte ? <span onClick={() => setMode("login")} style={{ color: "#B25F46", fontWeight: 700, cursor: "pointer" }}>Se connecter</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8, display: "block" }}>EMAIL</label>
+          <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="marie@email.com"
+            style={{ width: "100%", padding: "12px 16px", borderRadius: 14, border: "1.5px solid #E5E7EB", fontSize: 15, outline: "none", background: "#F9FAFB", boxSizing: "border-box", marginBottom: 16 }} />
+          <label style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8, display: "block" }}>MOT DE PASSE</label>
+          <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="••••••••"
+            style={{ width: "100%", padding: "12px 16px", borderRadius: 14, border: "1.5px solid #E5E7EB", fontSize: 15, outline: "none", background: "#F9FAFB", boxSizing: "border-box", marginBottom: 20 }} />
+          <button onClick={handleLogin} disabled={loading || !email || !password}
+            style={{ width: "100%", padding: "15px", borderRadius: 16, border: "none", background: (loading || !email || !password) ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: (loading || !email || !password) ? "#9CA3AF" : "#fff", fontSize: 15, fontWeight: 800, cursor: (loading || !email || !password) ? "default" : "pointer", marginBottom: 16 }}>
+            {loading ? "Connexion..." : "Se connecter"}
+          </button>
+          <div style={{ textAlign: "center", fontSize: 13, color: "#9CA3AF" }}>
+            <span onClick={() => setMode("choice")} style={{ color: "#B25F46", fontWeight: 700, cursor: "pointer" }}>← Retour</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function Miloute() {
   const [onboarded, setOnboarded] = useState(() => loadProfile() !== null);
   const [userProfile, setUserProfile] = useState(() => loadProfile());
+  const [authSession, setAuthSession] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [authView, setAuthView] = useState("welcome"); // welcome | email-onboarding
   const [screen, setScreen] = useState("swipe");
   const [chatId, setChatId] = useState(null);
   const [isPremium, setIsPremium] = useState(loadPremiumStatus);
@@ -3450,6 +3587,37 @@ export default function Miloute() {
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
+
+  // Vérifie s'il existe déjà une session Supabase (retour de Google, ou
+  // navigateur déjà connecté) et reste à l'écoute des changements —
+  // c'est ce listener qui capte le retour depuis Google après redirection.
+  useEffect(() => {
+    let active = true;
+
+    async function handleSession(session) {
+      setAuthSession(session);
+      if (!session) { setCheckingSession(false); return; }
+
+      const profile = await fetchProfileForUser(session.user.id);
+      if (!active) return;
+      if (profile) {
+        setUserProfile(profile);
+        setOnboarded(true);
+        saveProfile(profile);
+      } else {
+        // Compte authentifié (souvent via Google) mais profil animal pas encore créé.
+        setOnboarded(false);
+      }
+      setCheckingSession(false);
+    }
+
+    supabase.auth.getSession().then(({ data }) => handleSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session);
+    });
+
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, []);
 
   // Détecte le retour depuis Stripe Checkout, puis VÉRIFIE auprès de Stripe
   // que le paiement a réellement eu lieu — on ne fait jamais confiance à
@@ -3487,11 +3655,55 @@ export default function Miloute() {
     }
   }, []);
 
-  function completeOnboarding(form) {
+  async function completeOnboarding(form) {
+    let userId = authSession?.user?.id || null;
+
+    // Pas de session active (parcours email classique) → on crée le compte maintenant.
+    if (!userId) {
+      const { data, error } = await supabase.auth.signUp({
+        email: form.ownerEmail,
+        password: form.ownerPassword,
+      });
+
+      if (error) {
+        if (error.message.includes("already registered")) {
+          throw new Error("Un compte existe déjà avec cet email. Essayez de vous connecter plutôt.");
+        }
+        throw new Error(error.message);
+      }
+
+      userId = data.user?.id;
+      if (!userId) {
+        throw new Error(
+          "Compte créé, mais la session n'a pas pu démarrer. Si la confirmation par email est activée sur ton projet Supabase, désactive-la (Authentication → Settings → Confirm email) le temps du développement."
+        );
+      }
+    }
+
+    const { error: insertError } = await supabase.from("profiles").insert({
+      user_id: userId,
+      owner_name: form.ownerName,
+      owner_email: form.ownerEmail,
+      pet_name: form.petName,
+      species: form.species,
+      breed: form.breed,
+      age: form.age,
+      gender: form.gender,
+      energy: form.energy,
+      vaccinated: form.vaccinated,
+      sterilized: form.sterilized,
+      temper: form.temper,
+      seeking: form.seeking,
+      bio: form.bio,
+      photos: form.photos,
+    });
+
+    if (insertError) throw new Error(insertError.message);
+
     const normalized = { ...form, name: form.petName };
     setUserProfile(normalized);
     setOnboarded(true);
-    saveProfile(normalized);
+    saveProfile(normalized); // cache local — utile pour un chargement instantané au prochain lancement
   }
 
   function openChat(id) { setChatId(id); setScreen("chat"); }
@@ -3536,9 +3748,16 @@ export default function Miloute() {
 
         {/* Screens */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
-          {!onboarded
-            ? <Onboarding onComplete={completeOnboarding} />
-            : <>
+          {checkingSession
+            ? <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={40} color="#E8B89F" /></div>
+            : !onboarded
+              ? (authSession
+                  ? <Onboarding onComplete={completeOnboarding} initialOwner={{ name: authSession.user.user_metadata?.full_name || authSession.user.user_metadata?.name || "", email: authSession.user.email }} />
+                  : authView === "email-onboarding"
+                    ? <Onboarding onComplete={completeOnboarding} />
+                    : <WelcomeScreen onStartEmailSignup={() => setAuthView("email-onboarding")} onLoggedIn={setAuthSession} />
+                )
+              : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
                 {screen === "map" && <MapScreen onOpenChat={openChat} onNav={setScreen} userProfile={userProfile} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} />}
