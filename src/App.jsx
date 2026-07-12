@@ -2974,6 +2974,34 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [selectedLike, setSelectedLike] = useState(null);
   const [likesReceived, setLikesReceived] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(true);
+  const [showProviderScreen, setShowProviderScreen] = useState(false);
+  const [providerServices, setProviderServices] = useState([]);
+  const [commissionRate, setCommissionRate] = useState(15);
+  const [connectOnboarded, setConnectOnboarded] = useState(false);
+  const [checkingConnect, setCheckingConnect] = useState(false);
+  const [startingOnboarding, setStartingOnboarding] = useState(false);
+  const [showAddService, setShowAddService] = useState(false);
+
+  useEffect(() => {
+    if (!initialData?.id) return;
+    fetchProviderServices(initialData.id).then(setProviderServices);
+    fetchCommissionRate().then(setCommissionRate);
+    setConnectOnboarded(!!initialData.stripeConnectOnboarded);
+  }, [initialData?.id, initialData?.stripeConnectOnboarded]);
+
+  // Au retour de l'onboarding Stripe Connect, revérifie le statut réel.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connect") === "return" && initialData?.id) {
+      setCheckingConnect(true);
+      checkConnectStatus(initialData.id).then(onboarded => {
+        setConnectOnboarded(onboarded);
+        setCheckingConnect(false);
+        setShowProviderScreen(true);
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [initialData?.id]);
 
   useEffect(() => {
     let active = true;
@@ -3582,6 +3610,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </button>
         )}
 
+        <button onClick={() => setShowProviderScreen(true)}
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+          <span style={{ fontSize: 20 }}>🏥</span>
+          <span style={{ flex: 1 }}>Espace prestataire{providerServices.length > 0 ? ` (${providerServices.length})` : ""}</span>
+          <span style={{ color: "#9CA3AF" }}>›</span>
+        </button>
+
         <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
           Se déconnecter
         </button>
@@ -3739,6 +3774,152 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
         </div>
       )}
+
+      {/* Espace prestataire */}
+      {showProviderScreen && (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 65, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <button onClick={() => setShowProviderScreen(false)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>🏥 Espace prestataire</div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 40px" }}>
+            {/* Statut des paiements */}
+            <div style={{ background: connectOnboarded ? "#E8F5E9" : "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 20 }}>
+              {checkingConnect ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}><PawLogo size={22} color="#E8B89F" /><span style={{ fontSize: 13, color: "#6B7280" }}>Vérification en cours...</span></div>
+              ) : connectOnboarded ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 22 }}>✅</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1B5E20" }}>Paiements activés</div>
+                    <div style={{ fontSize: 12, color: "#2E7D32" }}>Vous pouvez proposer des prestations payantes</div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#8B3D28", marginBottom: 4 }}>💳 Paiements non activés</div>
+                  <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 12, lineHeight: 1.5 }}>Pour recevoir l'argent de vos prestations, activez un compte de paiement sécurisé (5 min, via Stripe) — obligatoire avant de fixer vos tarifs.</div>
+                  <button disabled={startingOnboarding} onClick={async () => {
+                      setStartingOnboarding(true);
+                      try { await startConnectOnboarding(initialData); }
+                      catch { setStartingOnboarding(false); }
+                    }}
+                    style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: startingOnboarding ? "#E5E7EB" : "linear-gradient(135deg,#635BFF,#4338CA)", color: startingOnboarding ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: startingOnboarding ? "default" : "pointer" }}>
+                    {startingOnboarding ? "Redirection..." : "⚡ Activer les paiements avec Stripe"}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Transparence commission */}
+            <div style={{ display: "flex", gap: 10, background: "#F9FAFB", borderRadius: 12, padding: "12px 14px", marginBottom: 20, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 18 }}>ℹ️</span>
+              <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.6 }}>
+                Miloute prélève une commission de <strong>{commissionRate}%</strong> sur chaque prestation payée via l'app. Le client paie à la réservation ; les fonds sont retenus par Stripe et vous sont reversés (moins la commission) une fois la prestation validée par vous et le client.
+              </div>
+            </div>
+
+            {/* Liste des prestations */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>MES PRESTATIONS</div>
+              <button onClick={() => connectOnboarded ? setShowAddService(true) : null}
+                style={{ background: "none", border: "none", color: connectOnboarded ? "#B25F46" : "#D1D5DB", fontWeight: 700, fontSize: 13, cursor: connectOnboarded ? "pointer" : "default" }}>+ Ajouter</button>
+            </div>
+
+            {providerServices.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "24px 0", color: "#9CA3AF", fontSize: 13 }}>
+                {connectOnboarded ? "Aucune prestation pour l'instant." : "Activez les paiements pour ajouter vos prestations."}
+              </div>
+            ) : providerServices.map(s => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px", borderBottom: "1px solid #F3F4F6", opacity: s.active ? 1 : 0.5 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{s.title}</div>
+                  {s.description && <div style={{ fontSize: 12, color: "#9CA3AF" }}>{s.description}</div>}
+                  <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 2 }}>
+                    {(s.priceCents / 100).toFixed(2)} € · vous touchez {((s.priceCents / 100) * (1 - commissionRate / 100)).toFixed(2)} €
+                  </div>
+                </div>
+                <button onClick={async () => { await updateProviderService(s.id, { active: !s.active }); setProviderServices(await fetchProviderServices(initialData.id)); }}
+                  style={{ background: "#F3F4F6", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#6B7280", cursor: "pointer" }}>
+                  {s.active ? "Désactiver" : "Réactiver"}
+                </button>
+                <button onClick={async () => { await deleteProviderService(s.id); setProviderServices(await fetchProviderServices(initialData.id)); }}
+                  style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "#DC2626" }}>🗑️</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Formulaire d'ajout de prestation */}
+      {showAddService && (
+        <AddServiceForm
+          userProfile={initialData}
+          onClose={() => setShowAddService(false)}
+          onAdded={async () => { setShowAddService(false); setProviderServices(await fetchProviderServices(initialData.id)); }}
+        />
+      )}
+
+    </div>
+  );
+}
+
+function AddServiceForm({ userProfile, onClose, onAdded }) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function submit() {
+    const priceNum = parseFloat(price.replace(",", "."));
+    if (!title.trim()) { setError("Le titre est requis."); return; }
+    if (!priceNum || priceNum <= 0) { setError("Indiquez un prix valide."); return; }
+    setError(null);
+    setSubmitting(true);
+    if (description.trim()) {
+      const modResult = await moderateText(description);
+      if (!modResult.approved) {
+        setError(modResult.reason || "Ce texte enfreint les règles de Miloute.");
+        setSubmitting(false);
+        return;
+      }
+    }
+    try {
+      await createProviderService(userProfile, { title: title.trim(), description: description.trim(), priceCents: Math.round(priceNum * 100) });
+      onAdded();
+    } catch {
+      setError("L'ajout a échoué, réessayez.");
+    }
+    setSubmitting(false);
+  }
+
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 80, display: "flex", alignItems: "flex-end" }} onClick={() => !submitting && onClose()}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "90%", overflowY: "auto", padding: "20px 20px 32px" }}>
+        <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+        <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Ajouter une prestation</div>
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>TITRE *</label>
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Garde à domicile (journée)"
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 14px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>PRIX (€) *</label>
+        <input value={price} onChange={e => setPrice(e.target.value)} placeholder="Ex: 25" inputMode="decimal"
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 14px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DESCRIPTION (optionnel)</label>
+        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Détails de la prestation..."
+          style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", resize: "none", boxSizing: "border-box" }} />
+
+        {error && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{error}</div>}
+
+        <button onClick={submit} disabled={submitting}
+          style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: submitting ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: submitting ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: submitting ? "default" : "pointer" }}>
+          {submitting ? "Ajout en cours..." : "Ajouter la prestation"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -4555,8 +4736,68 @@ function profileFromRow(row) {
     location: (row.lat && row.lng) ? { lat: row.lat, lng: row.lng } : null,
     repro: row.repro || { active: false, price: "", priceNegotiable: false, availableFrom: "", availableTo: "", pedigree: false, geneticTest: false, reproDesc: "", docs: [] },
     isPremium: row.is_premium || false,
+    providerInterest: row.provider_interest || null,
+    stripeConnectAccountId: row.stripe_connect_account_id || null,
+    stripeConnectOnboarded: row.stripe_connect_onboarded || false,
   };
 }
+// ── MARKETPLACE PRESTATAIRES ──────────────────────────────────────────────────
+async function fetchCommissionRate() {
+  const { data, error } = await supabase.from("platform_settings").select("value").eq("key", "commission_rate_percent").maybeSingle();
+  if (error || !data) return 15; // repli raisonnable si la ligne n'existe pas encore
+  return parseFloat(data.value);
+}
+
+async function fetchProviderServices(profileId) {
+  const { data, error } = await supabase.from("provider_services").select("*").eq("profile_id", profileId).order("created_at", { ascending: true });
+  if (error || !data) return [];
+  return data.map(s => ({ id: s.id, title: s.title, description: s.description, priceCents: s.price_cents, active: s.active }));
+}
+
+async function createProviderService(userProfile, { title, description, priceCents }) {
+  const { error } = await supabase.from("provider_services").insert({
+    profile_id: userProfile.id, user_id: userProfile.userId,
+    title, description: description || null, price_cents: priceCents,
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function updateProviderService(id, fields) {
+  const { error } = await supabase.from("provider_services").update(fields).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+async function deleteProviderService(id) {
+  const { error } = await supabase.from("provider_services").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+async function startConnectOnboarding(userProfile) {
+  const res = await fetch("/api/create-connect-onboarding", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      profileId: userProfile.id,
+      email: userProfile.ownerEmail,
+      returnUrl: window.location.origin + "?connect=return",
+      refreshUrl: window.location.origin + "?connect=refresh",
+    }),
+  });
+  const data = await res.json();
+  if (data.url) window.location.href = data.url;
+  else throw new Error(data.error || "Erreur inconnue");
+}
+
+async function checkConnectStatus(profileId) {
+  const res = await fetch("/api/check-connect-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ profileId }),
+  });
+  const data = await res.json();
+  return !!data.onboarded;
+}
+
 async function setPremiumInDb(profileId, value) {
   if (!profileId) return;
   const { error } = await supabase.from("profiles").update({ is_premium: value }).eq("id", profileId);
