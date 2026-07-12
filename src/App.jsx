@@ -3525,11 +3525,11 @@ function WelcomeScreen({ onStartEmailSignup, onLoggedIn }) {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "32px 28px", background: "#fff" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center", marginBottom: 8 }}>
-        <PawLogo size={40} color="#B25F46" />
-        <span style={{ fontSize: 30, fontWeight: 900, color: "#B25F46" }}>Miloute</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "center", marginBottom: 10 }}>
+        <PawLogo size={64} color="#B25F46" />
+        <span style={{ fontSize: 42, fontWeight: 900, color: "#B25F46" }}>Miloute</span>
       </div>
-      <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 36 }}>La rencontre, version chats & chiens 🐾</div>
+      <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 36 }}>La rencontre, version chats & chiens</div>
 
       {error && (
         <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>{error}</div>
