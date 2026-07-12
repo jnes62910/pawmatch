@@ -2376,10 +2376,6 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           {match?.photo ? <img src={match.photo} alt={match.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : match?.emoji}
         </div>
         <div><div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div><div style={{ fontSize: 12, color: "#9CA3AF" }}>{match?.owner}</div></div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer" }}>📍</button>
-          <button style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer" }}>🗓️</button>
-        </div>
       </div>
       <div style={{ margin: "10px 14px 0", padding: "10px 14px", background: "#FAF0EB", borderRadius: 12, display: "flex", alignItems: "center", gap: 10 }}>
         <span>📍</span>
@@ -4556,6 +4552,12 @@ export default function Miloute() {
             setIsPremium(true);
             savePremiumStatus(true);
             setShowPremiumSuccess(true);
+            // Revient à l'écran où l'utilisateur était avant d'être envoyé
+            // vers Stripe, plutôt que de retomber sur l'écran par défaut.
+            try {
+              const previousScreen = localStorage.getItem("miloute_screen_before_checkout");
+              if (previousScreen) { setScreen(previousScreen); localStorage.removeItem("miloute_screen_before_checkout"); }
+            } catch {}
           } else {
             setVerifyError("Le paiement n'a pas pu être confirmé. Si vous avez bien payé, contactez le support.");
           }
@@ -4658,7 +4660,13 @@ export default function Miloute() {
     try { localStorage.removeItem("miloute_user_profile"); } catch {}
   }
   function closeChat() { setChatId(null); setScreen("messages"); }
-  function openPremium(preferredPlan = "yearly") { if (!isPremium) { setPremiumInitialPlan(preferredPlan); setShowPremiumTunnel(true); } }
+  function openPremium(preferredPlan = "yearly") {
+    if (!isPremium) {
+      try { localStorage.setItem("miloute_screen_before_checkout", screen); } catch {}
+      setPremiumInitialPlan(preferredPlan);
+      setShowPremiumTunnel(true);
+    }
+  }
   function onPremiumSuccess() { setIsPremium(true); savePremiumStatus(true); setShowPremiumTunnel(false); }
 
   
