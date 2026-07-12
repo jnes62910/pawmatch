@@ -230,6 +230,24 @@ function distanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── STOCKAGE DES PHOTOS (Supabase Storage) ───────────────────────────────────
+// Envoie un fichier dans le bucket "photos", sous un dossier propre à
+// l'utilisateur (obligatoire pour les règles d'accès), et retourne son URL
+// publique définitive — contrairement à URL.createObjectURL, qui ne fonctionne
+// que localement et disparaît au rafraîchissement.
+async function uploadPhotoToStorage(file, userId) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from("photos").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type || "image/jpeg",
+  });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from("photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 // ── MODÉRATION ────────────────────────────────────────────────────────────────
 // Photos/vidéos : seuls les chats et chiens sont autorisés, contenu approprié
 // obligatoire. Messages/commentaires : blocage auto si contenu problématique.
@@ -1485,20 +1503,39 @@ const INIT_COMMENTS = {
 };
 
 function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
-  const [liked, setLiked] = useState({});
   const [breedFilter, setBreedFilter] = useState("all");
   const [showBreedMenu, setShowBreedMenu] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [previewPlan, setPreviewPlan] = useState("yearly");
   const [openComments, setOpenComments] = useState(null); // post id
-  const [comments, setComments] = useState(INIT_COMMENTS);
+  const [comments, setComments] = useState({}); // { [postId]: [...] }
+  const [loadingComments, setLoadingComments] = useState(false);
   const [commentInputs, setCommentInputs] = useState({});
-  const [commentLikes, setCommentLikes] = useState({});
   const commentsEndRef = useRef(null);
 
-  const speciesPosts = COMMUNITY_POSTS.filter(p => !userProfile?.species || p.species === userProfile.species);
-  const availableBreeds = [...new Set(speciesPosts.map(p => p.breed))].sort((a, b) => a.localeCompare(b));
-  const filtered = speciesPosts.filter(p => breedFilter === "all" || p.breed === breedFilter);
+  const [posts, setPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [showComposer, setShowComposer] = useState(false);
+  const [composerText, setComposerText] = useState("");
+  const [composerPhoto, setComposerPhoto] = useState(null); // { file, previewUrl }
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState(null);
+  const composerPhotoRef = useRef(null);
+
+  async function reloadPosts() {
+    setLoadingPosts(true);
+    const result = await fetchCommunityPosts(userProfile);
+    setPosts(result);
+    setLoadingPosts(false);
+  }
+
+  useEffect(() => {
+    reloadPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id, userProfile?.species]);
+
+  const availableBreeds = [...new Set(posts.map(p => p.breed).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const filtered = posts.filter(p => breedFilter === "all" || p.breed === breedFilter);
 
   const TAG_COLORS = {
     "Événement": ["#E3F2FD","#1565C0"],
@@ -1509,6 +1546,20 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
 
   const [moderatingComment, setModeratingComment] = useState({}); // { [postId]: bool }
   const [commentModerationError, setCommentModerationError] = useState({}); // { [postId]: string }
+  const [commentLikes, setCommentLikes] = useState({}); // cosmétique uniquement, non persisté
+
+  function toggleCommentLike(postId, commentId) {
+    const key = `${postId}-${commentId}`;
+    setCommentLikes(l => ({ ...l, [key]: !l[key] }));
+  }
+
+  async function openPostComments(postId) {
+    setOpenComments(postId);
+    setLoadingComments(true);
+    const result = await fetchCommentsForPost(postId);
+    setComments(c => ({ ...c, [postId]: result }));
+    setLoadingComments(false);
+  }
 
   async function submitComment(postId) {
     const text = (commentInputs[postId] || "").trim();
@@ -1516,31 +1567,82 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
     setCommentModerationError(e => ({ ...e, [postId]: null }));
     setModeratingComment(m => ({ ...m, [postId]: true }));
     const result = await moderateText(text);
-    setModeratingComment(m => ({ ...m, [postId]: false }));
     if (!result.approved) {
+      setModeratingComment(m => ({ ...m, [postId]: false }));
       setCommentModerationError(e => ({ ...e, [postId]: result.reason || "Ce message enfreint les règles de la communauté et n'a pas été publié." }));
       return;
     }
-    const newComment = {
-      id: Date.now(),
-      author: "Vous",
-      pet: "Caramel",
-      emoji: "🐱",
-      text,
-      time: "À l'instant",
-      likes: 0,
-    };
-    setComments(c => ({ ...c, [postId]: [...(c[postId] || []), newComment] }));
-    setCommentInputs(i => ({ ...i, [postId]: "" }));
-    setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    try {
+      await createCommunityComment(userProfile, postId, text);
+      const fresh = await fetchCommentsForPost(postId);
+      setComments(c => ({ ...c, [postId]: fresh }));
+      setPosts(ps => ps.map(p => p.id === postId ? { ...p, commentCount: fresh.length } : p));
+      setCommentInputs(i => ({ ...i, [postId]: "" }));
+      setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    } catch {
+      setCommentModerationError(e => ({ ...e, [postId]: "Le commentaire n'a pas pu être publié, réessayez." }));
+    }
+    setModeratingComment(m => ({ ...m, [postId]: false }));
   }
 
-  function toggleCommentLike(postId, commentId) {
-    const key = `${postId}-${commentId}`;
-    setCommentLikes(l => ({ ...l, [key]: !l[key] }));
+  async function toggleLike(post) {
+    // Optimiste : on met à jour l'affichage tout de suite, avant la confirmation serveur.
+    setPosts(ps => ps.map(p => p.id === post.id
+      ? { ...p, likedByMe: !p.likedByMe, likes: p.likes + (p.likedByMe ? -1 : 1) }
+      : p));
+    try {
+      await toggleCommunityLike(userProfile, post.id, post.likedByMe);
+    } catch (err) {
+      console.error("toggleLike error:", err);
+    }
   }
 
-  const activePost = COMMUNITY_POSTS.find(p => p.id === openComments);
+  async function handleComposerPhoto(e) {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setPostError(null);
+    try {
+      const base64 = await fileToBase64(f);
+      const result = await moderateImage(base64, f.type || "image/jpeg");
+      if (!result.approved) {
+        setPostError(result.reason || "Photo refusée : seules les photos de chats et chiens, au contenu approprié, sont autorisées.");
+        return;
+      }
+      setComposerPhoto({ file: f, previewUrl: URL.createObjectURL(f) });
+    } catch {
+      setPostError("Impossible de vérifier cette photo, réessayez.");
+    }
+  }
+
+  async function submitPost() {
+    const text = composerText.trim();
+    if (!text && !composerPhoto) return;
+    setPostError(null);
+    setPosting(true);
+    try {
+      if (text) {
+        const modResult = await moderateText(text);
+        if (!modResult.approved) {
+          setPostError(modResult.reason || "Ce texte enfreint les règles de la communauté et n'a pas été publié.");
+          setPosting(false);
+          return;
+        }
+      }
+      let photoUrl = null;
+      if (composerPhoto) {
+        photoUrl = await uploadPhotoToStorage(composerPhoto.file, userProfile.userId);
+      }
+      await createCommunityPost(userProfile, { text, photoUrl, tag: null });
+      setComposerText(""); setComposerPhoto(null); setShowComposer(false);
+      await reloadPosts();
+    } catch (err) {
+      setPostError(err.message || "La publication a échoué, réessayez.");
+    }
+    setPosting(false);
+  }
+
+  const activePost = posts.find(p => p.id === openComments);
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -1578,16 +1680,18 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
       <div style={{ flex: 1, overflowY: "auto" }}>
         {/* New post */}
         <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, display: "flex", gap: 10, alignItems: "center", border: "1px solid #E5E7EB" }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🐱</div>
-          <div onClick={() => isPremium ? null : setShowPremium(true)} style={{ flex: 1, fontSize: 14, color: "#9CA3AF", cursor: "pointer" }}>Partager un moment avec Caramel...</div>
-          <button onClick={() => isPremium ? null : setShowPremium(true)} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 700, padding: "6px 12px", cursor: "pointer" }}>📸</button>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{userProfile?.species === "cat" ? "🐱" : "🐕"}</div>
+          <div onClick={() => isPremium ? setShowComposer(true) : setShowPremium(true)} style={{ flex: 1, fontSize: 14, color: "#9CA3AF", cursor: "pointer" }}>Partager un moment avec {userProfile?.name || "votre animal"}...</div>
+          <button onClick={() => isPremium ? setShowComposer(true) : setShowPremium(true)} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 700, padding: "6px 12px", cursor: "pointer" }}>📸</button>
         </div>
 
-        {/* Posts */}
-        {filtered.map(post => {
+        {loadingPosts ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={32} color="#E8B89F" /></div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 32px", color: "#9CA3AF", fontSize: 14 }}>Aucune publication pour le moment. Soyez le premier à partager un moment ! 🐾</div>
+        ) : filtered.map(post => {
           const [bgTag, textTag] = TAG_COLORS[post.tag] || ["#FAF0EB","#8B3D28"];
-          const postComments = comments[post.id] || [];
-          const isLiked = liked[post.id];
+          const postComments = comments[post.id];
 
           return (
             <div key={post.id} style={{ margin: "0 16px 12px", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", background: "#fff" }}>
@@ -1601,27 +1705,27 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{post.pet} <span style={{ fontWeight: 400, color: "#9CA3AF" }}>· {post.author}</span></div>
                     <div style={{ fontSize: 11, color: "#9CA3AF" }}>{post.breed} · {post.time}</div>
                   </div>
-                  <span style={{ background: bgTag, color: textTag, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>{post.tag}</span>
+                  {post.tag && <span style={{ background: bgTag, color: textTag, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>{post.tag}</span>}
                 </div>
 
                 {/* Content */}
-                <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: "0 0 12px" }}>{post.text}</p>
+                {post.text && <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: "0 0 12px" }}>{post.text}</p>}
 
                 {/* Actions — sans bouton Partager */}
                 <div style={{ display: "flex", gap: 16, borderTop: "1px solid #F3F4F6", paddingTop: 10 }}>
-                  <button onClick={() => setLiked(l => ({ ...l, [post.id]: !l[post.id] }))}
-                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: isLiked ? "#B25F46" : "#9CA3AF" }}>
-                    {isLiked ? "🧡" : "🤍"} {post.likes + (isLiked ? 1 : 0)}
+                  <button onClick={() => toggleLike(post)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: post.likedByMe ? "#B25F46" : "#9CA3AF" }}>
+                    {post.likedByMe ? "🧡" : "🤍"} {post.likes}
                   </button>
-                  <button onClick={() => setOpenComments(post.id)}
+                  <button onClick={() => openPostComments(post.id)}
                     style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: openComments === post.id ? "#B25F46" : "#9CA3AF" }}>
-                    💬 {postComments.length}
+                    💬 {post.commentCount}
                   </button>
                 </div>
 
-                {/* Aperçu du dernier commentaire */}
-                {postComments.length > 0 && openComments !== post.id && (
-                  <button onClick={() => setOpenComments(post.id)}
+                {/* Aperçu du dernier commentaire (si déjà chargé) */}
+                {postComments && postComments.length > 0 && openComments !== post.id && (
+                  <button onClick={() => openPostComments(post.id)}
                     style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 10, background: "#F9FAFB", borderRadius: 10, padding: "8px 10px", border: "none", cursor: "pointer", width: "100%", textAlign: "left" }}>
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{postComments[postComments.length - 1].emoji}</span>
                     <div>
@@ -1630,10 +1734,10 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
                     </div>
                   </button>
                 )}
-                {postComments.length > 1 && openComments !== post.id && (
-                  <button onClick={() => setOpenComments(post.id)}
+                {(post.commentCount > 1 && (!postComments || postComments.length < post.commentCount)) && openComments !== post.id && (
+                  <button onClick={() => openPostComments(post.id)}
                     style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9CA3AF", padding: "4px 0 0", display: "block" }}>
-                    Voir les {postComments.length} commentaires →
+                    Voir les {post.commentCount} commentaires →
                   </button>
                 )}
               </div>
@@ -1641,6 +1745,37 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
           );
         })}
       </div>
+
+      {/* Composeur de publication */}
+      {showComposer && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 55, display: "flex", alignItems: "flex-end" }} onClick={() => !posting && setShowComposer(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 32px", width: "100%" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Partager un moment avec {userProfile?.name}</div>
+            <textarea value={composerText} onChange={e => setComposerText(e.target.value)} placeholder="Racontez quelque chose sur votre compagnon..." rows={4}
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 14, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB", fontFamily: "inherit", resize: "none", marginBottom: 12, boxSizing: "border-box" }} />
+            {composerPhoto ? (
+              <div style={{ position: "relative", marginBottom: 12 }}>
+                <img src={composerPhoto.previewUrl} alt="" style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: 14 }} />
+                <button onClick={() => setComposerPhoto(null)} style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,.6)", border: "none", borderRadius: "50%", width: 28, height: 28, color: "#fff", cursor: "pointer", fontSize: 14 }}>✕</button>
+              </div>
+            ) : (
+              <button onClick={() => composerPhotoRef.current?.click()}
+                style={{ width: "100%", padding: "12px", borderRadius: 14, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>
+                📸 Ajouter une photo
+              </button>
+            )}
+            <input ref={composerPhotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleComposerPhoto} />
+            {postError && (
+              <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{postError}</div>
+            )}
+            <button onClick={submitPost} disabled={posting || (!composerText.trim() && !composerPhoto)}
+              style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: (posting || (!composerText.trim() && !composerPhoto)) ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: (posting || (!composerText.trim() && !composerPhoto)) ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: (posting || (!composerText.trim() && !composerPhoto)) ? "default" : "pointer" }}>
+              {posting ? "Publication en cours..." : "Publier"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Premium popup */}
       {showPremium && (
@@ -1692,7 +1827,9 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
 
             {/* Comments list */}
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
-              {(comments[openComments] || []).length === 0 && (
+              {loadingComments ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={28} color="#E8B89F" /></div>
+              ) : (comments[openComments] || []).length === 0 && (
                 <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
                   <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
                   <div style={{ fontSize: 14 }}>Soyez le premier à commenter !</div>
@@ -2258,7 +2395,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
@@ -2298,7 +2435,33 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   }, [boostEnd]);
 
   function openEdit() { setDraft({ ...pet, repro: { ...pet.repro } }); setEditing(true); setEditTab("profil"); }
-  function save() { setPet({ ...draft }); setEditing(false); setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  async function save() {
+    const updated = { ...draft, repro: { ...draft.repro } };
+    setPet(updated);
+    setEditing(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+
+    if (initialData?.id) {
+      const { error } = await supabase.from("profiles").update({
+        pet_name: updated.name,
+        breed: updated.breed,
+        age: updated.age,
+        gender: updated.gender,
+        energy: updated.energy,
+        vaccinated: updated.vaccinated,
+        sterilized: updated.sterilized,
+        temper: updated.temper,
+        seeking: updated.seeking,
+        bio: updated.bio,
+        photos: updated.photos,
+        video: updated.video,
+        repro: updated.repro,
+      }).eq("id", initialData.id);
+      if (error) console.error("update profile error:", error);
+      else onProfileUpdated({ ...initialData, ...updated, petName: updated.name });
+    }
+  }
   function toggleTemper(t) { setDraft(d => ({ ...d, temper: d.temper.includes(t) ? d.temper.filter(x => x !== t) : d.temper.length < 4 ? [...d.temper, t] : d.temper })); }
   function toggleSeeking(s) { setDraft(d => ({ ...d, seeking: d.seeking.includes(s) ? d.seeking.filter(x => x !== s) : [...d.seeking, s] })); }
   function setRepro(k, v) { setDraft(d => ({ ...d, repro: { ...d.repro, [k]: v } })); }
@@ -2318,7 +2481,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         const base64 = await fileToBase64(f);
         const result = await moderateImage(base64, f.type || "image/jpeg");
         if (result.approved) {
-          approved.push({ url: URL.createObjectURL(f), name: f.name });
+          try {
+            const url = initialData?.userId ? await uploadPhotoToStorage(f, initialData.userId) : URL.createObjectURL(f);
+            approved.push({ url, name: f.name });
+          } catch {
+            setMediaModerationError("Photo vérifiée, mais l'envoi a échoué. Réessayez.");
+          }
         } else {
           setMediaModerationError(result.reason || "Photo refusée : seules les photos de chats et chiens, au contenu approprié, sont autorisées.");
         }
@@ -2339,7 +2507,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       const base64 = await extractVideoFrameBase64(f);
       const result = await moderateImage(base64, "image/jpeg");
       if (result.approved) {
-        setDraft(d => ({ ...d, video: { url: URL.createObjectURL(f), name: f.name } }));
+        const url = initialData?.userId ? await uploadPhotoToStorage(f, initialData.userId) : URL.createObjectURL(f);
+        setDraft(d => ({ ...d, video: { url, name: f.name } }));
       } else {
         setMediaModerationError(result.reason || "Vidéo refusée : seules les vidéos de chats et chiens, au contenu approprié, sont autorisées.");
       }
@@ -3177,7 +3346,9 @@ function Onboarding({ onComplete, initialOwner = null }) {
         const base64 = await fileToBase64(f);
         const result = await moderateImage(base64, f.type || "image/jpeg");
         if (result.approved) {
-          approved.push({ url: URL.createObjectURL(f), name: f.name });
+          // On garde le fichier brut (pas encore de compte = pas encore de dossier
+          // Storage) : l'upload réel se fait à la toute fin, dans completeOnboarding.
+          approved.push({ url: URL.createObjectURL(f), name: f.name, file: f });
         } else {
           setMediaModerationError(result.reason || "Photo refusée : seules les photos de chats et chiens, au contenu approprié, sont autorisées.");
         }
@@ -3661,6 +3832,84 @@ async function fetchReproProfiles(userProfile) {
   return data.filter(row => row.repro?.active).map(row => reproProfileFromRow(row, userProfile));
 }
 
+async function fetchCommunityPosts(userProfile) {
+  if (!userProfile?.species) return [];
+  const { data: posts, error } = await supabase
+    .from("community_posts")
+    .select("*")
+    .eq("species", userProfile.species)
+    .order("created_at", { ascending: false });
+  if (error || !posts || posts.length === 0) return [];
+
+  const postIds = posts.map(p => p.id);
+  const [{ data: likeRows }, { data: commentRows }] = await Promise.all([
+    supabase.from("community_likes").select("post_id, user_id").in("post_id", postIds),
+    supabase.from("community_comments").select("post_id").in("post_id", postIds),
+  ]);
+  const likeCounts = {}, myLikes = new Set(), commentCounts = {};
+  (likeRows || []).forEach(l => {
+    likeCounts[l.post_id] = (likeCounts[l.post_id] || 0) + 1;
+    if (l.user_id === userProfile.userId) myLikes.add(l.post_id);
+  });
+  (commentRows || []).forEach(c => { commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1; });
+
+  return posts.map(row => ({
+    id: row.id, userId: row.user_id, profileId: row.profile_id,
+    species: row.species, breed: row.breed,
+    pet: row.pet_name, author: row.owner_name || "",
+    emoji: row.species === "cat" ? "🐱" : "🐕",
+    photo: row.photo_url, text: row.text, tag: row.tag,
+    time: formatRelativeTime(row.created_at),
+    likes: likeCounts[row.id] || 0,
+    likedByMe: myLikes.has(row.id),
+    commentCount: commentCounts[row.id] || 0,
+  }));
+}
+
+async function fetchCommentsForPost(postId) {
+  const { data, error } = await supabase.from("community_comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
+  if (error || !data) return [];
+  return data.map(c => ({
+    id: c.id, author: c.owner_name || "", pet: c.pet_name,
+    emoji: c.species === "cat" ? "🐱" : "🐕",
+    text: c.text, time: formatRelativeTime(c.created_at), likes: 0,
+  }));
+}
+
+async function createCommunityPost(userProfile, { text, photoUrl, tag }) {
+  const { data, error } = await supabase.from("community_posts").insert({
+    user_id: userProfile.userId,
+    profile_id: userProfile.id,
+    species: userProfile.species,
+    breed: userProfile.breed,
+    pet_name: userProfile.name,
+    owner_name: userProfile.ownerName,
+    text, photo_url: photoUrl || null, tag: tag || null,
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function createCommunityComment(userProfile, postId, text) {
+  const { error } = await supabase.from("community_comments").insert({
+    post_id: postId,
+    user_id: userProfile.userId,
+    pet_name: userProfile.name,
+    owner_name: userProfile.ownerName,
+    species: userProfile.species,
+    text,
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function toggleCommunityLike(userProfile, postId, currentlyLiked) {
+  if (currentlyLiked) {
+    await supabase.from("community_likes").delete().eq("post_id", postId).eq("user_id", userProfile.userId);
+  } else {
+    await supabase.from("community_likes").insert({ post_id: postId, user_id: userProfile.userId });
+  }
+}
+
 async function fetchMatchesForUser(userProfile) {
   if (!userProfile?.userId) return [];
   const { data: matchRows, error } = await supabase
@@ -3927,6 +4176,23 @@ export default function Miloute() {
       }
     }
 
+    // Les photos ont été gardées en fichiers bruts pendant l'onboarding (pas de
+    // compte = pas de dossier Storage). Maintenant que le compte existe, on les
+    // envoie réellement et on récupère leurs vraies URLs publiques.
+    const uploadedPhotos = [];
+    for (const p of form.photos) {
+      if (p.file) {
+        try {
+          const url = await uploadPhotoToStorage(p.file, userId);
+          uploadedPhotos.push({ url, name: p.name });
+        } catch (err) {
+          console.error("Échec de l'envoi d'une photo :", err); // on n'annule pas toute l'inscription pour une photo
+        }
+      } else if (p.url) {
+        uploadedPhotos.push({ url: p.url, name: p.name });
+      }
+    }
+
     const { data: insertedRow, error: insertError } = await supabase.from("profiles").insert({
       user_id: userId,
       owner_name: form.ownerName,
@@ -3942,18 +4208,22 @@ export default function Miloute() {
       temper: form.temper,
       seeking: form.seeking,
       bio: form.bio,
-      photos: form.photos,
+      photos: uploadedPhotos,
     }).select().single();
 
     if (insertError) throw new Error(insertError.message);
 
-    const normalized = { ...form, name: form.petName, id: insertedRow.id, userId: insertedRow.user_id };
+    const normalized = { ...form, name: form.petName, photos: uploadedPhotos, id: insertedRow.id, userId: insertedRow.user_id };
     setUserProfile(normalized);
     setOnboarded(true);
     saveProfile(normalized); // cache local — utile pour un chargement instantané au prochain lancement
   }
 
   function openChat(id) { setChatId(id); setScreen("chat"); }
+  function updateUserProfile(updated) {
+    setUserProfile(updated);
+    saveProfile(updated);
+  }
   function closeChat() { setChatId(null); setScreen("messages"); }
   function openPremium(preferredPlan = "yearly") { if (!isPremium) { setPremiumInitialPlan(preferredPlan); setShowPremiumTunnel(true); } }
   function onPremiumSuccess() { setIsPremium(true); savePremiumStatus(true); setShowPremiumTunnel(false); }
@@ -4012,7 +4282,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} />}
               </>
           }
         </div>
