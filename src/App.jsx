@@ -760,6 +760,76 @@ const URBAN_ANIMALS = [
   { id: 4, x: 80, y: 60, species: "dog", emoji: "🐕", name: "Bella", breed: "Golden Retriever", owner: "Marc L.", distance: "3,4 km", live: false },
 ];
 
+// Grandes villes françaises avec leurs coordonnées, pour déterminer
+// automatiquement la ville la plus proche de l'utilisateur.
+// ⚠️ Liste de départ (villes majeures) — à compléter/vérifier avant d'étendre
+// à d'autres villes, plutôt que de se fier uniquement à ces coordonnées.
+const FRENCH_CITIES = [
+  { name: "Paris", lat: 48.8566, lng: 2.3522 },
+  { name: "Marseille", lat: 43.2965, lng: 5.3698 },
+  { name: "Lyon", lat: 45.7640, lng: 4.8357 },
+  { name: "Toulouse", lat: 43.6047, lng: 1.4442 },
+  { name: "Nice", lat: 43.7102, lng: 7.2620 },
+  { name: "Nantes", lat: 47.2184, lng: -1.5536 },
+  { name: "Montpellier", lat: 43.6108, lng: 3.8767 },
+  { name: "Strasbourg", lat: 48.5734, lng: 7.7521 },
+  { name: "Bordeaux", lat: 44.8378, lng: -0.5792 },
+  { name: "Lille", lat: 50.6292, lng: 3.0573 },
+  { name: "Rennes", lat: 48.1173, lng: -1.6778 },
+  { name: "Reims", lat: 49.2583, lng: 4.0317 },
+  { name: "Toulon", lat: 43.1242, lng: 5.9280 },
+  { name: "Grenoble", lat: 45.1885, lng: 5.7245 },
+  { name: "Dijon", lat: 47.3220, lng: 5.0415 },
+  { name: "Angers", lat: 47.4784, lng: -0.5632 },
+  { name: "Nîmes", lat: 43.8367, lng: 4.3601 },
+  { name: "Le Mans", lat: 48.0061, lng: 0.1996 },
+  { name: "Aix-en-Provence", lat: 43.5297, lng: 5.4474 },
+  { name: "Brest", lat: 48.3904, lng: -4.4861 },
+];
+// Étiquette d'affichage uniquement (ex. "Spots proches · Lyon") — le vrai
+// filtrage se fait désormais par case géographique, pas par nom de ville.
+function nearestCity(lat, lng) {
+  let best = FRENCH_CITIES[0], bestDist = Infinity;
+  for (const c of FRENCH_CITIES) {
+    const d = distanceKm(lat, lng, c.lat, c.lng);
+    if (d < bestDist) { bestDist = d; best = c; }
+  }
+  return best.name;
+}
+
+// Grille géographique (~5,5 km de côté) : fonctionne n'importe où, pas
+// seulement dans une liste de villes prédéfinies. Même formule que côté
+// serveur (api/ensure-spots-for-location.js) — les deux doivent rester identiques.
+const SPOT_CELL_SIZE = 0.05;
+function cellIdFor(lat, lng) {
+  return `${Math.round(lat / SPOT_CELL_SIZE)}_${Math.round(lng / SPOT_CELL_SIZE)}`;
+}
+
+// Déclenche (si besoin) une synchronisation Google Places pour la case de
+// l'utilisateur — no-op côté serveur si elle a déjà été rafraîchie il y a
+// moins de 30 jours, donc peut être appelé à chaque ouverture sans souci de coût.
+async function ensureSpotsForLocation(lat, lng, city) {
+  try {
+    await fetch("/api/ensure-spots-for-location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat, lng, city }),
+    });
+  } catch (err) {
+    console.error("ensureSpotsForLocation error:", err); // on continue quand même avec ce qui existe déjà en base
+  }
+}
+
+async function fetchSpotsForCell(cellId) {
+  const { data, error } = await supabase.from("spots").select("*").eq("cell_id", cellId);
+  if (error || !data) { console.error("fetchSpotsForCell error:", error); return []; }
+  return data.map(row => ({
+    id: row.id, name: row.name, city: row.city, type: row.type, species: row.species,
+    emoji: row.emoji, lat: row.lat, lng: row.lng, desc: row.description,
+    metricLabel: row.metric_label, animals: row.metric_value || 0, open: row.open,
+  }));
+}
+
 function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -769,12 +839,41 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
   const [showModeInfo, setShowModeInfo] = useState(false);
   const [userPos, setUserPos] = useState(null); // { lat, lng }
   const [geoError, setGeoError] = useState(null);
+  const [citySpots, setCitySpots] = useState([]);
+  const [loadingSpots, setLoadingSpots] = useState(true);
 
-  const spotsBySpecies = SPOTS.filter(s => s.species === "both" || !userProfile?.species || s.species === userProfile.species);
-  const filteredSpots = spotsBySpecies.filter(s => filter === "all" || s.type === filter);
+  // Position de référence : celle de l'utilisateur si partagée, sinon un
+  // repli par défaut (centre de Paris) le temps qu'il l'active.
+  const refLat = userProfile?.location?.lat ?? 48.8566;
+  const refLng = userProfile?.location?.lng ?? 2.3522;
+  const activeCity = nearestCity(refLat, refLng); // étiquette d'affichage uniquement
+  const activeCellId = cellIdFor(refLat, refLng);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      setLoadingSpots(true);
+      await ensureSpotsForLocation(refLat, refLng, activeCity); // no-op si déjà à jour
+      const result = await fetchSpotsForCell(activeCellId);
+      if (active) { setCitySpots(result); setLoadingSpots(false); }
+    }
+    load();
+    return () => { active = false; };
+  }, [activeCellId]);
+
+  function getSpotDistance(s) {
+    if (userProfile?.location) {
+      return distanceKm(userProfile.location.lat, userProfile.location.lng, s.lat, s.lng).toFixed(1).replace(".", ",") + " km";
+    }
+    return "—";
+  }
+
+  const spotsBySpecies = citySpots.filter(s => s.species === "both" || !userProfile?.species || s.species === userProfile.species);
+  const filteredSpots = spotsBySpecies.filter(s => filter === "all" || s.type === filter).map(s => ({ ...s, distance: getSpotDistance(s) }));
   const animalsBySpecies = (mode === "rural" ? RURAL_ANIMALS : URBAN_ANIMALS).filter(a => !userProfile?.species || a.species === userProfile.species);
   const liveAnimals = animalsBySpecies.filter(a => a.live);
   const offlineAnimals = animalsBySpecies.filter(a => !a.live);
+
 
   function toggleSharing() {
     if (!sharing) setShowSharePrompt(true);
@@ -936,15 +1035,15 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
         ))}
 
         {/* Spots — uniquement en mode urbain */}
-        {!isRural && [
-          { id: 1, x: 28, y: 68 }, { id: 2, x: 58, y: 22 }, { id: 3, x: 78, y: 38 },
-          { id: 4, x: 45, y: 15 }, { id: 5, x: 72, y: 12 },
-          { id: 6, x: 52, y: 50 }, { id: 7, x: 20, y: 30 }, { id: 8, x: 62, y: 70 }, { id: 9, x: 85, y: 78 },
-        ].filter(sp => filteredSpots.find(s => s.id === sp.id)).map(sp => {
-          const spot = SPOTS.find(s => s.id === sp.id);
+        {!isRural && filteredSpots.map(spot => {
+          // Position déterministe (basée sur l'id du spot) plutôt qu'un tableau
+          // fixe — nécessaire puisque le nombre de spots varie selon la ville.
+          const hash = [...String(spot.id)].reduce((a, c) => a + c.charCodeAt(0), 0);
+          const x = 15 + (hash % 71); // 15–85%
+          const y = 10 + ((hash * 7) % 71); // 10–80%
           return (
-            <div key={sp.id} onClick={() => setSelected(spot)}
-              style={{ position: "absolute", left: `${sp.x}%`, top: `${sp.y}%`, transform: "translate(-50%,-50%)", cursor: "pointer", zIndex: 9 }}>
+            <div key={spot.id} onClick={() => setSelected(spot)}
+              style={{ position: "absolute", left: `${x}%`, top: `${y}%`, transform: "translate(-50%,-50%)", cursor: "pointer", zIndex: 9 }}>
               <div style={{ background: spot.open ? "#fff" : "#F3F4F6", border: `2px solid ${spot.open ? "#8B3D28" : "#D1D5DB"}`, borderRadius: 12, padding: "4px 8px", fontSize: 16, boxShadow: "0 2px 8px rgba(0,0,0,.15)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
                 {spot.emoji}
                 <span style={{ fontSize: 10, fontWeight: 700, color: spot.open ? "#8B3D28" : "#9CA3AF" }}>{spot.animals}</span>
@@ -1002,8 +1101,12 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
       {/* Liste spots en mode urbain */}
       {!isRural && (
         <div style={{ background: "#fff", maxHeight: 180, overflowY: "auto", flexShrink: 0 }}>
-          <div style={{ padding: "10px 16px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>SPOTS PROCHES</div>
-          {filteredSpots.map(spot => (
+          <div style={{ padding: "10px 16px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>SPOTS PROCHES {loadingSpots ? "" : `· ${activeCity}`}</div>
+          {loadingSpots ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: 20 }}><PawLogo size={24} color="#E8B89F" /></div>
+          ) : filteredSpots.length === 0 ? (
+            <div style={{ padding: "16px", textAlign: "center", fontSize: 13, color: "#9CA3AF" }}>Pas encore de spot recensé à {activeCity}.</div>
+          ) : filteredSpots.map(spot => (
             <div key={spot.id} onClick={() => setSelected(spot)}
               style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
               <div style={{ fontSize: 26 }}>{spot.emoji}</div>
