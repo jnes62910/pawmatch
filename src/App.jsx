@@ -4623,10 +4623,10 @@ export default function Miloute() {
 
         {/* Bottom nav — uniquement après onboarding */}
         {onboarded && screen !== "chat" && (
-          <div style={{ borderTop: "1px solid #F3F4F6", background: "#fff", flexShrink: 0, overflowX: "auto" }}>
-            <div style={{ display: "flex", padding: "6px 0 14px", minWidth: "max-content" }}>
+          <div style={{ borderTop: "1px solid #F3F4F6", background: "#fff", flexShrink: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-evenly", padding: "6px 0 14px" }}>
               {NAV.map(n => (
-                <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 10px", minWidth: 52, position: "relative" }}>
+                <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 6px", flex: 1, position: "relative" }}>
                   {n.logo ? <PawLogo size={20} color={screen === n.id ? "#B25F46" : "#9CA3AF"} /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
                   {n.id === "profile" && unseenTreats > 0 && (
                     <span style={{ position: "absolute", top: 0, right: 6, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unseenTreats}</span>
