@@ -1277,8 +1277,16 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
     let active = true;
     async function load() {
       setLoadingRepro(true);
-      const result = await fetchReproProfiles(userProfile);
-      if (active) { setReproDeck(result); setLoadingRepro(false); }
+      const real = await fetchReproProfiles(userProfile);
+      if (!active) return;
+      // Profils de démo en renfort — utiles pour présenter l'app tant que
+      // peu de vrais profils reproducteurs sont inscrits. Marqués isDemo pour
+      // ne jamais toucher à Supabase (ils n'existent pas vraiment en base).
+      const demo = REPRO_PROFILES
+        .filter(p => !userProfile?.species || p.species === userProfile.species)
+        .map(p => ({ ...p, isDemo: true }));
+      setReproDeck([...real, ...demo]);
+      setLoadingRepro(false);
     }
     load();
     return () => { active = false; };
@@ -1658,8 +1666,14 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
 
   async function reloadPosts() {
     setLoadingPosts(true);
-    const result = await fetchCommunityPosts(userProfile);
-    setPosts(result);
+    const real = await fetchCommunityPosts(userProfile);
+    // Posts de démo en renfort — utiles pour présenter l'app tant que peu de
+    // vrais posts existent. Marqués isDemo pour ne jamais toucher à Supabase
+    // (comptes de likes/commentaires gérés localement uniquement pour eux).
+    const demo = COMMUNITY_POSTS
+      .filter(p => !userProfile?.species || p.species === userProfile.species)
+      .map(p => ({ ...p, likedByMe: false, commentCount: p.comments, isDemo: true }));
+    setPosts([...real, ...demo]);
     setLoadingPosts(false);
   }
 
@@ -1688,6 +1702,11 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
 
   async function openPostComments(postId) {
     setOpenComments(postId);
+    const post = posts.find(p => p.id === postId);
+    if (post?.isDemo) {
+      setComments(c => ({ ...c, [postId]: INIT_COMMENTS[postId] || [] }));
+      return;
+    }
     setLoadingComments(true);
     const result = await fetchCommentsForPost(postId);
     setComments(c => ({ ...c, [postId]: result }));
@@ -1705,6 +1724,19 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
       setCommentModerationError(e => ({ ...e, [postId]: result.reason || "Ce message enfreint les règles de la communauté et n'a pas été publié." }));
       return;
     }
+
+    const post = posts.find(p => p.id === postId);
+    if (post?.isDemo) {
+      const newComment = { id: Date.now(), author: userProfile?.ownerName || "Vous", pet: userProfile?.name || "", emoji: userProfile?.species === "cat" ? "🐱" : "🐕", text, time: "À l'instant", likes: 0 };
+      const updatedList = [...(comments[postId] || []), newComment];
+      setComments(c => ({ ...c, [postId]: updatedList }));
+      setPosts(ps => ps.map(p => p.id === postId ? { ...p, commentCount: updatedList.length } : p));
+      setCommentInputs(i => ({ ...i, [postId]: "" }));
+      setModeratingComment(m => ({ ...m, [postId]: false }));
+      setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      return;
+    }
+
     try {
       await createCommunityComment(userProfile, postId, text);
       const fresh = await fetchCommentsForPost(postId);
@@ -1723,6 +1755,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
     setPosts(ps => ps.map(p => p.id === post.id
       ? { ...p, likedByMe: !p.likedByMe, likes: p.likes + (p.likedByMe ? -1 : 1) }
       : p));
+    if (post.isDemo) return; // jamais écrit dans Supabase, purement cosmétique
     try {
       await toggleCommunityLike(userProfile, post.id, post.likedByMe);
     } catch (err) {
@@ -4698,8 +4731,8 @@ export default function Miloute() {
             <div style={{ display: "flex", justifyContent: "space-evenly", padding: "6px 0 14px" }}>
               {NAV.map(n => (
                 <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 6px", flex: 1 }}>
-                  <div style={{ position: "relative", display: "inline-flex" }}>
-                    {n.logo ? <PawLogo size={20} color={screen === n.id ? "#B25F46" : "#9CA3AF"} /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
+                  <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", height: 24 }}>
+                    {n.logo ? <PawLogo size={24} color="#B25F46" /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
                     {n.id === "profile" && unseenTreats > 0 && (
                       <span style={{ position: "absolute", top: -6, right: -8, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unseenTreats}</span>
                     )}
