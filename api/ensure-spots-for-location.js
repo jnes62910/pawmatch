@@ -25,6 +25,7 @@ const REFRESH_AFTER_DAYS = 30;
 const CATEGORIES = [
   { includedType: 'veterinary_care', type: 'vet', species: 'both', emoji: '🩺', metricLabel: 'avis Google' },
   { includedType: 'park', type: 'park', species: 'both', emoji: '🌳', metricLabel: null },
+  { includedType: 'pet_store', type: 'petshop', species: 'both', emoji: '🛍️', metricLabel: 'avis Google' },
 ];
 
 function cellIdFor(lat, lng) {
