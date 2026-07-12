@@ -4100,8 +4100,15 @@ function profileFromRow(row) {
     bio: row.bio, photos: row.photos || [], video: row.video || null,
     location: (row.lat && row.lng) ? { lat: row.lat, lng: row.lng } : null,
     repro: row.repro || { active: false, price: "", priceNegotiable: false, availableFrom: "", availableTo: "", pedigree: false, geneticTest: false, reproDesc: "", docs: [] },
+    isPremium: row.is_premium || false,
   };
 }
+async function setPremiumInDb(profileId, value) {
+  if (!profileId) return;
+  const { error } = await supabase.from("profiles").update({ is_premium: value }).eq("id", profileId);
+  if (error) console.error("setPremiumInDb error:", error);
+}
+
 async function fetchProfileForUser(userId) {
   const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle();
   if (error) { console.error("fetchProfileForUser error:", error); return null; }
@@ -4465,6 +4472,8 @@ export default function Miloute() {
   const [unseenTreats, setUnseenTreats] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [userProfile, setUserProfile] = useState(() => loadProfile());
+  const userProfileRef = useRef(userProfile);
+  useEffect(() => { userProfileRef.current = userProfile; }, [userProfile]);
   const [authSession, setAuthSession] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [authView, setAuthView] = useState("welcome"); // welcome | email-onboarding
@@ -4520,6 +4529,10 @@ export default function Miloute() {
         setUserProfile(profile);
         setOnboarded(true);
         saveProfile(profile);
+        // La base Supabase fait foi pour le statut Premium (pas seulement ce
+        // navigateur) — on synchronise l'état local et le cache dessus.
+        setIsPremium(profile.isPremium);
+        savePremiumStatus(profile.isPremium);
       } else {
         // Compte authentifié (souvent via Google) mais profil animal pas encore créé.
         setOnboarded(false);
@@ -4552,6 +4565,10 @@ export default function Miloute() {
             setIsPremium(true);
             savePremiumStatus(true);
             setShowPremiumSuccess(true);
+            if (userProfileRef.current?.id) {
+              setPremiumInDb(userProfileRef.current.id, true);
+              updateUserProfile({ ...userProfileRef.current, isPremium: true });
+            }
             // Revient à l'écran où l'utilisateur était avant d'être envoyé
             // vers Stripe, plutôt que de retomber sur l'écran par défaut.
             try {
@@ -4667,7 +4684,15 @@ export default function Miloute() {
       setShowPremiumTunnel(true);
     }
   }
-  function onPremiumSuccess() { setIsPremium(true); savePremiumStatus(true); setShowPremiumTunnel(false); }
+  function onPremiumSuccess() {
+    setIsPremium(true);
+    savePremiumStatus(true);
+    setShowPremiumTunnel(false);
+    if (userProfile?.id) {
+      setPremiumInDb(userProfile.id, true);
+      updateUserProfile({ ...userProfile, isPremium: true });
+    }
+  }
 
   
   const NAV = [
