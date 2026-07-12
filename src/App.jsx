@@ -3021,7 +3021,7 @@ function Onboarding({ onComplete, initialOwner = null }) {
   function back() { setDirection(-1); setStep(s => s - 1); }
 
   const STEPS = [
-    "splash", "owner", "species", "identity", "health",
+    "owner", "species", "identity", "health",
     "character", "seeking", "photos", "bio", "recap"
   ];
   const current = STEPS[step];
@@ -3030,28 +3030,13 @@ function Onboarding({ onComplete, initialOwner = null }) {
   const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 14, border: "1.5px solid #E5E7EB", fontSize: 15, outline: "none", background: "#F9FAFB", boxSizing: "border-box", fontFamily: "inherit" };
   const labelStyle = { fontSize: 12, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8, display: "block" };
 
-  // ── SPLASH ──────────────────────────────────────────────────────────────────
-  if (current === "splash") return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 28px", background: "linear-gradient(160deg,#8B3D28 0%,#B25F46 100%)" }}>
-      <div style={{ marginBottom: 24 }}><PawLogo size={180} color="#fff" /></div>
-      <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 10, textAlign: "center", lineHeight: 1.2 }}>Bienvenue sur Miloute</div>
-      <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", textAlign: "center", lineHeight: 1.7, marginBottom: 48 }}>
-        La première app de rencontres pour chats & chiens.<br/>Créons ensemble le profil de votre animal en 2 minutes.
-      </div>
-      <button onClick={next} style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", background: "#fff", color: "#8B3D28", fontSize: 17, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>
-        C'est parti !
-      </button>
-      <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 20, textAlign: "center" }}>Gratuit · Sans engagement · 2 minutes</div>
-    </div>
-  );
-
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* Progress bar */}
       <div style={{ padding: "14px 20px 0", background: "#fff", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          {step > 1 && (
+          {step > 0 && (
             <button onClick={back} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9CA3AF", padding: 0, flexShrink: 0 }}>←</button>
           )}
           <div style={{ flex: 1, height: 5, background: "#F3F4F6", borderRadius: 3, overflow: "hidden" }}>
