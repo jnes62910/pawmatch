@@ -222,6 +222,13 @@ function Badge({ children, color = "#FAF0EB", text = "#8B3D28" }) {
 
 // ── SWIPE SCREEN ──────────────────────────────────────────────────────────────
 // ── DISTANCE HELPER ────────────────────────────────────────────────────────────
+// Accepte les deux formats : {url, name} (vrais profils Supabase) et une
+// simple chaîne (profils de démo) — évite de dupliquer la logique partout.
+function photoUrl(p) {
+  if (!p) return null;
+  return typeof p === "string" ? p : p.url;
+}
+
 function distanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371; // rayon terrestre en km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -374,10 +381,18 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         if (swErr) throw swErr;
         if (!active) return;
         const alreadySwiped = new Set((mySwipes || []).map(s => s.target_profile_id));
-        const fresh = (candidates || [])
+        const realOnes = (candidates || [])
           .filter(row => !alreadySwiped.has(row.id))
           .map(profileFromRow);
-        setDeck(fresh);
+
+        // Profils de démo en renfort — utile pour présenter l'app (captures
+        // d'écran, vidéos) même quand peu de vrais utilisateurs sont inscrits.
+        // Marqués isDemo pour ne jamais toucher à Supabase quand on les swipe.
+        const demoOnes = PROFILES
+          .filter(p => !userProfile?.species || p.species === userProfile.species)
+          .map(p => ({ ...p, isDemo: true }));
+
+        setDeck([...realOnes, ...demoOnes]);
       } catch (err) {
         if (active) setDeckError("Impossible de charger les profils. Réessayez.");
         console.error("loadDeck error:", err);
@@ -402,7 +417,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
   const filtered = deck.filter(p =>
     (breedFilter === "all" || p.breed === breedFilter) &&
-    (searchRadius >= 100 || getProfileDistance(p) <= searchRadius)
+    (p.isDemo || searchRadius >= 100 || getProfileDistance(p) <= searchRadius)
   );
   const profile = filtered[idx];
 
@@ -417,6 +432,19 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     const targetX = dir === "like" ? 440 : -440;
     setDragX(targetX);
     setSwiping(true);
+
+    // Profil de démo : purement local, jamais écrit dans Supabase (ces profils
+    // n'existent pas vraiment en base). On simule un match de temps en temps
+    // pour que la démo reste vivante (utile pour les vidéos/captures).
+    if (swipedProfile.isDemo) {
+      const demoMatched = dir === "like" && Math.random() > 0.4;
+      setTimeout(() => {
+        setDragX(0); setDragging(false); setPhoto(0); setSwiping(false);
+        if (demoMatched) setMatchedWith(swipedProfile);
+        else setIdx(i => Math.min(i + 1, filtered.length - 1));
+      }, 380);
+      return;
+    }
 
     // Enregistre le swipe et détecte un éventuel match mutuel pendant l'animation.
     let matched = false;
@@ -466,7 +494,9 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     setTreatToast(targetProfile.name);
     setTimeout(() => setTreatSentId(null), 900);
     setTimeout(() => setTreatToast(null), 2200);
-    sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
+    if (!targetProfile.isDemo) {
+      sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
+    }
   }
 
   function onTouchStart(e) {
@@ -672,8 +702,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               onClick={() => !dragging && setPhoto(p => Math.min(profile.photos.length - 1, p + 1))} />
 
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-              {profile.photos?.[photo]?.url
-                ? <img src={profile.photos[photo].url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {photoUrl(profile.photos?.[photo])
+                ? <img src={photoUrl(profile.photos[photo])} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.species === "cat" ? "🐱" : "🐕"}</div>
               }
             </div>
@@ -729,8 +759,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
             <PawLogo size={56} color="#fff" />
             <div style={{ width: 92, height: 92, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", background: "#8B3D28", flexShrink: 0, boxShadow: "0 4px 16px rgba(0,0,0,.25)" }}>
-              {matchedWith.photos?.[0]?.url
-                ? <img src={matchedWith.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {photoUrl(matchedWith.photos?.[0])
+                ? <img src={photoUrl(matchedWith.photos[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>{matchedWith.species === "cat" ? "🐱" : "🐕"}</div>
               }
             </div>
