@@ -460,11 +460,13 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       onPremium("monthly");
       return;
     }
+    const targetProfile = profile;
     setTreatsToday(t => { const next = t + 1; saveTreatsToday(next); return next; });
-    setTreatSentId(profile.id);
-    setTreatToast(profile.name);
+    setTreatSentId(targetProfile.id);
+    setTreatToast(targetProfile.name);
     setTimeout(() => setTreatSentId(null), 900);
     setTimeout(() => setTreatToast(null), 2200);
+    sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
   }
 
   function onTouchStart(e) {
@@ -1332,7 +1334,8 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
       {/* Prompt Premium */}
       {showPremiumPrompt && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowPremiumPrompt(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%", position: "relative" }}>
+            <button onClick={() => setShowPremiumPrompt(false)} style={{ position: "absolute", top: 14, right: 14, width: 28, height: 28, borderRadius: "50%", border: "none", background: "#F3F4F6", color: "#6B7280", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             <div style={{ textAlign: "center", fontSize: 44, marginBottom: 12 }}>👑</div>
             <div style={{ textAlign: "center", fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Recherche avancée</div>
             <div style={{ textAlign: "center", fontSize: 14, color: "#6B7280", marginBottom: 20, lineHeight: 1.6 }}>
@@ -1779,7 +1782,8 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
       {/* Premium popup */}
       {showPremium && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 50, display: "flex", alignItems: "flex-end" }} onClick={() => setShowPremium(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "28px 20px 40px", width: "100%" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "28px 20px 40px", width: "100%", position: "relative" }}>
+            <button onClick={() => setShowPremium(false)} style={{ position: "absolute", top: 14, right: 14, width: 28, height: 28, borderRadius: "50%", border: "none", background: "#F3F4F6", color: "#6B7280", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 20px" }} />
             <div style={{ textAlign: "center", fontSize: 44, marginBottom: 12 }}>👑</div>
             <div style={{ textAlign: "center", fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Fonction Premium</div>
@@ -2394,13 +2398,36 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
   const [saved, setSaved] = useState(false);
   const [editTab, setEditTab] = useState("profil"); // "profil" | "repro"
   const [showLikesModal, setShowLikesModal] = useState(false);
+  const [treatsReceived, setTreatsReceived] = useState([]);
+  const [unseenTreatsCount, setUnseenTreatsCount] = useState(0);
+  const [showTreatsModal, setShowTreatsModal] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function loadTreats() {
+      const [list, count] = await Promise.all([
+        fetchReceivedTreats(initialData),
+        fetchUnseenTreatsCount(initialData),
+      ]);
+      if (active) { setTreatsReceived(list); setUnseenTreatsCount(count); }
+    }
+    if (initialData?.userId) loadTreats();
+    return () => { active = false; };
+  }, [initialData?.userId]);
+
+  function openTreatsModal() {
+    setShowTreatsModal(true);
+    if (unseenTreatsCount > 0) {
+      markTreatsSeen(initialData).then(() => { setUnseenTreatsCount(0); onTreatsSeen(); });
+    }
+  }
   const [boostEnd, setBoostEnd] = useState(readBoostEnd);
   const [boostTimeLeft, setBoostTimeLeft] = useState("");
   const photoRef = useRef(null);
@@ -2869,6 +2896,20 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
         </div>
 
+        {/* Friandises reçues */}
+        <button onClick={openTreatsModal}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
+          <span style={{ fontSize: 22 }}>{pet.species === "cat" ? "🐟" : "🦴"}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Friandises reçues</div>
+            <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
+          </div>
+          {unseenTreatsCount > 0 && (
+            <span style={{ background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>{unseenTreatsCount}</span>
+          )}
+          <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>
+        </button>
+
         {/* Statistiques avancées — Premium */}
         <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -3002,6 +3043,41 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
         </div>
       )}
+
+      {/* Modale Friandises reçues */}
+      {showTreatsModal && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setShowTreatsModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+              <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>{pet.species === "cat" ? "🐟" : "🦴"} Friandises reçues</div>
+                <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+              {treatsReceived.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>{pet.species === "cat" ? "🐟" : "🦴"}</div>
+                  <div style={{ fontSize: 14 }}>Pas encore de friandise reçue</div>
+                </div>
+              ) : treatsReceived.map(t => (
+                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                    {t.photo ? <img src={t.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : t.emoji}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{t.name} vous a envoyé une friandise {t.emoji}</div>
+                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{t.breed} · {t.time}</div>
+                  </div>
+                  {!t.seen && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#B25F46", flexShrink: 0 }} />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3091,7 +3167,11 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile
 
         {/* Handle */}
         <div style={{ flexShrink: 0, padding: "12px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto" }} />
+          <div style={{ width: 28 }} />
+          <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2 }} />
+          {step !== "success" ? (
+            <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "#F3F4F6", color: "#6B7280", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✕</button>
+          ) : <div style={{ width: 28 }} />}
         </div>
 
         {/* ── STEP 1 : Plans ── */}
@@ -3913,6 +3993,59 @@ async function toggleCommunityLike(userProfile, postId, currentlyLiked) {
   }
 }
 
+async function sendTreatToProfile(userProfile, targetProfile) {
+  const { error } = await supabase.from("treats").insert({
+    sender_user_id: userProfile.userId,
+    sender_profile_id: userProfile.id,
+    target_user_id: targetProfile.userId,
+    target_profile_id: targetProfile.id,
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function fetchUnseenTreatsCount(userProfile) {
+  if (!userProfile?.userId) return 0;
+  const { count, error } = await supabase
+    .from("treats")
+    .select("id", { count: "exact", head: true })
+    .eq("target_user_id", userProfile.userId)
+    .eq("seen", false);
+  if (error) { console.error("fetchUnseenTreatsCount error:", error); return 0; }
+  return count || 0;
+}
+
+async function fetchReceivedTreats(userProfile) {
+  if (!userProfile?.userId) return [];
+  const { data: treatRows, error } = await supabase
+    .from("treats")
+    .select("*")
+    .eq("target_user_id", userProfile.userId)
+    .order("created_at", { ascending: false });
+  if (error || !treatRows || treatRows.length === 0) return [];
+
+  const senderIds = [...new Set(treatRows.map(t => t.sender_profile_id))];
+  const { data: senderProfiles } = await supabase.from("profiles").select("*").in("id", senderIds);
+  const byId = Object.fromEntries((senderProfiles || []).map(p => [p.id, p]));
+
+  return treatRows.map(t => {
+    const sender = byId[t.sender_profile_id];
+    return {
+      id: t.id,
+      seen: t.seen,
+      time: formatRelativeTime(t.created_at),
+      name: sender?.pet_name || "Un animal",
+      breed: sender?.breed || "",
+      photo: sender?.photos?.[0]?.url || null,
+      emoji: sender?.species === "cat" ? "🐱" : "🐕",
+    };
+  });
+}
+
+async function markTreatsSeen(userProfile) {
+  if (!userProfile?.userId) return;
+  await supabase.from("treats").update({ seen: true }).eq("target_user_id", userProfile.userId).eq("seen", false);
+}
+
 async function fetchMatchesForUser(userProfile) {
   if (!userProfile?.userId) return [];
   const { data: matchRows, error } = await supabase
@@ -4073,6 +4206,7 @@ function WelcomeScreen({ onStartEmailSignup, onLoggedIn }) {
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function Miloute() {
   const [onboarded, setOnboarded] = useState(() => loadProfile() !== null);
+  const [unseenTreats, setUnseenTreats] = useState(0);
   const [userProfile, setUserProfile] = useState(() => loadProfile());
   const [authSession, setAuthSession] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -4086,6 +4220,19 @@ export default function Miloute() {
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
+
+  // Badge de notification sur l'icône Profil : friandises reçues pas encore vues.
+  useEffect(() => {
+    if (!userProfile?.userId) { setUnseenTreats(0); return; }
+    let active = true;
+    async function refresh() {
+      const count = await fetchUnseenTreatsCount(userProfile);
+      if (active) setUnseenTreats(count);
+    }
+    refresh();
+    const interval = setInterval(refresh, 30000); // rafraîchi toutes les 30s
+    return () => { active = false; clearInterval(interval); };
+  }, [userProfile?.userId]);
 
   // Vérifie s'il existe déjà une session Supabase (retour de Google, ou
   // navigateur déjà connecté) et reste à l'écoute des changements —
@@ -4294,7 +4441,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} />}
               </>
           }
         </div>
@@ -4311,8 +4458,11 @@ export default function Miloute() {
           <div style={{ borderTop: "1px solid #F3F4F6", background: "#fff", flexShrink: 0, overflowX: "auto" }}>
             <div style={{ display: "flex", padding: "6px 0 14px", minWidth: "max-content" }}>
               {NAV.map(n => (
-                <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 10px", minWidth: 52 }}>
+                <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 10px", minWidth: 52, position: "relative" }}>
                   {n.logo ? <PawLogo size={20} color={screen === n.id ? "#B25F46" : "#9CA3AF"} /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
+                  {n.id === "profile" && unseenTreats > 0 && (
+                    <span style={{ position: "absolute", top: 0, right: 6, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unseenTreats}</span>
+                  )}
                   <span style={{ fontSize: 9, fontWeight: screen === n.id ? 700 : 400, color: screen === n.id ? "#B25F46" : "#9CA3AF", whiteSpace: "nowrap" }}>{n.label}</span>
                   {screen === n.id && <div style={{ width: 16, height: 3, borderRadius: 2, background: "#B25F46" }} />}
                 </button>
