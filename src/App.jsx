@@ -2647,6 +2647,25 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [editTab, setEditTab] = useState("profil"); // "profil" | "repro"
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [selectedLike, setSelectedLike] = useState(null);
+  const [likesReceived, setLikesReceived] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function loadLikes() {
+      setLoadingLikes(true);
+      const real = await fetchLikesReceived(initialData);
+      if (!active) return;
+      // Likes de démo en renfort — utiles tant que peu de vrais likes existent.
+      const demo = LIKES_RECEIVED
+        .filter(l => !initialData?.species || l.species === initialData.species)
+        .map(l => ({ ...l, isDemo: true }));
+      setLikesReceived([...real, ...demo]);
+      setLoadingLikes(false);
+    }
+    loadLikes();
+    return () => { active = false; };
+  }, [initialData?.id, initialData?.userId, initialData?.species]);
   const [treatsReceived, setTreatsReceived] = useState([]);
   const [unseenTreatsCount, setUnseenTreatsCount] = useState(0);
   const [showTreatsModal, setShowTreatsModal] = useState(false);
@@ -3128,7 +3147,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 10, letterSpacing: 1 }}>STATISTIQUES</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            {[["12","Likes reçus",true],["3","Matchs",false],["5","Rencontres",false]].map(([n,l,clickable]) => (
+            {[[String(likesReceived.length || "0"),"Likes reçus",true],["3","Matchs",false],["5","Rencontres",false]].map(([n,l,clickable]) => (
               <div key={l} onClick={() => clickable && setShowLikesModal(true)}
                 style={{ textAlign: "center", cursor: clickable ? "pointer" : "default", position: "relative" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>{n}</div>
@@ -3257,11 +3276,18 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
-              {LIKES_RECEIVED.map((like, i) => (
+              {loadingLikes ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={28} color="#E8B89F" /></div>
+              ) : likesReceived.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>👁️</div>
+                  <div style={{ fontSize: 14 }}>Pas encore de like reçu</div>
+                </div>
+              ) : likesReceived.map((like, i) => (
                 <div key={i} onClick={() => isPremium ? setSelectedLike(like) : onPremium()}
                   style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative", cursor: "pointer" }}>
                   <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, filter: isPremium ? "none" : "blur(6px)" }}>
-                    {like.photo ? <img src={like.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : like.emoji}
+                    {photoUrl(like.photo) ? <img src={photoUrl(like.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : like.emoji}
                   </div>
                   <div style={{ flex: 1, filter: isPremium ? "none" : "blur(4px)" }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{isPremium ? like.name : "???"}</div>
@@ -3290,7 +3316,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
       {/* Détail d'un profil ayant liké */}
       {selectedLike && (() => {
-        const fullProfile = PROFILES.find(p => p.name === selectedLike.name) || REPRO_PROFILES.find(p => p.name === selectedLike.name);
+        const fullProfile = !selectedLike.isDemo
+          ? selectedLike
+          : (PROFILES.find(p => p.name === selectedLike.name) || REPRO_PROFILES.find(p => p.name === selectedLike.name));
         return (
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "flex-end" }} onClick={() => setSelectedLike(null)}>
             <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
@@ -4301,6 +4329,44 @@ async function fetchUnreadMessagesCount(userProfile) {
 
 async function markMessagesRead(matchId, userId) {
   await supabase.from("messages").update({ read: true }).eq("match_id", matchId).neq("sender_user_id", userId).eq("read", false);
+}
+
+// Les likes déjà transformés en match sont exclus : ils sont déjà visibles
+// dans Messages, inutile de les faire apparaître deux fois.
+async function fetchLikesReceived(userProfile) {
+  if (!userProfile?.id || !userProfile?.userId) return [];
+  const { data: likeRows, error } = await supabase
+    .from("swipes")
+    .select("swiper_user_id, created_at")
+    .eq("target_profile_id", userProfile.id)
+    .eq("direction", "like")
+    .order("created_at", { ascending: false });
+  if (error || !likeRows || likeRows.length === 0) return [];
+
+  const { data: matchRows } = await supabase
+    .from("matches")
+    .select("user_a, user_b")
+    .or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`);
+  const matchedUserIds = new Set((matchRows || []).flatMap(m => [m.user_a, m.user_b]));
+  const pending = likeRows.filter(l => !matchedUserIds.has(l.swiper_user_id));
+  if (pending.length === 0) return [];
+
+  const senderUserIds = [...new Set(pending.map(l => l.swiper_user_id))];
+  const { data: senderProfiles } = await supabase.from("profiles").select("*").in("user_id", senderUserIds);
+  const byUserId = Object.fromEntries((senderProfiles || []).map(p => [p.user_id, p]));
+
+  return pending.map(l => {
+    const p = byUserId[l.swiper_user_id];
+    if (!p) return null;
+    return {
+      name: p.pet_name, species: p.species, breed: p.breed, age: p.age,
+      emoji: p.species === "cat" ? "🐱" : "🐕",
+      photo: p.photos?.[0]?.url || null,
+      bio: p.bio, temper: p.temper || [],
+      time: formatRelativeTime(l.created_at),
+      isDemo: false,
+    };
+  }).filter(Boolean);
 }
 
 async function fetchUnseenTreatsCount(userProfile) {
