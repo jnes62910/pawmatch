@@ -162,22 +162,22 @@ const SPOTS = [
 ];
 
 const COMMUNITY_POSTS = [
-  { id: 1, breed: "Berger Australien", emoji: "🐕", photo: "/photos/rocky-1.jpg", author: "Thomas D.", pet: "Rocky", time: "Il y a 2h", text: "Rocky a fait son premier agility aujourd'hui ! On cherche d'autres Aussies pour s'entraîner le dimanche matin à Vincennes 🏃", likes: 24, comments: 8, tag: "Événement" },
-  { id: 2, breed: "Européen", emoji: "🐱", photo: "/photos/rosie-1.jpg", author: "Sophie M.", pet: "Rosie", time: "Il y a 5h", text: "Petite question : Rosie refuse de manger depuis 2 jours. Elle a pourtant l'air en forme... Quelqu'un a eu ça avec son chat ? 🤔", likes: 12, comments: 19, tag: "Conseil" },
-  { id: 3, breed: "Maine Coon", emoji: "🐱", photo: "/photos/mochi-1.jpg", author: "Clara B.", pet: "Mochi", time: "Hier", text: "Mochi vient de fêter ses 5 ans ! 🎂 Le plus grand et le plus doux des chats parisiens. Il cherche toujours son âme sœur pour partager son canapé.", likes: 67, comments: 14, tag: "Anniversaire" },
-  { id: 4, breed: "Golden Retriever", emoji: "🐕", photo: "/photos/bella-1.jpg", author: "Marc L.", pet: "Bella", time: "Hier", text: "Bella disponible pour reproduction printemps 2026. Pedigree SCC, bilan hanche A/A. Cherche mâle sain et équilibré uniquement.", likes: 9, comments: 5, tag: "Reproduction" },
+  { id: 1, species: "dog", breed: "Berger Australien", emoji: "🐕", photo: "/photos/rocky-1.jpg", author: "Thomas D.", pet: "Rocky", time: "Il y a 2h", text: "Rocky a fait son premier agility aujourd'hui ! On cherche d'autres Aussies pour s'entraîner le dimanche matin à Vincennes 🏃", likes: 24, comments: 8, tag: "Événement" },
+  { id: 2, species: "cat", breed: "Européen", emoji: "🐱", photo: "/photos/rosie-1.jpg", author: "Sophie M.", pet: "Rosie", time: "Il y a 5h", text: "Petite question : Rosie refuse de manger depuis 2 jours. Elle a pourtant l'air en forme... Quelqu'un a eu ça avec son chat ? 🤔", likes: 12, comments: 19, tag: "Conseil" },
+  { id: 3, species: "cat", breed: "Maine Coon", emoji: "🐱", photo: "/photos/mochi-1.jpg", author: "Clara B.", pet: "Mochi", time: "Hier", text: "Mochi vient de fêter ses 5 ans ! 🎂 Le plus grand et le plus doux des chats parisiens. Il cherche toujours son âme sœur pour partager son canapé.", likes: 67, comments: 14, tag: "Anniversaire" },
+  { id: 4, species: "dog", breed: "Golden Retriever", emoji: "🐕", photo: "/photos/bella-1.jpg", author: "Marc L.", pet: "Bella", time: "Hier", text: "Bella disponible pour reproduction printemps 2026. Pedigree SCC, bilan hanche A/A. Cherche mâle sain et équilibré uniquement.", likes: 9, comments: 5, tag: "Reproduction" },
 ];
 
 const AGENDA = [
-  { id: 1, date: "Sam. 14 Juin", time: "10h00", with: "Luna", ownerEmoji: "🐱", owner: "Sophie M.", place: "Parc Montsouris", type: "Play date", status: "confirmed", rating: null },
-  { id: 2, date: "Dim. 15 Juin", time: "15h30", with: "Rocky", ownerEmoji: "🐕", owner: "Thomas D.", place: "Bois de Vincennes", type: "Balade", status: "pending", rating: null },
-  { id: 3, date: "Mar. 10 Juin", time: "11h00", with: "Pixel", ownerEmoji: "🐱", owner: "Léa P.", place: "Café des Chats Marais", type: "Cat date", status: "done", rating: 5 },
+  { id: 1, date: "Sam. 14 Juin", time: "10h00", with: "Luna", species: "cat", ownerEmoji: "🐱", owner: "Sophie M.", place: "Parc Montsouris", type: "Play date", status: "confirmed", rating: null },
+  { id: 2, date: "Dim. 15 Juin", time: "15h30", with: "Rocky", species: "dog", ownerEmoji: "🐕", owner: "Thomas D.", place: "Bois de Vincennes", type: "Balade", status: "pending", rating: null },
+  { id: 3, date: "Mar. 10 Juin", time: "11h00", with: "Pixel", species: "cat", ownerEmoji: "🐱", owner: "Léa P.", place: "Café des Chats Marais", type: "Cat date", status: "done", rating: 5 },
 ];
 
 const MATCHES = [
-  { id: 1, name: "Rosie", emoji: "🐱", photo: "/photos/rosie-1.jpg", owner: "Sophie M.", lastMsg: "Super ! À samedi alors 😸", time: "12:34", unread: 2 },
-  { id: 2, name: "Rocky", emoji: "🐕", photo: "/photos/rocky-1.jpg", owner: "Thomas D.", lastMsg: "Il adore le bois de Vincennes !", time: "Hier", unread: 0 },
-  { id: 5, name: "Pixel", emoji: "🐱", photo: "/photos/pixel-1.jpg", owner: "Léa P.", lastMsg: "Nouveau match ✨", time: "Lun.", unread: 1 },
+  { id: 1, name: "Rosie", species: "cat", emoji: "🐱", photo: "/photos/rosie-1.jpg", owner: "Sophie M.", lastMsg: "Super ! À samedi alors 😸", time: "12:34", unread: 2 },
+  { id: 2, name: "Rocky", species: "dog", emoji: "🐕", photo: "/photos/rocky-1.jpg", owner: "Thomas D.", lastMsg: "Il adore le bois de Vincennes !", time: "Hier", unread: 0 },
+  { id: 5, name: "Pixel", species: "cat", emoji: "🐱", photo: "/photos/pixel-1.jpg", owner: "Léa P.", lastMsg: "Nouveau match ✨", time: "Lun.", unread: 1 },
 ];
 
 const MESSAGES = {
@@ -641,21 +641,21 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
 // ── MAP SCREEN ────────────────────────────────────────────────────────────────
 const RURAL_ANIMALS = [
-  { id: 10, name: "Filou", emoji: "🐕", breed: "Border Collie", owner: "Antoine R.", distance: "3,2 km", x: 30, y: 40, live: true },
-  { id: 11, name: "Caline", emoji: "🐱", breed: "Européen", owner: "Nathalie B.", distance: "5,8 km", x: 65, y: 25, live: true },
-  { id: 12, name: "Rex", emoji: "🐕", breed: "Berger Allemand", owner: "Pierre G.", distance: "7,1 km", x: 75, y: 62, live: false },
-  { id: 13, name: "Mimi", emoji: "🐱", breed: "Maine Coon", owner: "Claire M.", distance: "2,4 km", x: 20, y: 68, live: true },
-  { id: 14, name: "Duke", emoji: "🐕", breed: "Labrador", owner: "François T.", distance: "9,3 km", x: 55, y: 75, live: false },
+  { id: 10, name: "Filou", species: "dog", emoji: "🐕", breed: "Border Collie", owner: "Antoine R.", distance: "3,2 km", x: 30, y: 40, live: true },
+  { id: 11, name: "Caline", species: "cat", emoji: "🐱", breed: "Européen", owner: "Nathalie B.", distance: "5,8 km", x: 65, y: 25, live: true },
+  { id: 12, name: "Rex", species: "dog", emoji: "🐕", breed: "Berger Allemand", owner: "Pierre G.", distance: "7,1 km", x: 75, y: 62, live: false },
+  { id: 13, name: "Mimi", species: "cat", emoji: "🐱", breed: "Maine Coon", owner: "Claire M.", distance: "2,4 km", x: 20, y: 68, live: true },
+  { id: 14, name: "Duke", species: "dog", emoji: "🐕", breed: "Labrador", owner: "François T.", distance: "9,3 km", x: 55, y: 75, live: false },
 ];
 
 const URBAN_ANIMALS = [
-  { id: 1, x: 22, y: 55, emoji: "🐱", name: "Luna", breed: "Chartreux", owner: "Sophie M.", distance: "1,2 km", live: true },
-  { id: 2, x: 62, y: 45, emoji: "🐕", name: "Rocky", breed: "Berger Australien", owner: "Thomas D.", distance: "0,8 km", live: true },
-  { id: 3, x: 38, y: 72, emoji: "🐱", name: "Mochi", breed: "Maine Coon", owner: "Clara B.", distance: "2,1 km", live: false },
-  { id: 4, x: 80, y: 60, emoji: "🐕", name: "Bella", breed: "Golden Retriever", owner: "Marc L.", distance: "3,4 km", live: false },
+  { id: 1, x: 22, y: 55, species: "cat", emoji: "🐱", name: "Luna", breed: "Chartreux", owner: "Sophie M.", distance: "1,2 km", live: true },
+  { id: 2, x: 62, y: 45, species: "dog", emoji: "🐕", name: "Rocky", breed: "Berger Australien", owner: "Thomas D.", distance: "0,8 km", live: true },
+  { id: 3, x: 38, y: 72, species: "cat", emoji: "🐱", name: "Mochi", breed: "Maine Coon", owner: "Clara B.", distance: "2,1 km", live: false },
+  { id: 4, x: 80, y: 60, species: "dog", emoji: "🐕", name: "Bella", breed: "Golden Retriever", owner: "Marc L.", distance: "3,4 km", live: false },
 ];
 
-function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
+function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null }) {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("all");
   const [mode, setMode] = useState("urban"); // "urban" | "rural"
@@ -666,9 +666,9 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
   const [geoError, setGeoError] = useState(null);
 
   const filteredSpots = SPOTS.filter(s => filter === "all" || s.type === filter);
-  const animals = mode === "rural" ? RURAL_ANIMALS : URBAN_ANIMALS;
-  const liveAnimals = animals.filter(a => a.live);
-  const offlineAnimals = animals.filter(a => !a.live);
+  const animalsBySpecies = (mode === "rural" ? RURAL_ANIMALS : URBAN_ANIMALS).filter(a => !userProfile?.species || a.species === userProfile.species);
+  const liveAnimals = animalsBySpecies.filter(a => a.live);
+  const offlineAnimals = animalsBySpecies.filter(a => !a.live);
 
   function toggleSharing() {
     if (!sharing) setShowSharePrompt(true);
@@ -859,7 +859,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
             <span>PROPRIÉTAIRES PROCHES</span>
             <span style={{ color: "#22C55E" }}>{liveAnimals.length} en ligne</span>
           </div>
-          {animals.map(a => (
+          {animalsBySpecies.map(a => (
             <div key={a.id} onClick={() => setSelected(a)}
               style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
               <div style={{ position: "relative" }}>
@@ -1013,10 +1013,9 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {} }) {
 }
 
 // ── REPRO SCREEN ──────────────────────────────────────────────────────────────
-function ReproScreen({ isPremium = false, onPremium = () => {} }) {
+function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = null }) {
   const [selected, setSelected] = useState(null);
   const [requested, setRequested] = useState(null);
-  const [filter, setFilter] = useState("all");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
 
@@ -1047,10 +1046,10 @@ function ReproScreen({ isPremium = false, onPremium = () => {} }) {
     setShowAdvanced(true);
   }
 
-  const allTempers = [...new Set(REPRO_PROFILES.flatMap(p => p.temper))];
+  const speciesReproProfiles = REPRO_PROFILES.filter(p => !userProfile?.species || p.species === userProfile.species);
+  const allTempers = [...new Set(speciesReproProfiles.flatMap(p => p.temper))];
 
-  const filtered = REPRO_PROFILES.filter(p => {
-    if (filter !== "all" && p.species !== (filter === "cats" ? "cat" : "dog")) return false;
+  const filtered = speciesReproProfiles.filter(p => {
     if (!isPremium) return true; // les filtres avancés ne s'appliquent qu'en Premium
     if (advBreed && !p.breed.toLowerCase().includes(advBreed.toLowerCase())) return false;
     if (advAgeRange !== "all" && ageToRange(p.age) !== advAgeRange) return false;
@@ -1070,9 +1069,6 @@ function ReproScreen({ isPremium = false, onPremium = () => {} }) {
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
         <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 10 }}>Reproduction vérifiée et sécurisée 🌱</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {[["all","Tous"],["cats","Chats"],["dogs","Chiens"]].map(([v,l]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{ padding: "5px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: filter === v ? "#8B3D28" : "#FAF0EB", color: filter === v ? "#fff" : "#8B3D28" }}>{l}</button>
-          ))}
           <button onClick={openAdvanced}
             style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${advancedActive ? "#B25F46" : "#E5E7EB"}`, background: advancedActive ? "#FAF0EB" : "#fff", color: advancedActive ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
             {!isPremium && <span>👑</span>}
@@ -1367,10 +1363,9 @@ const INIT_COMMENTS = {
   ],
 };
 
-function CommunityScreen({ onPremium, isPremium }) {
+function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
   const [liked, setLiked] = useState({});
   const [breedFilter, setBreedFilter] = useState("all");
-  const [speciesForBreed, setSpeciesForBreed] = useState("cat"); // espèce affichée dans le menu déroulant
   const [showBreedMenu, setShowBreedMenu] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [previewPlan, setPreviewPlan] = useState("yearly");
@@ -1380,7 +1375,9 @@ function CommunityScreen({ onPremium, isPremium }) {
   const [commentLikes, setCommentLikes] = useState({});
   const commentsEndRef = useRef(null);
 
-  const filtered = COMMUNITY_POSTS.filter(p => breedFilter === "all" || p.breed === breedFilter);
+  const speciesPosts = COMMUNITY_POSTS.filter(p => !userProfile?.species || p.species === userProfile.species);
+  const availableBreeds = [...new Set(speciesPosts.map(p => p.breed))].sort((a, b) => a.localeCompare(b));
+  const filtered = speciesPosts.filter(p => breedFilter === "all" || p.breed === breedFilter);
 
   const TAG_COLORS = {
     "Événement": ["#E3F2FD","#1565C0"],
@@ -1440,20 +1437,13 @@ function CommunityScreen({ onPremium, isPremium }) {
 
         {showBreedMenu && (
           <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 16, right: 16, background: "#fff", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,.15)", border: "1px solid #F3F4F6", zIndex: 30, overflow: "hidden" }}>
-            {/* Toggle espèce */}
-            <div style={{ display: "flex", padding: 6, gap: 6, borderBottom: "1px solid #F3F4F6" }}>
-              {[["cat","🐱 Chats"],["dog","🐕 Chiens"]].map(([v,l]) => (
-                <button key={v} onClick={() => setSpeciesForBreed(v)}
-                  style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: speciesForBreed === v ? "#8B3D28" : "#FAF0EB", color: speciesForBreed === v ? "#fff" : "#8B3D28" }}>{l}</button>
-              ))}
-            </div>
             {/* Liste des races scrollable */}
             <div style={{ maxHeight: 260, overflowY: "auto" }}>
               <button onClick={() => { setBreedFilter("all"); setShowBreedMenu(false); }}
                 style={{ width: "100%", padding: "11px 14px", border: "none", background: breedFilter === "all" ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#8B3D28", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
                 Toutes les races
               </button>
-              {(speciesForBreed === "cat" ? CAT_BREEDS : DOG_BREEDS).map(b => (
+              {availableBreeds.map(b => (
                 <button key={b} onClick={() => { setBreedFilter(b); setShowBreedMenu(false); }}
                   style={{ width: "100%", padding: "11px 14px", border: "none", background: breedFilter === b ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: breedFilter === b ? 700 : 500, color: breedFilter === b ? "#8B3D28" : "#374151", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
                   {b}
@@ -1638,7 +1628,7 @@ function CommunityScreen({ onPremium, isPremium }) {
 }
 
 // ── MATCHES / CHAT ────────────────────────────────────────────────────────────
-function MatchesScreen({ onOpenChat }) {
+function MatchesScreen({ onOpenChat, userProfile = null }) {
   const [tab, setTab] = useState("messages");
   const [agendaData, setAgendaData] = useState(AGENDA);
   const [rating, setRating] = useState(null);
@@ -1649,8 +1639,10 @@ function MatchesScreen({ onOpenChat }) {
     setRatingFor(null); setRating(null);
   }
 
-  const upcoming = agendaData.filter(e => e.status !== "done" && e.status !== "cancelled");
-  const past = agendaData.filter(e => e.status === "done");
+  const matches = MATCHES.filter(m => !userProfile?.species || m.species === userProfile.species);
+  const agendaBySpecies = agendaData.filter(e => !userProfile?.species || e.species === userProfile.species);
+  const upcoming = agendaBySpecies.filter(e => e.status !== "done" && e.status !== "cancelled");
+  const past = agendaBySpecies.filter(e => e.status === "done");
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -1670,7 +1662,7 @@ function MatchesScreen({ onOpenChat }) {
             <div style={{ fontSize: 13, color: "#9CA3AF" }}>3 connexions en attente</div>
           </div>
           <div style={{ overflowX: "auto", display: "flex", gap: 12, padding: "8px 16px 16px" }}>
-            {MATCHES.map(m => (
+            {matches.map(m => (
               <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
                 <div style={{ width: 64, height: 64, position: "relative" }}>
                   <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, boxShadow: "0 4px 12px rgba(242,100,25,.25)" }}>
@@ -1686,7 +1678,7 @@ function MatchesScreen({ onOpenChat }) {
             <div style={{ height: 1, background: "#F3F4F6" }} />
             <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", marginTop: 12, marginBottom: 8, letterSpacing: 1 }}>MESSAGES</div>
           </div>
-          {MATCHES.map(m => (
+          {matches.map(m => (
             <div key={m.id} onClick={() => onOpenChat(m.id)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", cursor: "pointer", background: m.unread ? "#FAF0EB" : "#fff", borderBottom: "1px solid #F3F4F6" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>
                 {m.photo ? <img src={m.photo} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : m.emoji}
@@ -3528,11 +3520,11 @@ export default function Miloute() {
             ? <Onboarding onComplete={completeOnboarding} />
             : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
-                {screen === "map" && <MapScreen onOpenChat={openChat} onNav={setScreen} />}
-                {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} />}
+                {screen === "map" && <MapScreen onOpenChat={openChat} onNav={setScreen} userProfile={userProfile} />}
+                {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} />}
                 
-                {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} />}
-                {screen === "messages" && <MatchesScreen onOpenChat={openChat} />}
+                {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
+                {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} />}
                 {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} />}
               </>
