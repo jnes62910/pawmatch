@@ -1339,10 +1339,9 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
       <OnboardingHint hintKey="repro" icon="🌱" text="Tous les profils sont vérifiés (pedigree, documents sanitaires) pour des rencontres sereines" position="top" />
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
-        <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 10 }}>Reproduction vérifiée et sécurisée 🌱</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={openAdvanced}
-            style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${advancedActive ? "#B25F46" : "#E5E7EB"}`, background: advancedActive ? "#FAF0EB" : "#fff", color: advancedActive ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${advancedActive ? "#B25F46" : "#E5E7EB"}`, background: advancedActive ? "#FAF0EB" : "#fff", color: advancedActive ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
             {!isPremium && <span>👑</span>}
             🔎 Recherche {advancedActive && "•"}
           </button>
@@ -1352,9 +1351,9 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
       <div style={{ flex: 1, overflowY: "auto" }}>
         {/* Info banner */}
         <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#FAF0EB", borderRadius: 12, display: "flex", gap: 10, alignItems: "flex-start" }}>
-          <span style={{ fontSize: 18 }}>🔒</span>
+          <span style={{ fontSize: 30 }}>🔒</span>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>REPRODUCTION SÉCURISÉE</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>REPRODUCTION VÉRIFIÉE ET SÉCURISÉE</div>
             <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>Tous les profils sont vérifiés. Documents sanitaires validés. La mise en relation est réservée aux membres Premium.</div>
           </div>
         </div>
@@ -1425,8 +1424,10 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
             </div>
 
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>RACE</label>
-            <input value={advBreed} onChange={e => setAdvBreed(e.target.value)} placeholder="Ex: Maine Coon"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit" }} />
+            <div style={{ margin: "6px 0 16px" }}>
+              <BreedInput value={advBreed} onChange={setAdvBreed} species={userProfile?.species || "cat"}
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" }} />
+            </div>
 
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>TRANCHE D'ÂGE</label>
             <div style={{ display: "flex", gap: 6, margin: "6px 0 16px" }}>
