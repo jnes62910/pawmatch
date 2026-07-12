@@ -2643,9 +2643,11 @@ const FEATURES = [
   ["📊", "Statistiques avancées"],
 ];
 
-function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly" }) {
+function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile = null }) {
   const [step, setStep] = useState("plans"); // plans | payment | success
   const [plan, setPlan] = useState(initialPlan);
+  const treatIcon = userProfile?.species === "dog" ? "🦴" : "🐟";
+  const featuresWithTreats = [...FEATURES, [treatIcon, "Friandises illimitées"]];
   const [card, setCard] = useState({ number: "", expiry: "", cvc: "", name: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -2725,7 +2727,7 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly" }) {
 
             {/* Features */}
             <div style={{ background: "#FAF0EB", borderRadius: 16, padding: "14px 16px", marginBottom: 20 }}>
-              {FEATURES.map(([icon, label]) => (
+              {featuresWithTreats.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{icon}</span>
                   <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>{label}</span>
@@ -2891,7 +2893,7 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly" }) {
             </div>
 
             <div style={{ width: "100%", background: "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 24 }}>
-              {FEATURES.map(([icon, label]) => (
+              {featuresWithTreats.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18 }}>{icon}</span>
                   <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>{label}</span>
@@ -3538,7 +3540,7 @@ export default function Miloute() {
 
         {/* Premium tunnel */}
         {showPremiumTunnel && (
-          <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} onSuccess={onPremiumSuccess} initialPlan={premiumInitialPlan} />
+          <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} onSuccess={onPremiumSuccess} initialPlan={premiumInitialPlan} userProfile={userProfile} />
         )}
 
         {/* Vérification du paiement en cours */}
