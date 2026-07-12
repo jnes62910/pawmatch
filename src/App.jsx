@@ -154,15 +154,15 @@ const REPRO_PROFILES = [
 ];
 
 const SPOTS = [
-  { id: 1, name: "Parc Montsouris", type: "park", species: "both", emoji: "🌳", animals: 8, open: true, lat: 48.821, lng: 2.337, distance: "0,9 km", desc: "Grand parc avec zone chiens sans laisse" },
-  { id: 2, name: "Café des Chats Marais", type: "catcafe", species: "cat", emoji: "☕", animals: 12, open: true, lat: 48.857, lng: 2.354, distance: "2,1 km", desc: "Café-chat avec 12 résidents, accueil 10h–20h" },
-  { id: 3, name: "Dog Park Nation", type: "dogpark", species: "dog", emoji: "🏟️", animals: 5, open: false, lat: 48.848, lng: 2.396, distance: "3,4 km", desc: "Espace clos 800m², ouverture 8h–21h" },
-  { id: 4, name: "Jardins du Palais Royal", type: "park", species: "both", emoji: "🌸", animals: 3, open: true, lat: 48.864, lng: 2.337, distance: "4,2 km", desc: "Jardin historique pet-friendly" },
-  { id: 5, name: "Wouf Dog Park", type: "dogpark", species: "dog", emoji: "🎾", animals: 11, open: true, lat: 48.870, lng: 2.360, distance: "5,1 km", desc: "Dog park premium avec agility" },
-  { id: 6, name: "Vétérinaire du Marais", type: "vet", species: "both", emoji: "🩺", animals: 128, metricLabel: "avis vérifiés", open: true, lat: 48.859, lng: 2.362, distance: "2,4 km", desc: "Vétérinaire partenaire Miloute — consultations chats et chiens, urgences 7j/7" },
-  { id: 7, name: "Chez Marcel", type: "terrace", species: "dog", emoji: "🍽️", animals: 0, metricLabel: "terrasse chien-friendly", open: true, lat: 48.872, lng: 2.365, distance: "3,8 km", desc: "Bistrot avec grande terrasse, gamelle d'eau offerte, bords du Canal Saint-Martin" },
-  { id: 8, name: "La Chatterie", type: "petshop", species: "cat", emoji: "🛍️", animals: 0, metricLabel: "boutique spécialisée", open: true, lat: 48.853, lng: 2.349, distance: "1,7 km", desc: "Arbres à chat, jouets et alimentation premium — ateliers découverte le week-end" },
-  { id: 9, name: "Bassin de la Villette", type: "walk", species: "dog", emoji: "🚶", animals: 6, open: true, lat: 48.884, lng: 2.373, distance: "6,2 km", desc: "Balade au bord de l'eau, très fréquentée par les chiens du quartier" },
+  { id: 1, name: "Parc Montsouris", city: "Paris", type: "park", species: "both", emoji: "🌳", animals: 8, open: true, lat: 48.821, lng: 2.337, distance: "0,9 km", desc: "Grand parc avec zone chiens sans laisse" },
+  { id: 2, name: "Café des Chats Marais", city: "Paris", type: "catcafe", species: "cat", emoji: "☕", animals: 12, open: true, lat: 48.857, lng: 2.354, distance: "2,1 km", desc: "Café-chat avec 12 résidents, accueil 10h–20h" },
+  { id: 3, name: "Dog Park Nation", city: "Paris", type: "dogpark", species: "dog", emoji: "🏟️", animals: 5, open: false, lat: 48.848, lng: 2.396, distance: "3,4 km", desc: "Espace clos 800m², ouverture 8h–21h" },
+  { id: 4, name: "Jardins du Palais Royal", city: "Paris", type: "park", species: "both", emoji: "🌸", animals: 3, open: true, lat: 48.864, lng: 2.337, distance: "4,2 km", desc: "Jardin historique pet-friendly" },
+  { id: 5, name: "Wouf Dog Park", city: "Paris", type: "dogpark", species: "dog", emoji: "🎾", animals: 11, open: true, lat: 48.870, lng: 2.360, distance: "5,1 km", desc: "Dog park premium avec agility" },
+  { id: 6, name: "Vétérinaire du Marais", city: "Paris", type: "vet", species: "both", emoji: "🩺", animals: 128, metricLabel: "avis vérifiés", open: true, lat: 48.859, lng: 2.362, distance: "2,4 km", desc: "Vétérinaire partenaire Miloute — consultations chats et chiens, urgences 7j/7" },
+  { id: 7, name: "Chez Marcel", city: "Paris", type: "terrace", species: "dog", emoji: "🍽️", animals: 0, metricLabel: "terrasse chien-friendly", open: true, lat: 48.872, lng: 2.365, distance: "3,8 km", desc: "Bistrot avec grande terrasse, gamelle d'eau offerte, bords du Canal Saint-Martin" },
+  { id: 8, name: "La Chatterie", city: "Paris", type: "petshop", species: "cat", emoji: "🛍️", animals: 0, metricLabel: "boutique spécialisée", open: true, lat: 48.853, lng: 2.349, distance: "1,7 km", desc: "Arbres à chat, jouets et alimentation premium — ateliers découverte le week-end" },
+  { id: 9, name: "Bassin de la Villette", city: "Paris", type: "walk", species: "dog", emoji: "🚶", animals: 6, open: true, lat: 48.884, lng: 2.373, distance: "6,2 km", desc: "Balade au bord de l'eau, très fréquentée par les chiens du quartier" },
 ];
 
 const COMMUNITY_POSTS = [
