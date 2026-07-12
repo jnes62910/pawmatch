@@ -842,10 +842,11 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
   const [citySpots, setCitySpots] = useState([]);
   const [loadingSpots, setLoadingSpots] = useState(true);
 
-  // Position de référence : celle de l'utilisateur si partagée, sinon un
-  // repli par défaut (centre de Paris) le temps qu'il l'active.
-  const refLat = userProfile?.location?.lat ?? 48.8566;
-  const refLng = userProfile?.location?.lng ?? 2.3522;
+  // Position de référence : celle captée par "Partager ma position" sur cette
+  // carte (userPos) en priorité, puis celle du profil, puis un repli par
+  // défaut (centre de Paris) tant qu'aucune des deux n'est disponible.
+  const refLat = userPos?.lat ?? userProfile?.location?.lat ?? 48.8566;
+  const refLng = userPos?.lng ?? userProfile?.location?.lng ?? 2.3522;
   const activeCity = nearestCity(refLat, refLng); // étiquette d'affichage uniquement
   const activeCellId = cellIdFor(refLat, refLng);
 
@@ -862,10 +863,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
   }, [activeCellId]);
 
   function getSpotDistance(s) {
-    if (userProfile?.location) {
-      return distanceKm(userProfile.location.lat, userProfile.location.lng, s.lat, s.lng).toFixed(1).replace(".", ",") + " km";
-    }
-    return "—";
+    return distanceKm(refLat, refLng, s.lat, s.lng).toFixed(1).replace(".", ",") + " km";
   }
 
   const spotsBySpecies = citySpots.filter(s => s.species === "both" || !userProfile?.species || s.species === userProfile.species);
