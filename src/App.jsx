@@ -4811,13 +4811,6 @@ export default function Miloute() {
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100dvh", background: "#fff", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
       <div style={{ width: "100%", maxWidth: 430, height: "100%", background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
 
-        {/* Badge Premium uniquement si actif */}
-        {isPremium && (
-          <div style={{ position: "absolute", top: 8, right: 12, zIndex: 20 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#B25F46", background: "#FAF0EB", padding: "2px 8px", borderRadius: 10 }}>👑 PREMIUM</span>
-          </div>
-        )}
-
         {/* Header */}
         {showHeader && (
           <div style={{ padding: "4px 20px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", flexShrink: 0 }}>
