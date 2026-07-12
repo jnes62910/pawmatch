@@ -670,9 +670,9 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               onClick={() => !dragging && setPhoto(p => Math.min(profile.photos.length - 1, p + 1))} />
 
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-              {(profile.photos[photo].startsWith("http") || profile.photos[photo].startsWith("/"))
-                ? <img src={profile.photos[photo]} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.photos[photo]}</div>
+              {profile.photos?.[photo]?.url
+                ? <img src={profile.photos[photo].url} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.species === "cat" ? "🐱" : "🐕"}</div>
               }
             </div>
           </div>
@@ -727,9 +727,9 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
             <PawLogo size={56} color="#fff" />
             <div style={{ width: 92, height: 92, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", background: "#8B3D28", flexShrink: 0, boxShadow: "0 4px 16px rgba(0,0,0,.25)" }}>
-              {(matchedWith.photos?.[0]?.startsWith?.("http") || matchedWith.photos?.[0]?.startsWith?.("/"))
-                ? <img src={matchedWith.photos[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>{matchedWith.emoji}</div>
+              {matchedWith.photos?.[0]?.url
+                ? <img src={matchedWith.photos[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>{matchedWith.species === "cat" ? "🐱" : "🐕"}</div>
               }
             </div>
           </div>
