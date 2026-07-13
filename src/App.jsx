@@ -3198,6 +3198,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [myBookingsAsProvider, setMyBookingsAsProvider] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [confirmingBookingId, setConfirmingBookingId] = useState(null);
+  const [bookingConfirmError, setBookingConfirmError] = useState(null);
 
   async function reloadBookings() {
     setLoadingBookings(true);
@@ -3212,7 +3213,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   async function handleConfirmBooking(bookingId) {
     setConfirmingBookingId(bookingId);
-    await confirmBooking(bookingId, initialData.userId);
+    setBookingConfirmError(null);
+    const result = await confirmBooking(bookingId, initialData.userId);
+    if (result.error) {
+      setBookingConfirmError(result.error);
+    }
     await reloadBookings();
     setConfirmingBookingId(null);
   }
@@ -4112,6 +4117,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 40px" }}>
+            {bookingConfirmError && (
+              <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>{bookingConfirmError}</div>
+            )}
             {loadingBookings ? (
               <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={32} color="#E8B89F" /></div>
             ) : (
