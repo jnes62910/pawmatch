@@ -1424,6 +1424,17 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
     );
   }
 
+  async function disableLocation() {
+    setLocationError(null);
+    if (userProfile?.id) await clearProfileLocation(userProfile.id);
+    onProfileUpdated({ ...userProfile, location: null });
+  }
+
+  function toggleLocationSharing() {
+    if (userProfile?.location) disableLocation();
+    else shareLocation();
+  }
+
   async function reload() {
     setLoading(true);
     await ensureSpotsForLocation(refLat, refLng, nearestCity(refLat, refLng));
@@ -1550,16 +1561,23 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
           )}
         </div>
 
-        {!userProfile?.location && (
-          <button onClick={shareLocation} disabled={sharingLocation}
-            style={{ width: "100%", marginTop: 10, display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#FAF0EB", borderRadius: 12, border: "none", cursor: sharingLocation ? "default" : "pointer", textAlign: "left" }}>
+        <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14, background: userProfile?.location ? "linear-gradient(90deg,#E8F5E9,#F1F8E9)" : "#FAF0EB", border: `1.5px solid ${userProfile?.location ? "#A5D6A7" : "#E5E7EB"}`, transition: "all .3s" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>📍</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>{sharingLocation ? "Localisation en cours..." : "Partager ma position"}</div>
-              <div style={{ fontSize: 11, color: "#9CA3AF" }}>Pour trouver des prestataires vraiment près de chez vous</div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: userProfile?.location ? "#1B5E20" : "#B25F46" }}>
+                {sharingLocation ? "Localisation en cours..." : userProfile?.location ? "Position partagée" : "Partager ma position"}
+              </div>
+              <div style={{ fontSize: 11, color: "#9CA3AF" }}>
+                {userProfile?.location ? "Prestataires triés selon votre position réelle" : "Pour trouver des prestataires vraiment près de chez vous"}
+              </div>
             </div>
+          </div>
+          <button onClick={toggleLocationSharing} disabled={sharingLocation}
+            style={{ width: 48, height: 26, borderRadius: 13, background: userProfile?.location ? "#2E7D32" : "#D1D5DB", border: "none", cursor: sharingLocation ? "default" : "pointer", position: "relative", transition: "background .2s", flexShrink: 0 }}>
+            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: userProfile?.location ? 25 : 3, transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.2)" }} />
           </button>
-        )}
+        </div>
         {locationError && (
           <div style={{ marginTop: 8, fontSize: 11, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px" }}>{locationError}</div>
         )}
@@ -5208,6 +5226,11 @@ async function fetchMyBookingsAsProvider(userProfile) {
 async function updateProfileLocation(profileId, lat, lng) {
   const { error } = await supabase.from("profiles").update({ lat, lng }).eq("id", profileId);
   if (error) console.error("updateProfileLocation error:", error);
+}
+
+async function clearProfileLocation(profileId) {
+  const { error } = await supabase.from("profiles").update({ lat: null, lng: null }).eq("id", profileId);
+  if (error) console.error("clearProfileLocation error:", error);
 }
 
 async function setPremiumInDb(profileId, value) {
