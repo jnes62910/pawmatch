@@ -3640,6 +3640,26 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
         </div>
 
+        {isPremium ? (
+          <div style={{ background: "linear-gradient(135deg,#2E7D32,#43A047)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <span style={{ fontSize: 26 }}>👑</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Membre Premium</div>
+              <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Toutes les fonctionnalités sont actives ✓</div>
+            </div>
+            <div style={{ background: "rgba(255,255,255,.2)", borderRadius: 10, color: "#fff", fontWeight: 800, fontSize: 11, padding: "6px 10px" }}>Actif ✓</div>
+          </div>
+        ) : (
+          <button onClick={() => onPremium()} style={{ width: "100%", background: "linear-gradient(135deg,#8B3D28,#B25F46)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer", textAlign: "left", marginBottom: 14 }}>
+            <span style={{ fontSize: 26 }}>👑</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Miloute Premium</div>
+              <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Qui t'a liké · Boost · Stats avancées</div>
+            </div>
+            <div style={{ background: "#fff", borderRadius: 10, color: "#8B3D28", fontWeight: 800, fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap" }}>4,99 €/mois</div>
+          </button>
+        )}
+
         <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 10, letterSpacing: 1 }}>STATISTIQUES</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
@@ -3733,30 +3753,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         </div>
 
         <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
-        {isPremium ? (
-          <div style={{ background: "linear-gradient(135deg,#2E7D32,#43A047)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 26 }}>👑</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Membre Premium</div>
-              <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Toutes les fonctionnalités sont actives ✓</div>
-            </div>
-            <div style={{ background: "rgba(255,255,255,.2)", borderRadius: 10, color: "#fff", fontWeight: 800, fontSize: 11, padding: "6px 10px" }}>Actif ✓</div>
-          </div>
-        ) : (
-          <button onClick={() => onPremium()} style={{ width: "100%", background: "linear-gradient(135deg,#8B3D28,#B25F46)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
-            <span style={{ fontSize: 26 }}>👑</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Miloute Premium</div>
-              <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Qui t'a liké · Boost · Stats avancées</div>
-            </div>
-            <div style={{ background: "#fff", borderRadius: 10, color: "#8B3D28", fontWeight: 800, fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap" }}>4,99 €/mois</div>
-          </button>
-        )}
 
         <button onClick={() => setShowProviderScreen(true)}
-          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
           <span style={{ fontSize: 20 }}>🏥</span>
-          <span style={{ flex: 1 }}>Espace prestataire{providerServices.length > 0 ? ` (${providerServices.length})` : ""}</span>
+          <span style={{ flex: 1 }}>Devenir prestataire{providerServices.length > 0 ? ` (${providerServices.length})` : ""}</span>
           <span style={{ color: "#9CA3AF" }}>›</span>
         </button>
 
