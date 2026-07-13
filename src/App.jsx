@@ -1395,6 +1395,10 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
   const [reviewText, setReviewText] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [bookingServiceId, setBookingServiceId] = useState(null);
+  const [bookingError, setBookingError] = useState(null);
 
   const refLat = userProfile?.location?.lat ?? 48.8566;
   const refLng = userProfile?.location?.lng ?? 2.3522;
@@ -1456,9 +1460,28 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
   async function openProvider(p) {
     setSelected(p);
     setLoadingReviews(true);
-    const list = await fetchReviewsForSpot(p.id);
-    setSelectedReviews(list);
+    setLoadingServices(true);
+    setBookingError(null);
+    const [reviews, services] = await Promise.all([
+      fetchReviewsForSpot(p.id),
+      p.source === "self" ? fetchActiveServicesForSpot(p.id) : Promise.resolve([]),
+    ]);
+    setSelectedReviews(reviews);
+    setSelectedServices(services);
     setLoadingReviews(false);
+    setLoadingServices(false);
+  }
+
+  async function bookService(service) {
+    if (!userProfile?.id) return;
+    setBookingError(null);
+    setBookingServiceId(service.id);
+    try {
+      await startBookingCheckout(service, userProfile);
+    } catch (err) {
+      setBookingError(err.message || "La réservation a échoué, réessayez.");
+      setBookingServiceId(null);
+    }
   }
 
   async function submitReview() {
@@ -1608,6 +1631,29 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                 </>
               ) : (
                 <>
+                  {(loadingServices || selectedServices.length > 0) && (
+                    <div style={{ marginBottom: 18 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>PRESTATIONS</div>
+                      {loadingServices ? (
+                        <div style={{ display: "flex", justifyContent: "center", padding: 16 }}><PawLogo size={22} color="#E8B89F" /></div>
+                      ) : selectedServices.map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #F9FAFB" }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{s.title}</div>
+                            {s.description && <div style={{ fontSize: 12, color: "#9CA3AF" }}>{s.description}</div>}
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: 14, color: "#8B3D28", flexShrink: 0 }}>{(s.priceCents / 100).toFixed(2)} €</div>
+                          <button onClick={() => bookService(s)} disabled={bookingServiceId === s.id}
+                            style={{ background: bookingServiceId === s.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: bookingServiceId === s.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 12, padding: "8px 12px", cursor: bookingServiceId === s.id ? "default" : "pointer", flexShrink: 0 }}>
+                            {bookingServiceId === s.id ? "..." : "Réserver"}
+                          </button>
+                        </div>
+                      ))}
+                      {bookingError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginTop: 10 }}>{bookingError}</div>}
+                      <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 8, lineHeight: 1.5 }}>Paiement sécurisé. Les fonds sont reversés au prestataire une fois la prestation confirmée par vous deux.</div>
+                    </div>
+                  )}
+
                   <button onClick={() => setShowReviewForm(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>⭐ Laisser un avis</button>
 
                   {loadingReviews ? (
@@ -3129,6 +3175,29 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [checkingConnect, setCheckingConnect] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
+  const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [myBookingsAsClient, setMyBookingsAsClient] = useState([]);
+  const [myBookingsAsProvider, setMyBookingsAsProvider] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [confirmingBookingId, setConfirmingBookingId] = useState(null);
+
+  async function reloadBookings() {
+    setLoadingBookings(true);
+    const [asClient, asProvider] = await Promise.all([
+      fetchMyBookingsAsClient(initialData),
+      fetchMyBookingsAsProvider(initialData),
+    ]);
+    setMyBookingsAsClient(asClient);
+    setMyBookingsAsProvider(asProvider);
+    setLoadingBookings(false);
+  }
+
+  async function handleConfirmBooking(bookingId) {
+    setConfirmingBookingId(bookingId);
+    await confirmBooking(bookingId, initialData.userId);
+    await reloadBookings();
+    setConfirmingBookingId(null);
+  }
 
   useEffect(() => {
     if (!initialData?.id) return;
@@ -3766,6 +3835,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <span>Devenir prestataire{providerServices.length > 0 ? ` (${providerServices.length})` : ""}</span>
         </button>
 
+        <button onClick={() => { setShowBookingsModal(true); reloadBookings(); }}
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>📅</span>
+          <span>Mes réservations</span>
+        </button>
+
         <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
           Se déconnecter
         </button>
@@ -4010,6 +4085,70 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         />
       )}
 
+      {/* Mes réservations */}
+      {showBookingsModal && (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 65, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <button onClick={() => setShowBookingsModal(false)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>📅 Mes réservations</div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 40px" }}>
+            {loadingBookings ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={32} color="#E8B89F" /></div>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>EN TANT QUE CLIENT</div>
+                {myBookingsAsClient.length === 0 ? (
+                  <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 24 }}>Aucune réservation pour l'instant.</div>
+                ) : myBookingsAsClient.map(b => (
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} />
+                ))}
+
+                <div style={{ height: 1, background: "#F3F4F6", margin: "20px 0" }} />
+
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>REÇUES EN TANT QUE PRESTATAIRE</div>
+                {myBookingsAsProvider.length === 0 ? (
+                  <div style={{ fontSize: 13, color: "#9CA3AF" }}>Aucune réservation reçue pour l'instant.</div>
+                ) : myBookingsAsProvider.map(b => (
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} isProvider />
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+function BookingRow({ booking: b, onConfirm, confirming, isProvider = false }) {
+  return (
+    <div style={{ background: "#F9FAFB", borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{b.serviceTitle}</div>
+          <div style={{ fontSize: 12, color: "#9CA3AF" }}>{isProvider ? "Client" : "Prestataire"} : {b.counterpartName} · {b.time}</div>
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "#8B3D28" }}>{(b.priceCents / 100).toFixed(2)} €</div>
+          {isProvider && <div style={{ fontSize: 10, color: "#9CA3AF" }}>vous touchez {(b.payoutCents / 100).toFixed(2)} €</div>}
+        </div>
+      </div>
+
+      {b.status === "released" ? (
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#2E7D32" }}>✅ Terminée — fonds reversés</div>
+      ) : b.status === "cancelled" ? (
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>Annulée</div>
+      ) : b.myConfirmed ? (
+        <div style={{ fontSize: 12, color: "#B25F46" }}>✓ Vous avez confirmé — en attente de {isProvider ? "l'avis du client" : "l'avis du prestataire"}</div>
+      ) : (
+        <button onClick={() => onConfirm(b.id)} disabled={confirming}
+          style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: confirming ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: confirming ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 12, cursor: confirming ? "default" : "pointer" }}>
+          {confirming ? "..." : "✅ Confirmer la prestation terminée"}
+        </button>
+      )}
     </div>
   );
 }
@@ -4018,8 +4157,14 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("petsitter");
+  const [hasExistingSpot, setHasExistingSpot] = useState(true); // true tant qu'on n'a pas vérifié, pour ne pas flasher le sélecteur inutilement
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchSelfProviderSpot(userProfile.userId).then(spot => setHasExistingSpot(!!spot));
+  }, [userProfile.userId]);
 
   async function submit() {
     const priceNum = parseFloat(price.replace(",", "."));
@@ -4036,7 +4181,8 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
       }
     }
     try {
-      await createProviderService(userProfile, { title: title.trim(), description: description.trim(), priceCents: Math.round(priceNum * 100) });
+      const spotId = await ensureProviderSpot(userProfile, category);
+      await createProviderService(userProfile, { title: title.trim(), description: description.trim(), priceCents: Math.round(priceNum * 100), spotId });
       onAdded();
     } catch {
       setError("L'ajout a échoué, réessayez.");
@@ -4049,6 +4195,18 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
       <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "90%", overflowY: "auto", padding: "20px 20px 32px" }}>
         <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
         <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Ajouter une prestation</div>
+
+        {!hasExistingSpot && (
+          <>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
+            <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              {PROVIDER_TYPES.filter(t => t !== "insurance").map(t => (
+                <button key={t} onClick={() => setCategory(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${category === t ? "#B25F46" : "#E5E7EB"}`, background: category === t ? "#FAF0EB" : "#fff", color: category === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
+              ))}
+            </div>
+          </>
+        )}
 
         <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>TITRE *</label>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Garde à domicile (journée)"
@@ -4903,9 +5061,9 @@ async function fetchProviderServices(profileId) {
   return data.map(s => ({ id: s.id, title: s.title, description: s.description, priceCents: s.price_cents, active: s.active }));
 }
 
-async function createProviderService(userProfile, { title, description, priceCents }) {
+async function createProviderService(userProfile, { title, description, priceCents, spotId }) {
   const { error } = await supabase.from("provider_services").insert({
-    profile_id: userProfile.id, user_id: userProfile.userId,
+    profile_id: userProfile.id, user_id: userProfile.userId, spot_id: spotId || null,
     title, description: description || null, price_cents: priceCents,
   });
   if (error) throw new Error(error.message);
@@ -4945,6 +5103,106 @@ async function checkConnectStatus(profileId) {
   });
   const data = await res.json();
   return !!data.onboarded;
+}
+
+// ── RÉSERVATIONS ──────────────────────────────────────────────────────────────
+async function startBookingCheckout(service, userProfile) {
+  const res = await fetch("/api/create-booking-checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      serviceId: service.id,
+      clientProfileId: userProfile.id,
+      clientUserId: userProfile.userId,
+      successUrl: window.location.origin + "?booking=success&session_id={CHECKOUT_SESSION_ID}",
+      cancelUrl: window.location.origin + "?booking=cancel",
+    }),
+  });
+  const data = await res.json();
+  if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+  else throw new Error(data.error || "Erreur inconnue");
+}
+
+async function verifyBookingSession(sessionId) {
+  const res = await fetch("/api/verify-booking-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId }),
+  });
+  return res.json();
+}
+
+async function confirmBooking(bookingId, userId) {
+  const res = await fetch("/api/confirm-booking", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bookingId, userId }),
+  });
+  return res.json();
+}
+
+function mapBookingRow(row, isProvider) {
+  return {
+    id: row.id, serviceTitle: row.service_title,
+    priceCents: row.price_cents, payoutCents: row.provider_payout_cents, commissionCents: row.commission_cents,
+    status: row.status,
+    clientConfirmed: !!row.client_confirmed_at, providerConfirmed: !!row.provider_confirmed_at,
+    myConfirmed: isProvider ? !!row.provider_confirmed_at : !!row.client_confirmed_at,
+    otherConfirmed: isProvider ? !!row.client_confirmed_at : !!row.provider_confirmed_at,
+    counterpartProfileId: isProvider ? row.client_profile_id : row.provider_profile_id,
+    time: formatRelativeTime(row.created_at),
+  };
+}
+
+async function fetchSelfProviderSpot(userId) {
+  const { data } = await supabase.from("spots").select("*").eq("added_by_user_id", userId).eq("source", "self").maybeSingle();
+  return data || null;
+}
+
+async function ensureProviderSpot(userProfile, category) {
+  const existing = await fetchSelfProviderSpot(userProfile.userId);
+  if (existing) return existing.id;
+  const lat = userProfile?.location?.lat ?? 48.8566;
+  const lng = userProfile?.location?.lng ?? 2.3522;
+  const { data, error } = await supabase.from("spots").insert({
+    cell_id: cellIdFor(lat, lng), city: nearestCity(lat, lng),
+    name: userProfile.name, type: category, species: "both",
+    emoji: PROVIDER_TYPE_INFO[category]?.emoji || "📍",
+    lat, lng, open: true, source: "self", added_by_user_id: userProfile.userId,
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data.id;
+}
+
+async function fetchActiveServicesForSpot(spotId) {
+  const { data, error } = await supabase.from("provider_services").select("*").eq("spot_id", spotId).eq("active", true);
+  if (error || !data) return [];
+  return data.map(s => ({ id: s.id, title: s.title, description: s.description, priceCents: s.price_cents, profileId: s.profile_id }));
+}
+
+async function fetchProviderOnboardingStatus(profileId) {
+  const { data } = await supabase.from("profiles").select("stripe_connect_onboarded").eq("id", profileId).maybeSingle();
+  return !!data?.stripe_connect_onboarded;
+}
+
+async function fetchMyBookingsAsClient(userProfile) {
+  if (!userProfile?.userId) return [];
+  const { data, error } = await supabase.from("bookings").select("*").eq("client_user_id", userProfile.userId).order("created_at", { ascending: false });
+  if (error || !data) return [];
+  const counterpartIds = [...new Set(data.map(r => r.provider_profile_id))];
+  const { data: profs } = await supabase.from("profiles").select("id, pet_name, species").in("id", counterpartIds);
+  const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
+  return data.map(r => ({ ...mapBookingRow(r, false), counterpartName: byId[r.provider_profile_id]?.pet_name || "Prestataire" }));
+}
+
+async function fetchMyBookingsAsProvider(userProfile) {
+  if (!userProfile?.userId) return [];
+  const { data, error } = await supabase.from("bookings").select("*").eq("provider_user_id", userProfile.userId).order("created_at", { ascending: false });
+  if (error || !data) return [];
+  const counterpartIds = [...new Set(data.map(r => r.client_profile_id))];
+  const { data: profs } = await supabase.from("profiles").select("id, pet_name, species").in("id", counterpartIds);
+  const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
+  return data.map(r => ({ ...mapBookingRow(r, true), counterpartName: byId[r.client_profile_id]?.pet_name || "Client" }));
 }
 
 async function updateProfileLocation(profileId, lat, lng) {
@@ -5372,6 +5630,7 @@ export default function Miloute() {
   const [premiumInitialPlan, setPremiumInitialPlan] = useState("yearly");
   const [showAbout, setShowAbout] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
+  const [showBookingSuccess, setShowBookingSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
 
@@ -5478,6 +5737,26 @@ export default function Miloute() {
 
     if (status === "success" || status === "cancel") {
       // Nettoie l'URL pour ne pas re-déclencher au rafraîchissement
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // Même logique que ci-dessus, pour le retour d'une réservation de prestation.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("booking");
+    const sessionId = params.get("session_id");
+
+    if (status === "success" && sessionId) {
+      verifyBookingSession(sessionId)
+        .then(data => {
+          if (data.paid) setShowBookingSuccess(true);
+          else setVerifyError("Le paiement de la réservation n'a pas pu être confirmé.");
+        })
+        .catch(() => setVerifyError("Impossible de vérifier le paiement de la réservation."));
+    }
+
+    if (status === "success" || status === "cancel") {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
@@ -5709,6 +5988,21 @@ export default function Miloute() {
               <button onClick={() => setShowPremiumSuccess(false)}
                 style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
                 Découvrir mes avantages 🐾
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showBookingSuccess && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+            onClick={() => setShowBookingSuccess(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "32px 24px", width: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Réservation confirmée !</div>
+              <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>Votre paiement est sécurisé. Une fois la prestation réalisée, confirmez-le depuis "Mes réservations" dans votre profil — les fonds seront alors reversés au prestataire.</div>
+              <button onClick={() => { setShowBookingSuccess(false); setScreen("profile"); }}
+                style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Voir mes réservations
               </button>
             </div>
           </div>
