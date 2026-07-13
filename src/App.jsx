@@ -1378,7 +1378,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
 
 // ── REPRO SCREEN ──────────────────────────────────────────────────────────────
 // ── PRESTATAIRES ──────────────────────────────────────────────────────────────
-function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
+function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNav = () => {} }) {
   const [sharingLocation, setSharingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [providers, setProviders] = useState([]);
@@ -1490,8 +1490,13 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
         <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.4, marginBottom: 10 }}>En plus de mettre en relation les propriétaires d'animaux, Miloute propose un annuaire de prestataires de confiance, recommandés par la communauté, près de chez vous 🐾</div>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
           <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter</button>
+        </div>
+        <div style={{ textAlign: "right", marginBottom: 10 }}>
+          <button onClick={() => onNav("profile")} style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 11, cursor: "pointer", padding: 0 }}>
+            Vous êtes vous-même prestataire ? <span style={{ color: "#B25F46", fontWeight: 700 }}>Configurez vos tarifs →</span>
+          </button>
         </div>
         <div style={{ position: "relative" }}>
           <button onClick={() => setShowCategoryMenu(m => !m)}
@@ -3756,10 +3761,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
 
         <button onClick={() => setShowProviderScreen(true)}
-          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
           <span style={{ fontSize: 20 }}>🏥</span>
-          <span style={{ flex: 1 }}>Devenir prestataire{providerServices.length > 0 ? ` (${providerServices.length})` : ""}</span>
-          <span style={{ color: "#9CA3AF" }}>›</span>
+          <span>Devenir prestataire{providerServices.length > 0 ? ` (${providerServices.length})` : ""}</span>
         </button>
 
         <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
@@ -5620,7 +5624,7 @@ export default function Miloute() {
                 )
               : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
-                {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
+                {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
