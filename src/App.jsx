@@ -1489,8 +1489,8 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <div style={{ fontSize: 13, color: "#9CA3AF" }}>Prestataires vérifiés par la communauté 🐾</div>
+        <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.4, marginBottom: 10 }}>En plus de mettre en relation les propriétaires d'animaux, Miloute leur propose un annuaire de prestataires de confiance, recommandés par la communauté 🐾</div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
           <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter</button>
         </div>
         <div style={{ position: "relative" }}>
