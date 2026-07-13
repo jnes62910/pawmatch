@@ -5580,8 +5580,8 @@ export default function Miloute() {
   
   const NAV = [
     { id: "swipe", label: "Découvrir", icon: null, logo: true },
-    { id: "providers", label: "Prestataires", icon: "🏥" },
     { id: "repro", label: "Reproduction", icon: "🌱" },
+    { id: "providers", label: "Prestataires", icon: "🏥" },
     { id: "community", label: "Communauté", icon: "🏆" },
     { id: "messages", label: "Messages", icon: "💬" },
     { id: "profile", label: "Profil", icon: userProfile?.species === "dog" ? "🐕" : "🐱" },
