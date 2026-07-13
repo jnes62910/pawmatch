@@ -835,6 +835,21 @@ function cellIdFor(lat, lng) {
   return `${Math.round(lat / SPOT_CELL_SIZE)}_${Math.round(lng / SPOT_CELL_SIZE)}`;
 }
 
+// Les 8 cases autour de la case principale (grille 3×3) — utile en zone peu
+// dense (rurale), où une seule case peut ne contenir aucun prestataire.
+function neighborCellIds(lat, lng) {
+  const cellX = Math.round(lat / SPOT_CELL_SIZE);
+  const cellY = Math.round(lng / SPOT_CELL_SIZE);
+  const ids = [];
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (dx === 0 && dy === 0) continue;
+      ids.push(`${cellX + dx}_${cellY + dy}`);
+    }
+  }
+  return ids;
+}
+
 // Déclenche (si besoin) une synchronisation Google Places pour la case de
 // l'utilisateur — no-op côté serveur si elle a déjà été rafraîchie il y a
 // moins de 30 jours, donc peut être appelé à chaque ouverture sans souci de coût.
@@ -861,7 +876,7 @@ async function fetchSpotsForCell(cellId) {
 }
 
 // ── PRESTATAIRES ──────────────────────────────────────────────────────────────
-const PROVIDER_TYPES = ["groomer", "petsitter", "trainer", "boarding", "vet", "petshop"];
+const PROVIDER_TYPES = ["groomer", "petsitter", "trainer", "boarding", "vet", "petshop", "insurance"];
 const PROVIDER_TYPE_INFO = {
   vet: { label: "Vétérinaires", emoji: "🩺" },
   groomer: { label: "Toiletteurs", emoji: "✂️" },
@@ -869,15 +884,52 @@ const PROVIDER_TYPE_INFO = {
   trainer: { label: "Éducateurs", emoji: "🎓" },
   petsitter: { label: "Pet-sitters", emoji: "🐾" },
   petshop: { label: "Boutiques", emoji: "🛍️" },
+  insurance: { label: "Assurances", emoji: "🛡️" },
 };
 
-async function fetchProvidersForCell(cellId) {
-  const { data, error } = await supabase.from("spots").select("*").eq("cell_id", cellId).in("type", PROVIDER_TYPES);
-  if (error || !data) { console.error("fetchProvidersForCell error:", error); return []; }
-  return data.map(row => ({
+function mapProviderRow(row) {
+  return {
     id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
     lat: row.lat, lng: row.lng, address: row.address, phone: row.phone, desc: row.description,
-    open: row.open, source: row.source,
+    open: row.open, source: row.source, affiliateUrl: row.affiliate_url || null,
+  };
+}
+
+const MIN_PROVIDERS_BEFORE_EXPANDING = 5;
+
+async function fetchProvidersForCell(cellId, lat, lng) {
+  const { data, error } = await supabase.from("spots").select("*").eq("cell_id", cellId).in("type", PROVIDER_TYPES).neq("source", "affiliate");
+  if (error) { console.error("fetchProvidersForCell error:", error); return []; }
+  let results = (data || []).map(mapProviderRow);
+
+  // Zone peu dense (rurale) : si la case principale a peu de résultats, on
+  // regarde aussi dans les 8 cases voisines — pas de nouvel appel Google,
+  // juste ce qui a déjà été synchronisé par d'autres utilisateurs passés
+  // par là, donc aucun coût supplémentaire.
+  if (results.length < MIN_PROVIDERS_BEFORE_EXPANDING && lat != null && lng != null) {
+    const neighborIds = neighborCellIds(lat, lng);
+    const { data: neighborData, error: neighborError } = await supabase
+      .from("spots").select("*").in("cell_id", neighborIds).in("type", PROVIDER_TYPES).neq("source", "affiliate");
+    if (!neighborError && neighborData) {
+      const existingIds = new Set(results.map(p => p.id));
+      const extra = neighborData.map(mapProviderRow).filter(p => !existingIds.has(p.id));
+      // Triés par vraie distance (pas juste par case), pour rester pertinent.
+      extra.sort((a, b) => distanceKm(lat, lng, a.lat, a.lng) - distanceKm(lat, lng, b.lat, b.lng));
+      results = [...results, ...extra];
+    }
+  }
+
+  return results;
+}
+
+// Les partenaires en affiliation (assurances, grandes enseignes) ne sont pas
+// des commerces locaux : ils s'affichent partout, peu importe la position.
+async function fetchAffiliatePartners() {
+  const { data, error } = await supabase.from("spots").select("*").eq("source", "affiliate");
+  if (error || !data) { console.error("fetchAffiliatePartners error:", error); return []; }
+  return data.map(row => ({
+    id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
+    desc: row.description, source: row.source, affiliateUrl: row.affiliate_url || null,
   }));
 }
 
@@ -1333,6 +1385,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
   const [reviewsBySpot, setReviewsBySpot] = useState({});
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [selected, setSelected] = useState(null);
   const [selectedReviews, setSelectedReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -1370,9 +1423,13 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
   async function reload() {
     setLoading(true);
     await ensureSpotsForLocation(refLat, refLng, nearestCity(refLat, refLng));
-    const list = await fetchProvidersForCell(cellId);
+    const [list, partners] = await Promise.all([
+      fetchProvidersForCell(cellId, refLat, refLng),
+      fetchAffiliatePartners(),
+    ]);
+    const merged = [...partners, ...list]; // partenaires toujours en tête
     const reviews = await fetchReviewsForProviders(list.map(p => p.id));
-    setProviders(list);
+    setProviders(merged);
     setReviewsBySpot(reviews);
     setLoading(false);
   }
@@ -1389,6 +1446,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
   const filtered = providers
     .filter(p => category === "all" || p.type === category)
     .sort((a, b) => {
+      if (!!a.affiliateUrl !== !!b.affiliateUrl) return a.affiliateUrl ? -1 : 1;
       const typeDiff = PROVIDER_TYPES.indexOf(a.type) - PROVIDER_TYPES.indexOf(b.type);
       if (typeDiff !== 0) return typeDiff;
       const ratingA = ratingFor(a.id)?.avg || 0, ratingB = ratingFor(b.id)?.avg || 0;
@@ -1435,11 +1493,33 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
           <div style={{ fontSize: 13, color: "#9CA3AF" }}>Prestataires vérifiés par la communauté 🐾</div>
           <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter</button>
         </div>
-        <div className="miloute-hide-scrollbar" style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-          <button onClick={() => setCategory("all")} style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: category === "all" ? "#8B3D28" : "#FAF0EB", color: category === "all" ? "#fff" : "#8B3D28" }}>Tout</button>
-          {PROVIDER_TYPES.map(t => (
-            <button key={t} onClick={() => setCategory(t)} style={{ padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: category === t ? "#8B3D28" : "#FAF0EB", color: category === t ? "#fff" : "#8B3D28" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
-          ))}
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setShowCategoryMenu(m => !m)}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14,
+              border: `2px solid ${category !== "all" ? "#8B3D28" : "#E5E7EB"}`,
+              background: category !== "all" ? "#FAF0EB" : "#fff", cursor: "pointer" }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: category !== "all" ? "#8B3D28" : "#2D1200" }}>
+              {category === "all" ? "Toutes les catégories" : `${PROVIDER_TYPE_INFO[category].emoji} ${PROVIDER_TYPE_INFO[category].label}`}
+            </span>
+            <span style={{ fontSize: 12, color: "#9CA3AF", transform: showCategoryMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+          </button>
+
+          {showCategoryMenu && (
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,.15)", border: "1px solid #F3F4F6", zIndex: 30, overflow: "hidden" }}>
+              <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                <button onClick={() => { setCategory("all"); setShowCategoryMenu(false); }}
+                  style={{ width: "100%", padding: "11px 14px", border: "none", background: category === "all" ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#8B3D28", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
+                  Toutes les catégories
+                </button>
+                {PROVIDER_TYPES.map(t => (
+                  <button key={t} onClick={() => { setCategory(t); setShowCategoryMenu(false); }}
+                    style={{ width: "100%", padding: "11px 14px", border: "none", background: category === t ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: category === t ? 700 : 500, color: category === t ? "#8B3D28" : "#374151", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
+                    {PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {!userProfile?.location && (
@@ -1472,10 +1552,15 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
             <div key={p.id} onClick={() => openProvider(p)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
               <div style={{ fontSize: 26 }}>{p.emoji || PROVIDER_TYPE_INFO[p.type]?.emoji}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.name}</div>
+                  {p.affiliateUrl && <span style={{ fontSize: 10, fontWeight: 700, color: "#8B3D28", background: "#FAF0EB", padding: "1px 7px", borderRadius: 8 }}>Partenaire</span>}
+                </div>
                 <div style={{ fontSize: 12, color: "#9CA3AF" }}>{PROVIDER_TYPE_INFO[p.type]?.label}{p.address ? ` · ${p.address}` : ""}</div>
               </div>
-              {r ? (
+              {p.affiliateUrl ? (
+                <div style={{ fontSize: 13, color: "#B25F46", fontWeight: 700, flexShrink: 0 }}>Voir l'offre ›</div>
+              ) : r ? (
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: "#B25F46" }}>⭐ {r.avg.toFixed(1)}</div>
                   <div style={{ fontSize: 10, color: "#9CA3AF" }}>{r.count} avis</div>
@@ -1505,23 +1590,38 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {} }) {
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 20px" }}>
-              <button onClick={() => setShowReviewForm(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>⭐ Laisser un avis</button>
-
-              {loadingReviews ? (
-                <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={24} color="#E8B89F" /></div>
-              ) : selectedReviews.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "20px 0", color: "#9CA3AF", fontSize: 13 }}>Aucun avis pour l'instant — soyez le premier !</div>
-              ) : selectedReviews.map(r => (
-                <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #F9FAFB" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span>{r.emoji}</span>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: "#2D1200" }}>{r.petName}</span>
-                    <span style={{ color: "#F59E0B", fontSize: 12 }}>{"⭐".repeat(r.rating)}</span>
-                    <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: "auto" }}>{r.time}</span>
+              {selected.affiliateUrl ? (
+                <>
+                  {selected.desc && <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.6, marginBottom: 16 }}>{selected.desc}</p>}
+                  <a href={selected.affiliateUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ display: "block", textAlign: "center", width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, textDecoration: "none", marginBottom: 12, boxSizing: "border-box" }}>
+                    Voir l'offre {selected.name} ↗
+                  </a>
+                  <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", lineHeight: 1.5 }}>
+                    Lien partenaire — Miloute peut percevoir une commission si vous souscrivez ou achetez via ce lien, sans coût supplémentaire pour vous.
                   </div>
-                  {r.text && <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.5 }}>{r.text}</div>}
-                </div>
-              ))}
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setShowReviewForm(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>⭐ Laisser un avis</button>
+
+                  {loadingReviews ? (
+                    <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={24} color="#E8B89F" /></div>
+                  ) : selectedReviews.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "#9CA3AF", fontSize: 13 }}>Aucun avis pour l'instant — soyez le premier !</div>
+                  ) : selectedReviews.map(r => (
+                    <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #F9FAFB" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <span>{r.emoji}</span>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: "#2D1200" }}>{r.petName}</span>
+                        <span style={{ color: "#F59E0B", fontSize: 12 }}>{"⭐".repeat(r.rating)}</span>
+                        <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: "auto" }}>{r.time}</span>
+                      </div>
+                      {r.text && <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.5 }}>{r.text}</div>}
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>
