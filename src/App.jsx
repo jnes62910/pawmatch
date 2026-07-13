@@ -2597,6 +2597,8 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
   const [ratingFor, setRatingFor] = useState(null);
   const [matches, setMatches] = useState([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [confirmUnmatch, setConfirmUnmatch] = useState(null); // match en attente de confirmation
+  const [unmatching, setUnmatching] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -2609,6 +2611,18 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
     return () => { active = false; };
   }, [userProfile?.id, userProfile?.userId]);
 
+  async function handleUnmatch(matchId) {
+    setUnmatching(true);
+    try {
+      await unmatchUser(matchId);
+      setMatches(m => m.filter(x => x.id !== matchId));
+    } catch (err) {
+      console.error("unmatch error:", err);
+    }
+    setUnmatching(false);
+    setConfirmUnmatch(null);
+  }
+
   function submitRating(id, stars) {
     setAgendaData(a => a.map(ev => ev.id === id ? { ...ev, rating: stars } : ev));
     setRatingFor(null); setRating(null);
@@ -2619,7 +2633,7 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
   const past = agendaBySpecies.filter(e => e.status === "done");
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
 
       {/* Tab switcher */}
       <div style={{ display: "flex", background: "#fff", flexShrink: 0, borderBottom: "1px solid #F3F4F6" }}>
@@ -2630,6 +2644,7 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
 
       {/* ── MESSAGES ── */}
       {tab === "messages" && (
+        <>
         <div style={{ flex: 1, overflowY: "auto" }}>
           <div style={{ padding: "14px 16px 8px" }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Vos matchs</div>
@@ -2675,11 +2690,35 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
                 <div style={{ fontSize: 11, color: "#9CA3AF" }}>{m.owner}</div>
               </div>
               {m.unread > 0 && <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.unread}</div>}
+              <button onClick={e => { e.stopPropagation(); setConfirmUnmatch(m); }}
+                style={{ background: "none", border: "none", color: "#D1D5DB", fontSize: 16, cursor: "pointer", flexShrink: 0, padding: 4 }}>✕</button>
             </div>
           ))}
             </>
           )}
         </div>
+
+        {/* Confirmation d'annulation de match */}
+        {confirmUnmatch && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => !unmatching && setConfirmUnmatch(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", width: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>💔</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 6 }}>Annuler le match avec {confirmUnmatch.name} ?</div>
+              <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 20, lineHeight: 1.5 }}>Votre conversation sera définitivement supprimée pour vous deux. Cette action est irréversible.</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setConfirmUnmatch(null)} disabled={unmatching}
+                  style={{ flex: 1, padding: "12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                  Annuler
+                </button>
+                <button onClick={() => handleUnmatch(confirmUnmatch.id)} disabled={unmatching}
+                  style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: unmatching ? "#E5E7EB" : "#DC2626", color: unmatching ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: unmatching ? "default" : "pointer" }}>
+                  {unmatching ? "..." : "Oui, annuler"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* ── AGENDA ── */}
@@ -3185,6 +3224,19 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [selectedLike, setSelectedLike] = useState(null);
   const [likesReceived, setLikesReceived] = useState([]);
+  const [decliningLikeId, setDecliningLikeId] = useState(null);
+
+  async function handleDeclineLike(like) {
+    setDecliningLikeId(like.profileId);
+    try {
+      await declineLike(initialData, like);
+      setLikesReceived(l => l.filter(x => x.profileId !== like.profileId));
+    } catch (err) {
+      console.error("declineLike error:", err);
+    }
+    setDecliningLikeId(null);
+  }
+
   const [loadingLikes, setLoadingLikes] = useState(true);
   const [showProviderScreen, setShowProviderScreen] = useState(false);
   const [providerServices, setProviderServices] = useState([]);
@@ -3891,17 +3943,24 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   <div style={{ fontSize: 14 }}>Pas encore de like reçu</div>
                 </div>
               ) : likesReceived.map((like, i) => (
-                <div key={i} onClick={() => isPremium ? setSelectedLike(like) : onPremium()}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative", cursor: "pointer" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, filter: isPremium ? "none" : "blur(6px)" }}>
-                    {photoUrl(like.photo) ? <img src={photoUrl(like.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : like.emoji}
-                  </div>
-                  <div style={{ flex: 1, filter: isPremium ? "none" : "blur(4px)" }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{isPremium ? like.name : "???"}</div>
-                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{like.breed} · {like.time}</div>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative" }}>
+                  <div onClick={() => isPremium ? setSelectedLike(like) : onPremium()} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, filter: isPremium ? "none" : "blur(6px)" }}>
+                      {photoUrl(like.photo) ? <img src={photoUrl(like.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : like.emoji}
+                    </div>
+                    <div style={{ flex: 1, filter: isPremium ? "none" : "blur(4px)" }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{isPremium ? like.name : "???"}</div>
+                      <div style={{ fontSize: 12, color: "#9CA3AF" }}>{like.breed} · {like.time}</div>
+                    </div>
                   </div>
                   {!isPremium && <span style={{ fontSize: 16, flexShrink: 0 }}>🔒</span>}
-                  {isPremium && <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>}
+                  {isPremium && !like.isDemo && (
+                    <button onClick={() => handleDeclineLike(like)} disabled={decliningLikeId === like.profileId}
+                      style={{ background: "none", border: "none", color: "#D1D5DB", fontSize: 15, cursor: "pointer", flexShrink: 0, padding: 4 }}>
+                      {decliningLikeId === like.profileId ? "..." : "✕"}
+                    </button>
+                  )}
+                  {isPremium && <span onClick={() => setSelectedLike(like)} style={{ fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>›</span>}
                 </div>
               ))}
             </div>
@@ -5428,10 +5487,19 @@ async function fetchLikesReceived(userProfile) {
   const { data: senderProfiles } = await supabase.from("profiles").select("*").in("user_id", senderUserIds);
   const byUserId = Object.fromEntries((senderProfiles || []).map(p => [p.user_id, p]));
 
+  // Exclut les profils déjà rejetés (swipe "nope" de ma part) — sinon ils
+  // réapparaîtraient dans cette liste malgré le rejet.
+  const senderProfileIds = Object.values(byUserId).map(p => p.id);
+  const { data: myNopes } = await supabase
+    .from("swipes").select("target_profile_id")
+    .eq("swiper_user_id", userProfile.userId).eq("direction", "nope").in("target_profile_id", senderProfileIds);
+  const declinedIds = new Set((myNopes || []).map(s => s.target_profile_id));
+
   return pending.map(l => {
     const p = byUserId[l.swiper_user_id];
-    if (!p) return null;
+    if (!p || declinedIds.has(p.id)) return null;
     return {
+      profileId: p.id, userId: p.user_id,
       name: p.pet_name, species: p.species, breed: p.breed, age: p.age, gender: p.gender,
       emoji: p.species === "cat" ? "🐱" : "🐕",
       photo: p.photos?.[0]?.url || null,
@@ -5441,6 +5509,15 @@ async function fetchLikesReceived(userProfile) {
       isDemo: false,
     };
   }).filter(Boolean);
+}
+
+async function declineLike(userProfile, targetProfile) {
+  const { error } = await supabase.from("swipes").insert({
+    swiper_user_id: userProfile.userId,
+    target_profile_id: targetProfile.profileId,
+    direction: "nope",
+  });
+  if (error) throw new Error(error.message);
 }
 
 async function fetchUnseenTreatsCount(userProfile) {
@@ -5484,6 +5561,11 @@ async function fetchReceivedTreats(userProfile) {
 async function markTreatsSeen(userProfile) {
   if (!userProfile?.userId) return;
   await supabase.from("treats").update({ seen: true }).eq("target_user_id", userProfile.userId).eq("seen", false);
+}
+
+async function unmatchUser(matchId) {
+  const { error } = await supabase.from("matches").delete().eq("id", matchId);
+  if (error) throw new Error(error.message);
 }
 
 async function fetchMatchesForUser(userProfile) {
