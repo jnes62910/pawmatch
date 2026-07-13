@@ -3660,9 +3660,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </button>
         )}
 
-        <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
+        <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 10, letterSpacing: 1 }}>STATISTIQUES</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             {[[String(likesReceived.length || "0"),"Likes reçus",true],["3","Matchs",false],["5","Rencontres",false]].map(([n,l,clickable]) => (
               <div key={l} onClick={() => clickable && setShowLikesModal(true)}
                 style={{ textAlign: "center", cursor: clickable ? "pointer" : "default", position: "relative" }}>
@@ -3671,56 +3671,57 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Friandises reçues */}
-        <button onClick={openTreatsModal}
-          style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
-          <span style={{ fontSize: 22 }}>{pet.species === "cat" ? "🐟" : "🦴"}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Friandises reçues</div>
-            <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
-          </div>
-          {unseenTreatsCount > 0 && (
-            <span style={{ background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>{unseenTreatsCount}</span>
-          )}
-          <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>
-        </button>
+          {/* Friandises reçues */}
+          <button onClick={openTreatsModal}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "12px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
+            <span style={{ fontSize: 22 }}>{pet.species === "cat" ? "🐟" : "🦴"}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Friandises reçues</div>
+              <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
+            </div>
+            {unseenTreatsCount > 0 && (
+              <span style={{ background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>{unseenTreatsCount}</span>
+            )}
+            <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>
+          </button>
 
-        {/* Statistiques avancées — Premium */}
-        <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>STATISTIQUES AVANCÉES</div>
-            {!isPremium && <span style={{ fontSize: 11 }}>👑</span>}
-          </div>
-          <div style={{ filter: isPremium ? "none" : "blur(5px)", pointerEvents: isPremium ? "auto" : "none" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>65%</div>
-                <div style={{ fontSize: 10, color: "#9CA3AF" }}>Taux de match</div>
+          <div style={{ height: 1, background: "#E5E7EB", marginBottom: 14 }} />
+
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>STATISTIQUES AVANCÉES</div>
+              {!isPremium && <span style={{ fontSize: 11 }}>👑</span>}
+            </div>
+            <div style={{ filter: isPremium ? "none" : "blur(5px)", pointerEvents: isPremium ? "auto" : "none" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>65%</div>
+                  <div style={{ fontSize: 10, color: "#9CA3AF" }}>Taux de match</div>
+                </div>
+                <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>47</div>
+                  <div style={{ fontSize: 10, color: "#9CA3AF" }}>Vues cette semaine</div>
+                </div>
+              </div>
+              <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Race la plus intéressée</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>🐕 Golden Retriever</div>
               </div>
               <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>47</div>
-                <div style={{ fontSize: 10, color: "#9CA3AF" }}>Vues cette semaine</div>
+                <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Jour le plus actif</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>📅 Dimanche</div>
               </div>
             </div>
-            <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Race la plus intéressée</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>🐕 Golden Retriever</div>
-            </div>
-            <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
-              <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Jour le plus actif</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>📅 Dimanche</div>
-            </div>
+            {!isPremium && (
+              <button onClick={() => onPremium()}
+                style={{ position: "absolute", inset: 0, background: "rgba(249,250,251,.3)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ background: "linear-gradient(135deg,#8B3D28,#B25F46)", color: "#fff", fontWeight: 800, fontSize: 12, padding: "8px 16px", borderRadius: 20, boxShadow: "0 4px 12px rgba(0,0,0,.15)" }}>
+                  👑 Débloquer
+                </span>
+              </button>
+            )}
           </div>
-          {!isPremium && (
-            <button onClick={() => onPremium()}
-              style={{ position: "absolute", inset: 0, background: "rgba(249,250,251,.3)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ background: "linear-gradient(135deg,#8B3D28,#B25F46)", color: "#fff", fontWeight: 800, fontSize: 12, padding: "8px 16px", borderRadius: 20, boxShadow: "0 4px 12px rgba(0,0,0,.15)" }}>
-                👑 Débloquer
-              </span>
-            </button>
-          )}
         </div>
 
         {/* Boost de visibilité — Premium */}
