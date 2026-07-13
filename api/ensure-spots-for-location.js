@@ -26,6 +26,11 @@ const CATEGORIES = [
   { includedType: 'veterinary_care', type: 'vet', species: 'both', emoji: '🩺', metricLabel: 'avis Google' },
   { includedType: 'park', type: 'park', species: 'both', emoji: '🌳', metricLabel: null },
   { includedType: 'pet_store', type: 'petshop', species: 'both', emoji: '🛍️', metricLabel: 'avis Google' },
+  { includedType: 'pet_boarding_service', type: 'boarding', species: 'both', emoji: '🏠', metricLabel: 'avis Google' },
+  // Google n'a pas de catégorie "toiletteur" dédiée — "pet_care" est
+  // l'approximation la plus proche disponible, mais reste plus large que le
+  // seul toilettage (peut inclure d'autres services animaliers).
+  { includedType: 'pet_care', type: 'groomer', species: 'both', emoji: '✂️', metricLabel: 'avis Google' },
 ];
 
 function cellIdFor(lat, lng) {
