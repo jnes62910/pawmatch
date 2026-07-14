@@ -888,10 +888,11 @@ const PROVIDER_TYPE_INFO = {
 };
 
 function mapProviderRow(row) {
+  const url = row.affiliate_url;
   return {
     id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
     lat: row.lat, lng: row.lng, address: row.address, phone: row.phone, desc: row.description,
-    open: row.open, source: row.source, affiliateUrl: row.affiliate_url || null,
+    open: row.open, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
   };
 }
 
@@ -927,10 +928,13 @@ async function fetchProvidersForCell(cellId, lat, lng) {
 async function fetchAffiliatePartners() {
   const { data, error } = await supabase.from("spots").select("*").eq("source", "affiliate");
   if (error || !data) { console.error("fetchAffiliatePartners error:", error); return []; }
-  return data.map(row => ({
-    id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
-    desc: row.description, source: row.source, affiliateUrl: row.affiliate_url || null,
-  }));
+  return data.map(row => {
+    const url = row.affiliate_url;
+    return {
+      id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
+      desc: row.description, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
+    };
+  });
 }
 
 async function fetchReviewsForProviders(spotIds) {
@@ -1602,7 +1606,12 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.name}</div>
                   {p.affiliateUrl && <span style={{ fontSize: 10, fontWeight: 700, color: "#8B3D28", background: "#FAF0EB", padding: "1px 7px", borderRadius: 8 }}>Partenaire</span>}
                 </div>
-                <div style={{ fontSize: 12, color: "#9CA3AF" }}>{PROVIDER_TYPE_INFO[p.type]?.label}{p.address ? ` · ${p.address}` : ""}</div>
+                <div style={{ fontSize: 12, color: "#9CA3AF" }}>
+                  {PROVIDER_TYPE_INFO[p.type]?.label}{p.address ? ` · ${p.address}` : ""}
+                  {p.type === "groomer" && p.source === "google_places" && (
+                    <span style={{ color: "#9CA3AF" }}> · suggéré par Google</span>
+                  )}
+                </div>
               </div>
               {p.affiliateUrl ? (
                 <div style={{ fontSize: 13, color: "#B25F46", fontWeight: 700, flexShrink: 0 }}>Voir l'offre ›</div>
@@ -1630,6 +1639,9 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{selected.emoji} {selected.name}</div>
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.address ? ` · ${selected.address}` : ""}</div>
                   {selected.phone && <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 4, fontWeight: 600 }}>📞 {selected.phone}</div>}
+                  {selected.type === "groomer" && selected.source === "google_places" && (
+                    <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6, lineHeight: 1.4 }}>ℹ️ Suggéré par Google d'après son activité — à confirmer sur place.</div>
+                  )}
                 </div>
                 <button onClick={() => setSelected(null)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>✕</button>
               </div>
