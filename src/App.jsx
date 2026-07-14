@@ -2221,7 +2221,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
     // (comptes de likes/commentaires gérés localement uniquement pour eux).
     const demo = COMMUNITY_POSTS
       .filter(p => !userProfile?.species || p.species === userProfile.species)
-      .map(p => ({ ...p, likedByMe: false, commentCount: p.comments, isDemo: true }));
+      .map(p => ({ ...p, likedByMe: false, commentCount: (INIT_COMMENTS[p.id] || []).length, isDemo: true }));
     setPosts([...real, ...demo]);
     setLoadingPosts(false);
   }
@@ -2582,7 +2582,9 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
               <div style={{ margin: "0 16px", padding: "8px 12px", background: "#FEF2F2", borderRadius: 10, fontSize: 12, color: "#DC2626" }}>{commentModerationError[openComments]}</div>
             )}
             <div style={{ padding: "10px 16px 28px", borderTop: "1px solid #F3F4F6", display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🐱</div>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                {photoUrl(userProfile?.photos?.[0]) ? <img src={photoUrl(userProfile.photos[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (userProfile?.species === "dog" ? "🐕" : "🐱")}
+              </div>
               <input
                 value={commentInputs[openComments] || ""}
                 onChange={e => setCommentInputs(i => ({ ...i, [openComments]: e.target.value }))}
