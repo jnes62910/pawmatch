@@ -887,6 +887,21 @@ const PROVIDER_TYPE_INFO = {
   insurance: { label: "Assurances", emoji: "🛡️" },
 };
 
+// Prestataires de démonstration — équilibrent l'annuaire pour les catégories
+// que la communauté n'a pas encore remplies (toiletteurs, pet-sitters,
+// éducateurs, pensions). Marqués isDemo : jamais de vraie réservation
+// possible, jamais écrits dans Supabase.
+const DEMO_PROVIDERS = [
+  { id: "demo-1", type: "groomer", name: "Zen Toilettage", emoji: "✂️", address: "Paris 11e", phone: "01 42 00 00 01", desc: "Toilettage doux pour chats et chiens, spécialiste poils longs. Sur rendez-vous du mardi au samedi.", demoRating: 4.8, demoReviewCount: 34 },
+  { id: "demo-2", type: "groomer", name: "Griffe & Ronron", emoji: "✂️", address: "Paris 15e", phone: "01 42 00 00 02", desc: "Toiletteuse féline exclusivement, approche sans stress pour chats craintifs.", demoRating: 4.9, demoReviewCount: 21 },
+  { id: "demo-3", type: "petsitter", name: "Léa, pet-sitter", emoji: "🐾", address: "Paris 12e", phone: "06 00 00 00 03", desc: "Garde à domicile ou chez moi, week-ends et vacances. 5 ans d'expérience.", demoRating: 5.0, demoReviewCount: 18 },
+  { id: "demo-4", type: "petsitter", name: "Nino Dog Sitting", emoji: "🐾", address: "Paris 18e", phone: "06 00 00 00 04", desc: "Promenades quotidiennes et garde ponctuelle, spécial grands chiens.", demoRating: 4.7, demoReviewCount: 12 },
+  { id: "demo-5", type: "trainer", name: "Canin Attitude", emoji: "🎓", address: "Paris 20e", phone: "01 42 00 00 05", desc: "Éducateur canin comportementaliste, cours particuliers et collectifs.", demoRating: 4.9, demoReviewCount: 27 },
+  { id: "demo-6", type: "trainer", name: "Patte Éducative", emoji: "🎓", address: "Boulogne-Billancourt", phone: "06 00 00 00 06", desc: "Rééducation chiots et chiens adultes, méthode positive.", demoRating: 4.6, demoReviewCount: 9 },
+  { id: "demo-7", type: "boarding", name: "Chez Mamie Chat", emoji: "🏠", address: "Vincennes", phone: "06 00 00 00 07", desc: "Pension féline à domicile, maison avec jardin, 2 chats maximum à la fois.", demoRating: 5.0, demoReviewCount: 15 },
+  { id: "demo-8", type: "boarding", name: "Le Chenil du Bois", emoji: "🏠", address: "Saint-Mandé", phone: "01 42 00 00 08", desc: "Pension canine avec grand parc clos, promenades incluses.", demoRating: 4.7, demoReviewCount: 22 },
+].map(p => ({ ...p, species: "both", open: true, isDemo: true, source: "demo" }));
+
 function mapProviderRow(row) {
   const url = row.affiliate_url;
   return {
@@ -1446,7 +1461,8 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       fetchProvidersForCell(cellId, refLat, refLng),
       fetchAffiliatePartners(),
     ]);
-    const merged = [...partners, ...list]; // partenaires toujours en tête
+    const demo = DEMO_PROVIDERS.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
+    const merged = [...partners, ...list, ...demo]; // partenaires toujours en tête
     const reviews = await fetchReviewsForProviders(list.map(p => p.id));
     setProviders(merged);
     setReviewsBySpot(reviews);
@@ -1455,25 +1471,52 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
 
   useEffect(() => { reload(); }, [cellId]);
 
-  function ratingFor(spotId) {
-    const list = reviewsBySpot[spotId];
+  function ratingFor(p) {
+    if (p.isDemo) return { avg: p.demoRating, count: p.demoReviewCount };
+    const list = reviewsBySpot[p.id];
     if (!list || list.length === 0) return null;
     const avg = list.reduce((s, r) => s + r.rating, 0) / list.length;
     return { avg, count: list.length };
   }
 
-  const filtered = providers
+  const MAX_VETS_IN_ALL_VIEW = 3;
+
+  const sortedProviders = providers
     .filter(p => category === "all" || p.type === category)
     .sort((a, b) => {
       if (!!a.affiliateUrl !== !!b.affiliateUrl) return a.affiliateUrl ? -1 : 1;
       const typeDiff = PROVIDER_TYPES.indexOf(a.type) - PROVIDER_TYPES.indexOf(b.type);
       if (typeDiff !== 0) return typeDiff;
-      const ratingA = ratingFor(a.id)?.avg || 0, ratingB = ratingFor(b.id)?.avg || 0;
+      const ratingA = ratingFor(a)?.avg || 0, ratingB = ratingFor(b)?.avg || 0;
       return ratingB - ratingA;
     });
 
+  // Dans la vue "Toutes les catégories", les vétérinaires (souvent nombreux
+  // via Google) ne doivent pas noyer les autres catégories, moins fournies —
+  // on en limite l'affichage ici, le filtre "Vétérinaires" reste complet.
+  const hiddenVetsCount = category === "all"
+    ? Math.max(0, sortedProviders.filter(p => p.type === "vet").length - MAX_VETS_IN_ALL_VIEW)
+    : 0;
+  const filtered = category === "all" && hiddenVetsCount > 0
+    ? (() => {
+        let vetsShown = 0;
+        return sortedProviders.filter(p => {
+          if (p.type !== "vet") return true;
+          vetsShown++;
+          return vetsShown <= MAX_VETS_IN_ALL_VIEW;
+        });
+      })()
+    : sortedProviders;
+
   async function openProvider(p) {
     setSelected(p);
+    if (p.isDemo) {
+      setSelectedReviews([]); // pas de fil d'avis réel pour une fiche de démo
+      setSelectedServices([]);
+      setLoadingReviews(false);
+      setLoadingServices(false);
+      return;
+    }
     setLoadingReviews(true);
     setLoadingServices(true);
     setBookingError(null);
@@ -1597,7 +1640,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
             <button onClick={() => setShowAddForm(true)} style={{ background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Soyez le premier à en ajouter un</button>
           </div>
         ) : filtered.map(p => {
-          const r = ratingFor(p.id);
+          const r = ratingFor(p);
           return (
             <div key={p.id} onClick={() => openProvider(p)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
               <div style={{ fontSize: 26 }}>{p.emoji || PROVIDER_TYPE_INFO[p.type]?.emoji}</div>
@@ -1626,6 +1669,12 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
             </div>
           );
         })}
+        {hiddenVetsCount > 0 && (
+          <button onClick={() => setCategory("vet")}
+            style={{ width: "100%", padding: "14px 8px", background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
+            Voir les {hiddenVetsCount + MAX_VETS_IN_ALL_VIEW} vétérinaires →
+          </button>
+        )}
       </div>
 
       {/* Détail d'un prestataire */}
@@ -1684,23 +1733,32 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                     </div>
                   )}
 
-                  <button onClick={() => setShowReviewForm(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>⭐ Laisser un avis</button>
-
-                  {loadingReviews ? (
-                    <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={24} color="#E8B89F" /></div>
-                  ) : selectedReviews.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "20px 0", color: "#9CA3AF", fontSize: 13 }}>Aucun avis pour l'instant — soyez le premier !</div>
-                  ) : selectedReviews.map(r => (
-                    <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #F9FAFB" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span>{r.emoji}</span>
-                        <span style={{ fontWeight: 700, fontSize: 13, color: "#2D1200" }}>{r.petName}</span>
-                        <span style={{ color: "#F59E0B", fontSize: 12 }}>{"⭐".repeat(r.rating)}</span>
-                        <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: "auto" }}>{r.time}</span>
-                      </div>
-                      {r.text && <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.5 }}>{r.text}</div>}
+                  {selected.isDemo ? (
+                    <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: "#B25F46" }}>⭐ {selected.demoRating.toFixed(1)}</div>
+                      <div style={{ fontSize: 12, color: "#9CA3AF" }}>{selected.demoReviewCount} avis</div>
                     </div>
-                  ))}
+                  ) : (
+                    <>
+                      <button onClick={() => setShowReviewForm(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>⭐ Laisser un avis</button>
+
+                      {loadingReviews ? (
+                        <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={24} color="#E8B89F" /></div>
+                      ) : selectedReviews.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "20px 0", color: "#9CA3AF", fontSize: 13 }}>Aucun avis pour l'instant — soyez le premier !</div>
+                      ) : selectedReviews.map(r => (
+                        <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #F9FAFB" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <span>{r.emoji}</span>
+                            <span style={{ fontWeight: 700, fontSize: 13, color: "#2D1200" }}>{r.petName}</span>
+                            <span style={{ color: "#F59E0B", fontSize: 12 }}>{"⭐".repeat(r.rating)}</span>
+                            <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: "auto" }}>{r.time}</span>
+                          </div>
+                          {r.text && <div style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.5 }}>{r.text}</div>}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </>
               )}
             </div>
