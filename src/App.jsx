@@ -152,6 +152,12 @@ const REPRO_PROFILES = [
   { id: 10, name: "Atlas", species: "dog", breed: "Berger Australien", age: "3 ans", gender: "M", emoji: "🐕", owner: "Julie R.", distance: "2,3 km", vaccinated: true, pedigree: true, testedGenes: true, price: "500 €", bio: "Champion de France 2024, bilan génétique complet. Recherche femelle saine pour reproduction sérieuse.", temper: ["Calme", "Équilibré"], color: "#A9C4B8" },
   { id: 11, name: "Isis", species: "cat", breed: "Maine Coon", age: "2 ans", gender: "F", emoji: "🐱", owner: "Pierre T.", distance: "4,1 km", vaccinated: true, pedigree: true, testedGenes: false, price: "400 €", bio: "Isis est une beauté au caractère doux. Recherche mâle avec pedigree LOOF.", temper: ["Douce", "Affectueuse"], color: "#C9B8A9" },
   { id: 12, name: "Thor", species: "dog", breed: "Golden Retriever", age: "4 ans", gender: "M", emoji: "🐕", owner: "Emma G.", distance: "1,8 km", vaccinated: true, pedigree: true, testedGenes: true, price: "600 €", bio: "Hips A/A, yeux clairs. Reproducteur confirmé, 3 portées saines.", temper: ["Stable", "Joueur"], color: "#C9C4A9" },
+  { id: 13, name: "Luna", species: "cat", breed: "Siamois", age: "2 ans", gender: "F", emoji: "🐱", owner: "Nadia B.", distance: "3,2 km", vaccinated: true, pedigree: true, testedGenes: true, price: "450 €", bio: "Luna est vive et très sociable. Bilan félin complet fait, recherche mâle LOOF pour une première portée.", temper: ["Vive", "Sociable"], color: "#D9C9B0" },
+  { id: 14, name: "Simba", species: "cat", breed: "Bengal", age: "3 ans", gender: "M", emoji: "🐱", owner: "Karim H.", distance: "5,6 km", vaccinated: true, pedigree: true, testedGenes: true, price: "550 €", bio: "Simba a déjà 2 portées réussies à son actif. Robe marbrée superbe, caractère joueur et affirmé.", temper: ["Joueur", "Affirmé"], color: "#E0B98D" },
+  { id: 15, name: "Nala", species: "cat", breed: "Sacré de Birmanie", age: "18 mois", gender: "F", emoji: "🐱", owner: "Claire V.", distance: "2,9 km", vaccinated: true, pedigree: true, testedGenes: false, price: "420 €", bio: "Première portée envisagée pour Nala. Yeux bleus intenses, tempérament très câlin.", temper: ["Câline", "Douce"], color: "#EDE4D3" },
+  { id: 16, name: "Rex", species: "dog", breed: "Labrador", age: "3 ans", gender: "M", emoji: "🐕", owner: "Antoine F.", distance: "1,2 km", vaccinated: true, pedigree: true, testedGenes: true, price: "500 €", bio: "Rex est sociable et en pleine forme, bilan hanches/coudes excellent. Déjà 2 portées de qualité.", temper: ["Sociable", "Énergique"], color: "#D4C9A8" },
+  { id: 17, name: "Bella", species: "dog", breed: "Cavalier King Charles", age: "2 ans", gender: "F", emoji: "🐕", owner: "Marion S.", distance: "4,7 km", vaccinated: true, pedigree: true, testedGenes: true, price: "550 €", bio: "Bella recherche un mâle avec pedigree pour une première portée. Cœur testé sain, caractère très doux.", temper: ["Douce", "Câline"], color: "#E8C9B8" },
+  { id: 18, name: "Zeus", species: "dog", breed: "Berger Allemand", age: "4 ans", gender: "M", emoji: "🐕", owner: "Lucas M.", distance: "3,5 km", vaccinated: true, pedigree: true, testedGenes: true, price: "600 €", bio: "Zeus est un reproducteur expérimenté, ligne de travail reconnue. Bilan dysplasie A/A.", temper: ["Protecteur", "Obéissant"], color: "#B0A99C" },
 ];
 
 const SPOTS = [
@@ -227,6 +233,70 @@ function Badge({ children, color = "#FAF0EB", text = "#8B3D28" }) {
 function photoUrl(p) {
   if (!p) return null;
   return typeof p === "string" ? p : p.url;
+}
+
+// ── MESSAGE DE MATCH PERSONNALISÉ ─────────────────────────────────────────────
+// Ramène un trait de caractère à sa forme canonique (les profils de démo
+// utilisent parfois des variantes accordées au féminin) pour pouvoir
+// retrouver une combinaison connue, peu importe le genre de l'animal.
+function normalizeTemper(t) {
+  if (!t) return null;
+  const map = {
+    "joueuse": "Joueur", "joueur": "Joueur",
+    "affectueuse": "Affectueux", "affectueux": "Affectueux",
+    "curieuse": "Curieux", "curieux": "Curieux",
+    "câline": "Câlin", "câlin": "Câlin",
+    "calme": "Calme",
+    "énergique": "Énergique",
+    "indépendante": "Indépendant", "indépendant": "Indépendant",
+    "sociable": "Sociable",
+    "timide": "Timide",
+    "gourmande": "Gourmand", "gourmand": "Gourmand",
+  };
+  return map[t.toLowerCase()] || t;
+}
+
+// Combinaisons de traits avec une phrase dédiée, plus piquante qu'un texte
+// générique. Clé = les deux traits normalisés, triés par ordre alphabétique.
+const TEMPER_COMBO_MESSAGES = {
+  "Joueur|Joueur": (a, b) => `${a} et ${b} : deux boules d'énergie qui ne vont jamais s'arrêter de s'amuser 🐾`,
+  "Calme|Joueur": (a, b) => `${a} le trublion et ${b} le zen : l'équilibre parfait entre énergie et sérénité 🐾`,
+  "Câlin|Joueur": (a, b) => `${a} adore jouer, ${b} adore les câlins — de quoi alterner les bons moments 🐾`,
+  "Indépendant|Joueur": (a, b) => `${a} plein d'entrain, ${b} plus indépendant : un duo qui trouve son propre rythme 🐾`,
+  "Joueur|Timide": (a, b) => `${a} pourrait bien aider ${b} à sortir de sa coquille, tout en douceur 🐾`,
+  "Affectueux|Affectueux": (a, b) => `${a} et ${b} : deux cœurs tendres qui vont se le rendre au centuple 🐾`,
+  "Affectueux|Calme": (a, b) => `${a} tout en tendresse et ${b} tout en tranquillité : parfait pour de longues siestes câlines 🐾`,
+  "Affectueux|Indépendant": (a, b) => `${a} cherche les câlins, ${b} son espace : un bel équilibre en perspective 🐾`,
+  "Curieux|Curieux": (a, b) => `${a} et ${b} : deux explorateurs qui ne manqueront pas d'aventures à vivre ensemble 🐾`,
+  "Calme|Curieux": (a, b) => `${a} l'aventurier et ${b} le posé : le duo qui explore sans jamais se presser 🐾`,
+  "Câlin|Câlin": (a, b) => `${a} et ${b} : deux âmes câlines faites pour se blottir l'une contre l'autre 🐾`,
+  "Calme|Calme": (a, b) => `${a} et ${b} : la promesse d'une belle complicité tranquille 🐾`,
+  "Énergique|Énergique": (a, b) => `${a} et ${b} : ensemble, ils ne vont jamais s'arrêter — accrochez-vous ! 🐾`,
+  "Calme|Énergique": (a, b) => `${a} déborde d'énergie, ${b} garde son calme : un duo qui s'équilibre à merveille 🐾`,
+  "Énergique|Indépendant": (a, b) => `${a} plein d'énergie, ${b} qui trace sa route : une belle complicité à leur rythme 🐾`,
+  "Indépendant|Indépendant": (a, b) => `${a} et ${b} : deux esprits libres qui sauront respecter l'espace l'un de l'autre 🐾`,
+  "Sociable|Sociable": (a, b) => `${a} et ${b} : deux boute-en-train qui vont adorer se retrouver 🐾`,
+  "Sociable|Timide": (a, b) => `${a} le sociable pourrait bien mettre ${b} en confiance, doucement 🐾`,
+  "Timide|Timide": (a, b) => `${a} et ${b} : deux âmes discrètes qui sauront avancer à leur rythme, ensemble 🐾`,
+  "Gourmand|Gourmand": (a, b) => `${a} et ${b} : le duo qui ne dira jamais non à une friandise partagée 🐾`,
+  "Calme|Gourmand": (a, b) => `${a} et ${b} : parfait pour une sieste après un bon repas 🐾`,
+};
+
+function generateMatchMessage(myPet, theirPet) {
+  const myName = myPet?.name || "Votre compagnon";
+  const theirName = theirPet?.name || "leur compagnon";
+  const myTraitRaw = myPet?.temper?.[0];
+  const theirTraitRaw = theirPet?.temper?.[0];
+
+  if (!myTraitRaw || !theirTraitRaw) {
+    return `${myName} et ${theirName} : un match plein de promesses ! 🐾`;
+  }
+
+  const key = [normalizeTemper(myTraitRaw), normalizeTemper(theirTraitRaw)].sort().join("|");
+  const template = TEMPER_COMBO_MESSAGES[key];
+  if (template) return template(myName, theirName);
+
+  return `${myName} (${myTraitRaw.toLowerCase()}) et ${theirName} (${theirTraitRaw.toLowerCase()}) : le duo qui pourrait bien être fait l'un pour l'autre 🐾`;
 }
 
 function distanceKm(lat1, lng1, lat2, lng2) {
@@ -749,7 +819,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#B25F46)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
           <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
-          <div style={{ fontSize: 16, color: "rgba(255,255,255,.8)", marginBottom: 32, textAlign: "center" }}>{matchedWith.name} et votre animal s'adorent</div>
+          <div style={{ fontSize: 16, color: "rgba(255,255,255,.9)", marginBottom: 32, textAlign: "center", lineHeight: 1.5, maxWidth: 320 }}>{generateMatchMessage(userProfile, matchedWith)}</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, marginBottom: 32 }}>
             <div style={{ width: 92, height: 92, borderRadius: "50%", border: "4px solid #fff", overflow: "hidden", background: "#8B3D28", flexShrink: 0, boxShadow: "0 4px 16px rgba(0,0,0,.25)" }}>
               {userProfile?.photos?.[0]
@@ -4315,6 +4385,7 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("petsitter");
+  const [businessName, setBusinessName] = useState("");
   const [hasExistingSpot, setHasExistingSpot] = useState(true); // true tant qu'on n'a pas vérifié, pour ne pas flasher le sélecteur inutilement
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -4326,6 +4397,7 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
   async function submit() {
     const priceNum = parseFloat(price.replace(",", "."));
     if (!title.trim()) { setError("Le titre est requis."); return; }
+    if (!hasExistingSpot && !businessName.trim()) { setError("Le nom de votre activité est requis."); return; }
     if (!priceNum || priceNum <= 0) { setError("Indiquez un prix valide."); return; }
     setError(null);
     setSubmitting(true);
@@ -4338,7 +4410,7 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
       }
     }
     try {
-      const spotId = await ensureProviderSpot(userProfile, category);
+      const spotId = await ensureProviderSpot(userProfile, category, businessName.trim());
       await createProviderService(userProfile, { title: title.trim(), description: description.trim(), priceCents: Math.round(priceNum * 100), spotId });
       onAdded();
     } catch {
@@ -4355,6 +4427,11 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
 
         {!hasExistingSpot && (
           <>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>NOM DE VOTRE ACTIVITÉ *</label>
+            <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Le nom affiché dans l'annuaire — celui de votre salon, entreprise, ou simplement le vôtre.</div>
+            <input value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Ex: Léa, pet-sitter du 15e"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
+
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
             <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
@@ -5316,14 +5393,14 @@ async function fetchSelfProviderSpot(userId) {
   return data || null;
 }
 
-async function ensureProviderSpot(userProfile, category) {
+async function ensureProviderSpot(userProfile, category, businessName) {
   const existing = await fetchSelfProviderSpot(userProfile.userId);
   if (existing) return existing.id;
   const lat = userProfile?.location?.lat ?? 48.8566;
   const lng = userProfile?.location?.lng ?? 2.3522;
   const { data, error } = await supabase.from("spots").insert({
     cell_id: cellIdFor(lat, lng), city: nearestCity(lat, lng),
-    name: userProfile.name, type: category, species: "both",
+    name: businessName || userProfile.name, type: category, species: "both",
     emoji: PROVIDER_TYPE_INFO[category]?.emoji || "📍",
     lat, lng, open: true, source: "self", added_by_user_id: userProfile.userId,
   }).select().single();
