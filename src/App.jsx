@@ -149,15 +149,15 @@ const PROFILES = [
 ];
 
 const REPRO_PROFILES = [
-  { id: 10, name: "Atlas", species: "dog", breed: "Berger Australien", age: "3 ans", gender: "M", emoji: "🐕", owner: "Julie R.", distance: "2,3 km", vaccinated: true, pedigree: true, testedGenes: true, price: "500 €", bio: "Champion de France 2024, bilan génétique complet. Recherche femelle saine pour reproduction sérieuse.", temper: ["Calme", "Équilibré"], color: "#A9C4B8" },
+  { id: 10, name: "Atlas", species: "dog", breed: "Berger Australien", age: "3 ans", gender: "M", emoji: "🐕", owner: "Julie R.", distance: "2,3 km", vaccinated: true, pedigree: true, testedGenes: true, price: "500 €", bio: "Champion de France 2024, bilan génétique complet. Recherche femelle saine pour reproduction sérieuse.", temper: ["Calme", "Équilibré"], color: "#A9C4B8", photos: ["/photos/atlas-1.jpg"] },
   { id: 11, name: "Isis", species: "cat", breed: "Maine Coon", age: "2 ans", gender: "F", emoji: "🐱", owner: "Pierre T.", distance: "4,1 km", vaccinated: true, pedigree: true, testedGenes: false, price: "400 €", bio: "Isis est une beauté au caractère doux. Recherche mâle avec pedigree LOOF.", temper: ["Douce", "Affectueuse"], color: "#C9B8A9" },
-  { id: 12, name: "Thor", species: "dog", breed: "Golden Retriever", age: "4 ans", gender: "M", emoji: "🐕", owner: "Emma G.", distance: "1,8 km", vaccinated: true, pedigree: true, testedGenes: true, price: "600 €", bio: "Hips A/A, yeux clairs. Reproducteur confirmé, 3 portées saines.", temper: ["Stable", "Joueur"], color: "#C9C4A9" },
+  { id: 12, name: "Thor", species: "dog", breed: "Golden Retriever", age: "4 ans", gender: "M", emoji: "🐕", owner: "Emma G.", distance: "1,8 km", vaccinated: true, pedigree: true, testedGenes: true, price: "600 €", bio: "Hips A/A, yeux clairs. Reproducteur confirmé, 3 portées saines.", temper: ["Stable", "Joueur"], color: "#C9C4A9", photos: ["/photos/thor-1.jpg"] },
   { id: 13, name: "Luna", species: "cat", breed: "Siamois", age: "2 ans", gender: "F", emoji: "🐱", owner: "Nadia B.", distance: "3,2 km", vaccinated: true, pedigree: true, testedGenes: true, price: "450 €", bio: "Luna est vive et très sociable. Bilan félin complet fait, recherche mâle LOOF pour une première portée.", temper: ["Vive", "Sociable"], color: "#D9C9B0" },
   { id: 14, name: "Simba", species: "cat", breed: "Bengal", age: "3 ans", gender: "M", emoji: "🐱", owner: "Karim H.", distance: "5,6 km", vaccinated: true, pedigree: true, testedGenes: true, price: "550 €", bio: "Simba a déjà 2 portées réussies à son actif. Robe marbrée superbe, caractère joueur et affirmé.", temper: ["Joueur", "Affirmé"], color: "#E0B98D" },
   { id: 15, name: "Nala", species: "cat", breed: "Sacré de Birmanie", age: "18 mois", gender: "F", emoji: "🐱", owner: "Claire V.", distance: "2,9 km", vaccinated: true, pedigree: true, testedGenes: false, price: "420 €", bio: "Première portée envisagée pour Nala. Yeux bleus intenses, tempérament très câlin.", temper: ["Câline", "Douce"], color: "#EDE4D3" },
-  { id: 16, name: "Rex", species: "dog", breed: "Labrador", age: "3 ans", gender: "M", emoji: "🐕", owner: "Antoine F.", distance: "1,2 km", vaccinated: true, pedigree: true, testedGenes: true, price: "500 €", bio: "Rex est sociable et en pleine forme, bilan hanches/coudes excellent. Déjà 2 portées de qualité.", temper: ["Sociable", "Énergique"], color: "#D4C9A8" },
-  { id: 17, name: "Bella", species: "dog", breed: "Cavalier King Charles", age: "2 ans", gender: "F", emoji: "🐕", owner: "Marion S.", distance: "4,7 km", vaccinated: true, pedigree: true, testedGenes: true, price: "550 €", bio: "Bella recherche un mâle avec pedigree pour une première portée. Cœur testé sain, caractère très doux.", temper: ["Douce", "Câline"], color: "#E8C9B8" },
-  { id: 18, name: "Zeus", species: "dog", breed: "Berger Allemand", age: "4 ans", gender: "M", emoji: "🐕", owner: "Lucas M.", distance: "3,5 km", vaccinated: true, pedigree: true, testedGenes: true, price: "600 €", bio: "Zeus est un reproducteur expérimenté, ligne de travail reconnue. Bilan dysplasie A/A.", temper: ["Protecteur", "Obéissant"], color: "#B0A99C" },
+  { id: 16, name: "Rex", species: "dog", breed: "Labrador", age: "3 ans", gender: "M", emoji: "🐕", owner: "Antoine F.", distance: "1,2 km", vaccinated: true, pedigree: true, testedGenes: true, price: "500 €", bio: "Rex est sociable et en pleine forme, bilan hanches/coudes excellent. Déjà 2 portées de qualité.", temper: ["Sociable", "Énergique"], color: "#D4C9A8", photos: ["/photos/rex-1.jpg"] },
+  { id: 17, name: "Bella", species: "dog", breed: "Cavalier King Charles", age: "2 ans", gender: "F", emoji: "🐕", owner: "Marion S.", distance: "4,7 km", vaccinated: true, pedigree: true, testedGenes: true, price: "550 €", bio: "Bella recherche un mâle avec pedigree pour une première portée. Cœur testé sain, caractère très doux.", temper: ["Douce", "Câline"], color: "#E8C9B8", photos: ["/photos/bella-1.jpg"] },
+  { id: 18, name: "Zeus", species: "dog", breed: "Berger Allemand", age: "4 ans", gender: "M", emoji: "🐕", owner: "Lucas M.", distance: "3,5 km", vaccinated: true, pedigree: true, testedGenes: true, price: "600 €", bio: "Zeus est un reproducteur expérimenté, ligne de travail reconnue. Bilan dysplasie A/A.", temper: ["Protecteur", "Obéissant"], color: "#B0A99C", photos: ["/photos/zeus-1.jpg"] },
 ];
 
 const SPOTS = [
@@ -2065,7 +2065,9 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
           <div key={p.id} onClick={() => setSelected(p)} style={{ margin: "0 16px 12px", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,.05)" }}>
             <div style={{ background: `linear-gradient(90deg, ${p.color}44, #fff)`, padding: "16px" }}>
               <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                <div style={{ fontSize: 52 }}>{p.emoji}</div>
+                <div style={{ width: 64, height: 64, borderRadius: 14, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, background: photoUrl(p.photos?.[0]) ? "transparent" : `${p.color}33` }}>
+                  {photoUrl(p.photos?.[0]) ? <img src={photoUrl(p.photos[0])} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : p.emoji}
+                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{p.name}</span>
@@ -2180,7 +2182,9 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 20px 36px", width: "100%", maxHeight: "85%", overflowY: "auto" }}>
             <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
             <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 52 }}>{selected.emoji}</div>
+              <div style={{ width: 72, height: 72, borderRadius: 16, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, background: photoUrl(selected.photos?.[0]) ? "transparent" : `${selected.color}33` }}>
+                {photoUrl(selected.photos?.[0]) ? <img src={photoUrl(selected.photos[0])} alt={selected.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : selected.emoji}
+              </div>
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selected.name}</div>
                 <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selected.breed} · {selected.age}</div>
