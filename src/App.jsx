@@ -1941,10 +1941,44 @@ function AddProviderForm({ userProfile, refLat, refLng, onClose, onAdded }) {
   );
 }
 
-function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = null }) {
+function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = null, onProfileUpdated = () => {} }) {
   const [selected, setSelected] = useState(null);
   const [requested, setRequested] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sharingLocation, setSharingLocation] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+
+  function shareLocation() {
+    if (!navigator.geolocation) { setLocationError("La géolocalisation n'est pas supportée par ce navigateur."); return; }
+    setSharingLocation(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude, lng = position.coords.longitude;
+        if (userProfile?.id) await updateProfileLocation(userProfile.id, lat, lng);
+        onProfileUpdated({ ...userProfile, location: { lat, lng } });
+        setSharingLocation(false);
+      },
+      (error) => {
+        setLocationError(error.code === error.PERMISSION_DENIED
+          ? "Position refusée — activez-la dans les paramètres de votre navigateur."
+          : "Impossible de récupérer votre position.");
+        setSharingLocation(false);
+      }
+    );
+  }
+
+  async function disableLocation() {
+    setLocationError(null);
+    if (userProfile?.id) await clearProfileLocation(userProfile.id);
+    onProfileUpdated({ ...userProfile, location: null });
+  }
+
+  function toggleLocationSharing() {
+    if (userProfile?.location) disableLocation();
+    else shareLocation();
+  }
+
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
   const [reproDeck, setReproDeck] = useState([]);
   const [loadingRepro, setLoadingRepro] = useState(true);
@@ -1974,6 +2008,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
   const [advGender, setAdvGender] = useState("all"); // all | M | F
   const [advTemper, setAdvTemper] = useState("all");
   const [advDocs, setAdvDocs] = useState([]); // vaccinated | pedigree | testedGenes
+  const [advMaxDistance, setAdvMaxDistance] = useState("all"); // all | 5 | 10 | 25
 
   function ageToRange(ageStr) {
     const n = parseInt(ageStr, 10);
@@ -1982,12 +2017,18 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
     return "senior";
   }
 
+  // Convertit le texte "2,3 km" (ou "—" si inconnu) en nombre exploitable pour trier/filtrer.
+  function parseDistanceKm(p) {
+    const n = parseFloat((p.distance || "").replace(",", ".").replace(/[^\d.]/g, ""));
+    return isNaN(n) ? Infinity : n;
+  }
+
   function toggleDoc(doc) {
     setAdvDocs(d => d.includes(doc) ? d.filter(x => x !== doc) : [...d, doc]);
   }
 
   function resetAdvanced() {
-    setAdvBreed(""); setAdvAgeRange("all"); setAdvGender("all"); setAdvTemper("all"); setAdvDocs([]);
+    setAdvBreed(""); setAdvAgeRange("all"); setAdvGender("all"); setAdvTemper("all"); setAdvDocs([]); setAdvMaxDistance("all");
   }
 
   function openAdvanced() {
@@ -1997,19 +2038,22 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
 
   const allTempers = [...new Set(reproDeck.flatMap(p => p.temper))];
 
-  const filtered = reproDeck.filter(p => {
-    if (!isPremium) return true; // les filtres avancés ne s'appliquent qu'en Premium
-    if (advBreed && !p.breed.toLowerCase().includes(advBreed.toLowerCase())) return false;
-    if (advAgeRange !== "all" && ageToRange(p.age) !== advAgeRange) return false;
-    if (advGender !== "all" && p.gender !== advGender) return false;
-    if (advTemper !== "all" && !p.temper.includes(advTemper)) return false;
-    if (advDocs.includes("vaccinated") && !p.vaccinated) return false;
-    if (advDocs.includes("pedigree") && !p.pedigree) return false;
-    if (advDocs.includes("testedGenes") && !p.testedGenes) return false;
-    return true;
-  });
+  const filtered = reproDeck
+    .filter(p => {
+      if (!isPremium) return true; // les filtres avancés ne s'appliquent qu'en Premium
+      if (advBreed && !p.breed.toLowerCase().includes(advBreed.toLowerCase())) return false;
+      if (advAgeRange !== "all" && ageToRange(p.age) !== advAgeRange) return false;
+      if (advGender !== "all" && p.gender !== advGender) return false;
+      if (advTemper !== "all" && !p.temper.includes(advTemper)) return false;
+      if (advDocs.includes("vaccinated") && !p.vaccinated) return false;
+      if (advDocs.includes("pedigree") && !p.pedigree) return false;
+      if (advDocs.includes("testedGenes") && !p.testedGenes) return false;
+      if (advMaxDistance !== "all" && parseDistanceKm(p) > advMaxDistance) return false;
+      return true;
+    })
+    .sort((a, b) => userProfile?.location ? parseDistanceKm(a) - parseDistanceKm(b) : 0);
 
-  const advancedActive = isPremium && (advBreed || advAgeRange !== "all" || advGender !== "all" || advTemper !== "all" || advDocs.length > 0);
+  const advancedActive = isPremium && (advBreed || advAgeRange !== "all" || advGender !== "all" || advTemper !== "all" || advDocs.length > 0 || advMaxDistance !== "all");
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
@@ -2100,6 +2144,38 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
               <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>🔎 Recherche avancée</div>
               <button onClick={resetAdvanced} style={{ background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Réinitialiser</button>
             </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14, background: userProfile?.location ? "linear-gradient(90deg,#E8F5E9,#F1F8E9)" : "#FAF0EB", border: `1.5px solid ${userProfile?.location ? "#A5D6A7" : "#E5E7EB"}`, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>📍</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: userProfile?.location ? "#1B5E20" : "#B25F46" }}>
+                    {sharingLocation ? "Localisation en cours..." : userProfile?.location ? "Position partagée" : "Partager ma position"}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>
+                    {userProfile?.location ? "Résultats triés selon votre position réelle" : "Pour trouver des reproducteurs vraiment près de chez vous"}
+                  </div>
+                </div>
+              </div>
+              <button onClick={toggleLocationSharing} disabled={sharingLocation}
+                style={{ width: 48, height: 26, borderRadius: 13, background: userProfile?.location ? "#2E7D32" : "#D1D5DB", border: "none", cursor: sharingLocation ? "default" : "pointer", position: "relative", transition: "background .2s", flexShrink: 0 }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: userProfile?.location ? 25 : 3, transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.2)" }} />
+              </button>
+            </div>
+            {locationError && (
+              <div style={{ marginBottom: 16, fontSize: 11, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px" }}>{locationError}</div>
+            )}
+
+            {userProfile?.location && (
+              <>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DISTANCE MAXIMALE</label>
+                <div style={{ display: "flex", gap: 6, margin: "6px 0 16px" }}>
+                  {[["all","Toutes"],[5,"5 km"],[10,"10 km"],[25,"25 km"]].map(([v,l]) => (
+                    <button key={l} onClick={() => setAdvMaxDistance(v)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${advMaxDistance === v ? "#B25F46" : "#E5E7EB"}`, background: advMaxDistance === v ? "#FAF0EB" : "#fff", color: advMaxDistance === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+                  ))}
+                </div>
+              </>
+            )}
 
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>RACE</label>
             <div style={{ margin: "6px 0 16px" }}>
@@ -6170,7 +6246,7 @@ export default function Miloute() {
               : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
                 {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} />}
-                {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} />}
+                {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
