@@ -27,10 +27,9 @@ const CATEGORIES = [
   { includedType: 'park', type: 'park', species: 'both', emoji: '🌳', metricLabel: null },
   { includedType: 'pet_store', type: 'petshop', species: 'both', emoji: '🛍️', metricLabel: 'avis Google' },
   { includedType: 'pet_boarding_service', type: 'boarding', species: 'both', emoji: '🏠', metricLabel: 'avis Google' },
-  // Google n'a pas de catégorie "toiletteur" dédiée — "pet_care" est
-  // l'approximation la plus proche disponible, mais reste plus large que le
-  // seul toilettage (peut inclure d'autres services animaliers).
-  { includedType: 'pet_care', type: 'groomer', species: 'both', emoji: '✂️', metricLabel: 'avis Google' },
+  // Pas de catégorie "pet_care" ici : trop large côté Google (remontait des
+  // jardineries, animaleries générales, etc. classées comme "toiletteurs").
+  // Cette catégorie reste donc réservée aux ajouts par la communauté, plus fiables.
 ];
 
 function cellIdFor(lat, lng) {
