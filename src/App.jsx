@@ -2603,7 +2603,9 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
       <div style={{ flex: 1, overflowY: "auto" }}>
         {/* New post */}
         <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, display: "flex", gap: 10, alignItems: "center", border: "1px solid #E5E7EB" }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{userProfile?.species === "cat" ? "🐱" : "🐕"}</div>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+            {photoUrl(userProfile?.photos?.[0]) ? <img src={photoUrl(userProfile.photos[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (userProfile?.species === "cat" ? "🐱" : "🐕")}
+          </div>
           <div onClick={() => isPremium ? setShowComposer(true) : setShowPremium(true)} style={{ flex: 1, fontSize: 14, color: "#9CA3AF", cursor: "pointer" }}>Partager un moment avec {userProfile?.name || "votre animal"}...</div>
           <button onClick={() => isPremium ? setShowComposer(true) : setShowPremium(true)} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 700, padding: "6px 12px", cursor: "pointer" }}>📸</button>
         </div>
