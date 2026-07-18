@@ -3347,7 +3347,7 @@ function readBoostEnd() {
 // ── À PROPOS / AIDE ──────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   { q: "Comment fonctionne le matching sur Miloute ?", a: "Vous créez le profil de votre animal (race, caractère, ce qu'il recherche), puis vous parcourez les profils d'autres animaux à proximité. Si vous likez un profil et que son propriétaire vous like en retour, c'est un match ! Vous pouvez alors échanger des messages pour organiser une rencontre." },
-  { q: "L'application est-elle gratuite ?", a: "Oui, l'essentiel de Miloute est gratuit : créer un profil, swiper, matcher, discuter. L'abonnement Premium (4,99€/mois ou 39,99€/an) débloque des fonctionnalités de confort comme voir qui vous a liké, un rayon de recherche illimité, un boost de visibilité et des statistiques avancées." },
+  { q: "L'application est-elle gratuite ?", a: "Oui, l'essentiel de Miloute est gratuit : créer un profil, swiper, matcher, discuter. L'abonnement Premium (4,99€/mois ou 39,99€/an) débloque des fonctionnalités de confort comme voir qui vous a liké, un rayon de recherche illimité et des statistiques avancées." },
   { q: "Comment fonctionne le module Reproduction ?", a: "C'est un espace dédié aux éleveurs et particuliers souhaitant faire reproduire leur animal. Chaque profil reproducteur peut afficher pedigree, bilan génétique et documents sanitaires. La mise en relation est réservée aux membres Premium ; le prix de la saillie se négocie ensuite directement entre les deux propriétaires, en dehors de l'application." },
   { q: "Mes données sont-elles partagées avec d'autres utilisateurs ?", a: "Seules les informations que vous choisissez de rendre publiques (profil de votre animal, photos, distance approximative) sont visibles par les autres utilisateurs. Votre position exacte, votre email et vos données de paiement ne sont jamais partagés. Voir notre politique de confidentialité pour plus de détails." },
   { q: "Comment supprimer mon compte ?", a: "Vous pouvez demander la suppression de votre compte et de toutes vos données à tout moment en nous contactant à l'adresse indiquée dans la section Contact. Nous traitons les demandes sous 30 jours maximum, conformément au RGPD." },
@@ -4222,35 +4222,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
         </div>
 
-        {/* Boost de visibilité — Premium */}
-        <div style={{ background: boostActive ? "linear-gradient(135deg,#8B3D28,#B25F46)" : "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
-          {boostActive ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 26 }}>🚀</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Boost actif — visibilité x3</div>
-                <div style={{ color: "rgba(255,255,255,.85)", fontSize: 11 }}>Se termine dans {boostTimeLeft}</div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VISIBILITÉ</div>
-                {!isPremium && <span style={{ fontSize: 11 }}>👑</span>}
-              </div>
-              <button onClick={() => (isPremium || initialData?.boostCredits > 0) ? startBoost() : onPremium()}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#fff", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
-                <span style={{ fontSize: 22 }}>🚀</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Booster mon profil x3</div>
-                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>{isPremium ? "30 minutes de visibilité boostée" : "Réservé à Premium"}</div>
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#B25F46" }}>{isPremium ? "Activer" : "🔒"}</span>
-              </button>
-            </>
-          )}
-        </div>
-
         <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
 
         <button onClick={() => setShowProviderScreen(true)}
@@ -4572,9 +4543,29 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 40px" }}>
-            <div style={{ background: "#F9FAFB", borderRadius: 14, padding: "12px", textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>🚀 {initialData?.boostCredits || 0}</div>
-              <div style={{ fontSize: 11, color: "#9CA3AF" }}>Boosts disponibles</div>
+            <div style={{ background: boostActive ? "linear-gradient(135deg,#8B3D28,#B25F46)" : "#F9FAFB", borderRadius: 14, padding: "14px", marginBottom: 20 }}>
+              {boostActive ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 26 }}>🚀</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Boost actif — visibilité x3</div>
+                    <div style={{ color: "rgba(255,255,255,.85)", fontSize: 11 }}>Se termine dans {boostTimeLeft}</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>🚀 {initialData?.boostCredits || 0}</div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>Boosts disponibles</div>
+                  </div>
+                  {(initialData?.boostCredits > 0 || isPremium) && (
+                    <button onClick={() => startBoost()}
+                      style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 13, padding: "10px 16px", cursor: "pointer", flexShrink: 0 }}>
+                      Activer
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {isPremium && (
@@ -4768,7 +4759,6 @@ const PLANS = [
 
 const FEATURES = [
   ["👁️", "Voir qui a liké votre animal"],
-  ["⚡", "Boost de visibilité x3"],
   ["🌱", "Accès reproduction complète"],
   ["🏆", "Publier dans la communauté"],
   ["📊", "Statistiques avancées"],
@@ -4777,8 +4767,6 @@ const FEATURES = [
 function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile = null }) {
   const [step, setStep] = useState("plans"); // plans | payment | success
   const [plan, setPlan] = useState(initialPlan);
-  const treatIcon = userProfile?.species === "dog" ? "🦴" : "🐟";
-  const featuresWithTreats = [...FEATURES, [treatIcon, "Friandises illimitées"]];
   const [card, setCard] = useState({ number: "", expiry: "", cvc: "", name: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -4862,7 +4850,7 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile
 
             {/* Features */}
             <div style={{ background: "#FAF0EB", borderRadius: 16, padding: "14px 16px", marginBottom: 20 }}>
-              {featuresWithTreats.map(([icon, label]) => (
+              {FEATURES.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{icon}</span>
                   <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>{label}</span>
@@ -5028,7 +5016,7 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile
             </div>
 
             <div style={{ width: "100%", background: "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 24 }}>
-              {featuresWithTreats.map(([icon, label]) => (
+              {FEATURES.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18 }}>{icon}</span>
                   <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>{label}</span>
