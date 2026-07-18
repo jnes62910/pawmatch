@@ -1,0 +1,8 @@
+{
+  "appId": "com.miloute.app",
+  "appName": "Miloute",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https"
+  }
+}
