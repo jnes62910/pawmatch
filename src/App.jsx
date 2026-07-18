@@ -3333,17 +3333,6 @@ const INIT_PET = {
   }
 };
 
-const BOOST_DURATION_MS = 30 * 60 * 1000; // 30 minutes
-
-function readBoostEnd() {
-  try {
-    const raw = localStorage.getItem("miloute_boost_end");
-    if (!raw) return null;
-    const end = Number(raw);
-    return end > Date.now() ? end : null;
-  } catch { return null; }
-}
-
 // ── À PROPOS / AIDE ──────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   { q: "Comment fonctionne le matching sur Miloute ?", a: "Vous créez le profil de votre animal (race, caractère, ce qu'il recherche), puis vous parcourez les profils d'autres animaux à proximité. Si vous likez un profil et que son propriétaire vous like en retour, c'est un match ! Vous pouvez alors échanger des messages pour organiser une rencontre." },
@@ -3576,11 +3565,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [buyingItemId, setBuyingItemId] = useState(null);
   const [shopError, setShopError] = useState(null);
 
-  async function buyItem(itemId, itemType) {
+  async function buyItem(itemId) {
     setBuyingItemId(itemId);
     setShopError(null);
     try {
-      await startShopCheckout(itemId, itemType, initialData);
+      await startShopCheckout(itemId, initialData);
     } catch (err) {
       setShopError(err.message || "L'achat a échoué, réessayez.");
       setBuyingItemId(null);
@@ -3674,46 +3663,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       markTreatsSeen(initialData).then(() => { setUnseenTreatsCount(0); onTreatsSeen(); });
     }
   }
-  const [boostEnd, setBoostEnd] = useState(readBoostEnd);
-  const [boostTimeLeft, setBoostTimeLeft] = useState("");
   const photoRef = useRef(null);
   const videoRef = useRef(null);
   const docRef = useRef(null);
-
-  const boostActive = boostEnd && boostEnd > Date.now();
-
-  async function startBoost() {
-    if (!isPremium) {
-      if (initialData?.boostCredits > 0) {
-        const result = await spendCredit(initialData, "boost");
-        if (!result.success) return;
-        onProfileUpdated({ ...initialData, boostCredits: result.remaining });
-      } else {
-        return; // pas de crédit et pas Premium : le bouton appelant gère déjà l'invite Premium/boutique
-      }
-    }
-    const end = Date.now() + BOOST_DURATION_MS;
-    setBoostEnd(end);
-    try { localStorage.setItem("miloute_boost_end", String(end)); } catch {}
-  }
-
-  useEffect(() => {
-    if (!boostEnd) return;
-    const tick = () => {
-      const remaining = boostEnd - Date.now();
-      if (remaining <= 0) {
-        setBoostEnd(null);
-        try { localStorage.removeItem("miloute_boost_end"); } catch {}
-        return;
-      }
-      const m = Math.floor(remaining / 60000);
-      const s = Math.floor((remaining % 60000) / 1000);
-      setBoostTimeLeft(`${m}:${s < 10 ? "0" : ""}${s}`);
-    };
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [boostEnd]);
 
   function openEdit() { setDraft({ ...pet, repro: { ...pet.repro } }); setEditing(true); setEditTab("profil"); }
   async function save() {
@@ -4241,8 +4193,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <span style={{ fontSize: 20 }}>🛍️</span>
           <span>Boutique Miloute{(() => {
             const totalGifts = Object.values(initialData?.giftInventory || {}).reduce((s, n) => s + n, 0);
-            const total = (initialData?.boostCredits || 0) + totalGifts;
-            return total > 0 ? ` (${total})` : "";
+            return totalGifts > 0 ? ` (${totalGifts})` : "";
           })()}</span>
         </button>
 
@@ -4543,50 +4494,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 40px" }}>
-            <div style={{ background: boostActive ? "linear-gradient(135deg,#8B3D28,#B25F46)" : "#F9FAFB", borderRadius: 14, padding: "14px", marginBottom: 20 }}>
-              {boostActive ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 26 }}>🚀</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Boost actif — visibilité x3</div>
-                    <div style={{ color: "rgba(255,255,255,.85)", fontSize: 11 }}>Se termine dans {boostTimeLeft}</div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ flex: 1, textAlign: "center" }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>🚀 {initialData?.boostCredits || 0}</div>
-                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>Boosts disponibles</div>
-                  </div>
-                  {(initialData?.boostCredits > 0 || isPremium) && (
-                    <button onClick={() => startBoost()}
-                      style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 13, padding: "10px 16px", cursor: "pointer", flexShrink: 0 }}>
-                      Activer
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
             {isPremium && (
               <div style={{ fontSize: 12, color: "#2E7D32", background: "#E8F5E9", borderRadius: 10, padding: "10px 12px", marginBottom: 16, lineHeight: 1.5 }}>
-                👑 Vous êtes Premium : boosts et cadeaux illimités inclus. Ces articles restent utiles si vous voulez en offrir davantage ou en garder en réserve.
+                👑 Vous êtes Premium : cadeaux illimités inclus. Ces articles restent utiles si vous voulez en offrir davantage ou en garder en réserve.
               </div>
             )}
-
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>BOOSTS DE VISIBILITÉ</div>
-            {BOOST_PACKS.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10, border: p.bestValue ? "1.5px solid #B25F46" : "1.5px solid transparent" }}>
-                <span style={{ fontSize: 24 }}>{p.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.label} {p.bestValue && <span style={{ fontSize: 10, color: "#B25F46", fontWeight: 800 }}>MEILLEURE OFFRE</span>}</div>
-                </div>
-                <button onClick={() => buyItem(p.id, "boost")} disabled={buyingItemId === p.id}
-                  style={{ background: buyingItemId === p.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingItemId === p.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === p.id ? "default" : "pointer" }}>
-                  {buyingItemId === p.id ? "..." : p.price}
-                </button>
-              </div>
-            ))}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 4px" }}>NOURRITURE</div>
             <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Chaque article acheté s'ajoute à votre stock personnel — utilisable dans Découvrir ou dans vos conversations.</div>
@@ -4599,7 +4511,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label}</div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
-                  <button onClick={() => buyItem(g.id, "gift")} disabled={buyingItemId === g.id}
+                  <button onClick={() => buyItem(g.id)} disabled={buyingItemId === g.id}
                     style={{ background: buyingItemId === g.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                     {buyingItemId === g.id ? "..." : g.price}
                   </button>
@@ -4617,7 +4529,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label}</div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
-                  <button onClick={() => buyItem(g.id, "gift")} disabled={buyingItemId === g.id}
+                  <button onClick={() => buyItem(g.id)} disabled={buyingItemId === g.id}
                     style={{ background: buyingItemId === g.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                     {buyingItemId === g.id ? "..." : g.price}
                   </button>
@@ -5733,11 +5645,6 @@ async function clearProfileLocation(profileId) {
 }
 
 // ── BOUTIQUE (boosts et friandises à l'unité) ────────────────────────────────
-const BOOST_PACKS = [
-  { id: "boost_1", label: "1 Boost", price: "2,99 €", amount: 1, emoji: "🚀" },
-  { id: "boost_5", label: "5 Boosts", price: "9,99 €", amount: 5, emoji: "🚀", bestValue: true },
-];
-
 // Vrai catalogue de cadeaux — chacun a son propre prix et son propre stock
 // (profiles.gift_inventory), au lieu d'un crédit générique indifférencié.
 // Sert à la fois au bouton friandise du swipe (🦴/🐟 selon l'espèce) et au
@@ -5766,13 +5673,13 @@ const GIFT_CATALOG = [
   { id: "cake", emoji: "🎂", label: "Gâteau d'anniversaire", price: "1,99 €", category: "gift", species: "both" },
 ];
 
-async function startShopCheckout(itemId, itemType, userProfile) {
+async function startShopCheckout(itemId, userProfile) {
   const res = await fetch("/api/shop", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "create-checkout",
-      itemId, itemType, profileId: userProfile.id, userId: userProfile.userId,
+      itemId, profileId: userProfile.id, userId: userProfile.userId,
       successUrl: window.location.origin + "?shop=success&session_id={CHECKOUT_SESSION_ID}",
       cancelUrl: window.location.origin + "?shop=cancel",
     }),
@@ -5787,15 +5694,6 @@ async function verifyShopSession(sessionId) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "verify-session", sessionId }),
-  });
-  return res.json();
-}
-
-async function spendCredit(userProfile, creditType) {
-  const res = await fetch("/api/shop", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "spend-credit", profileId: userProfile.id, userId: userProfile.userId, creditType }),
   });
   return res.json();
 }
@@ -6400,7 +6298,6 @@ export default function Miloute() {
             setShowShopSuccess(true);
             if (userProfileRef.current) {
               const updates = {};
-              if (data.boostCredits !== undefined) updates.boostCredits = data.boostCredits;
               if (data.giftInventory !== undefined) updates.giftInventory = data.giftInventory;
               updateUserProfile({ ...userProfileRef.current, ...updates });
             }
