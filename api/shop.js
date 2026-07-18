@@ -1,9 +1,13 @@
 // api/shop.js
 //
-// Regroupe les actions de la boutique (boosts + vrai catalogue de cadeaux
-// individuels) dans une seule fonction serverless, pour rester sous la
-// limite de 12 fonctions du plan Vercel Hobby. L'action voulue est précisée
-// dans le corps de la requête via `action`.
+// Boutique Miloute — vrai catalogue de cadeaux individuels (nourriture +
+// cadeaux), chacun avec son propre prix et son propre stock
+// (profiles.gift_inventory). Regroupé en une seule fonction serverless pour
+// rester sous la limite de 12 fonctions du plan Vercel Hobby. L'action
+// voulue est précisée dans le corps de la requête via `action`.
+//
+// Le Boost de visibilité a été retiré pour l'instant (pas assez d'utilisateurs
+// pour que ça ait un sens) — à réintroduire plus tard si besoin.
 
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -13,12 +17,6 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-// Boosts — restent un simple crédit générique (pas d'identité visuelle à choisir).
-const BOOST_PACKS = {
-  boost_1: { label: '1 Boost',  amountCents: 299, boosts: 1 },
-  boost_5: { label: '5 Boosts', amountCents: 999, boosts: 5 },
-};
 
 // Vrai catalogue de cadeaux — chacun a son propre prix et sa propre identité,
 // stocké individuellement dans profiles.gift_inventory (ex: {"bone": 3}).
@@ -49,11 +47,10 @@ module.exports = async (req, res) => {
   const { action } = req.body;
 
   try {
-    // ── Créer la session de paiement (boost ou cadeau précis) ─────────────
+    // ── Créer la session de paiement pour un cadeau précis ────────────────
     if (action === 'create-checkout') {
-      const { itemId, itemType, profileId, userId, successUrl, cancelUrl } = req.body;
-      const catalog = itemType === 'boost' ? BOOST_PACKS : GIFT_CATALOG;
-      const item = catalog[itemId];
+      const { itemId, profileId, userId, successUrl, cancelUrl } = req.body;
+      const item = GIFT_CATALOG[itemId];
       if (!item) return res.status(400).json({ error: 'Article inconnu' });
       if (!profileId || !userId) return res.status(400).json({ error: 'profileId and userId are required' });
 
@@ -68,7 +65,7 @@ module.exports = async (req, res) => {
           },
           quantity: 1,
         }],
-        metadata: { itemId, itemType, profileId, userId },
+        metadata: { itemId, profileId, userId },
         success_url: successUrl,
         cancel_url: cancelUrl,
       });
@@ -90,77 +87,34 @@ module.exports = async (req, res) => {
       const { data: existing } = await supabase
         .from('shop_purchases').select('*').eq('stripe_checkout_session_id', sessionId).maybeSingle();
       if (existing) {
-        const { data: profile } = await supabase.from('profiles').select('boost_credits, gift_inventory').eq('id', existing.profile_id).single();
-        return res.status(200).json({ paid: true, alreadyProcessed: true, boostCredits: profile?.boost_credits, giftInventory: profile?.gift_inventory });
+        const { data: profile } = await supabase.from('profiles').select('gift_inventory').eq('id', existing.profile_id).single();
+        return res.status(200).json({ paid: true, alreadyProcessed: true, giftInventory: profile?.gift_inventory });
       }
 
       const meta = session.metadata;
-
-      if (meta.itemType === 'boost') {
-        const pack = BOOST_PACKS[meta.itemId];
-        if (!pack) return res.status(400).json({ error: 'Article inconnu' });
-
-        const { data: profile, error: fetchError } = await supabase
-          .from('profiles').select('boost_credits').eq('id', meta.profileId).single();
-        if (fetchError) throw fetchError;
-
-        const newBoostCredits = (profile.boost_credits || 0) + pack.boosts;
-        const { error: updateError } = await supabase
-          .from('profiles').update({ boost_credits: newBoostCredits }).eq('id', meta.profileId);
-        if (updateError) throw updateError;
-
-        await supabase.from('shop_purchases').insert({
-          user_id: meta.userId, profile_id: meta.profileId, pack_id: meta.itemId,
-          stripe_checkout_session_id: sessionId, amount_cents: pack.amountCents, credited_boosts: pack.boosts,
-        });
-
-        return res.status(200).json({ paid: true, boostCredits: newBoostCredits });
-      } else {
-        const gift = GIFT_CATALOG[meta.itemId];
-        if (!gift) return res.status(400).json({ error: 'Article inconnu' });
-
-        const { data: profile, error: fetchError } = await supabase
-          .from('profiles').select('gift_inventory').eq('id', meta.profileId).single();
-        if (fetchError) throw fetchError;
-
-        const inventory = profile.gift_inventory || {};
-        const newInventory = { ...inventory, [meta.itemId]: (inventory[meta.itemId] || 0) + 1 };
-
-        const { error: updateError } = await supabase
-          .from('profiles').update({ gift_inventory: newInventory }).eq('id', meta.profileId);
-        if (updateError) throw updateError;
-
-        await supabase.from('shop_purchases').insert({
-          user_id: meta.userId, profile_id: meta.profileId, pack_id: meta.itemId,
-          stripe_checkout_session_id: sessionId, amount_cents: gift.amountCents, credited_treats: 1,
-        });
-
-        return res.status(200).json({ paid: true, giftInventory: newInventory });
-      }
-    }
-
-    // ── Consommer un crédit (boost) ou un cadeau précis de l'inventaire ───
-    if (action === 'spend-credit') {
-      const { profileId, userId, creditType } = req.body;
-      if (!profileId || !userId || creditType !== 'boost') {
-        return res.status(400).json({ error: 'profileId, userId and creditType=boost are required' });
-      }
+      const gift = GIFT_CATALOG[meta.itemId];
+      if (!gift) return res.status(400).json({ error: 'Article inconnu' });
 
       const { data: profile, error: fetchError } = await supabase
-        .from('profiles').select('id, user_id, boost_credits').eq('id', profileId).single();
-      if (fetchError || !profile) throw fetchError || new Error('Profil introuvable');
-      if (profile.user_id !== userId) return res.status(403).json({ error: 'Ce profil ne vous appartient pas.' });
+        .from('profiles').select('gift_inventory').eq('id', meta.profileId).single();
+      if (fetchError) throw fetchError;
 
-      const current = profile.boost_credits || 0;
-      if (current <= 0) return res.status(400).json({ error: 'Aucun crédit disponible.' });
+      const inventory = profile.gift_inventory || {};
+      const newInventory = { ...inventory, [meta.itemId]: (inventory[meta.itemId] || 0) + 1 };
 
-      const { data: updated, error: updateError } = await supabase
-        .from('profiles').update({ boost_credits: current - 1 }).eq('id', profileId).select('boost_credits').single();
+      const { error: updateError } = await supabase
+        .from('profiles').update({ gift_inventory: newInventory }).eq('id', meta.profileId);
       if (updateError) throw updateError;
 
-      return res.status(200).json({ success: true, remaining: updated.boost_credits });
+      await supabase.from('shop_purchases').insert({
+        user_id: meta.userId, profile_id: meta.profileId, pack_id: meta.itemId,
+        stripe_checkout_session_id: sessionId, amount_cents: gift.amountCents, credited_treats: 1,
+      });
+
+      return res.status(200).json({ paid: true, giftInventory: newInventory });
     }
 
+    // ── Consommer un cadeau précis de l'inventaire ─────────────────────────
     if (action === 'spend-gift') {
       const { profileId, userId, giftId } = req.body;
       if (!profileId || !userId || !GIFT_CATALOG[giftId]) {
