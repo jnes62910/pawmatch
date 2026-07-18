@@ -1467,7 +1467,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
 
 // ── REPRO SCREEN ──────────────────────────────────────────────────────────────
 // ── PRESTATAIRES ──────────────────────────────────────────────────────────────
-function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNav = () => {} }) {
+function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNav = () => {}, onGoToProviderSetup = () => {} }) {
   const [sharingLocation, setSharingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [providers, setProviders] = useState([]);
@@ -1645,7 +1645,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
           <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter</button>
         </div>
         <div style={{ textAlign: "right", marginBottom: 10 }}>
-          <button onClick={() => onNav("profile")} style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 11, cursor: "pointer", padding: 0 }}>
+          <button onClick={onGoToProviderSetup} style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 11, cursor: "pointer", padding: 0 }}>
             Vous êtes vous-même prestataire ? <span style={{ color: "#B25F46", fontWeight: 700 }}>Configurez vos tarifs →</span>
           </button>
         </div>
@@ -3439,7 +3439,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onNav = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
@@ -3463,6 +3463,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   const [loadingLikes, setLoadingLikes] = useState(true);
   const [showProviderScreen, setShowProviderScreen] = useState(false);
+
+  useEffect(() => {
+    if (autoOpenProviderScreen) {
+      setShowProviderScreen(true);
+      onProviderScreenOpened();
+    }
+  }, [autoOpenProviderScreen]);
   const [providerServices, setProviderServices] = useState([]);
   const [commissionRate, setCommissionRate] = useState(15);
   const [connectOnboarded, setConnectOnboarded] = useState(false);
@@ -5974,6 +5981,7 @@ export default function Miloute() {
   const [premiumInitialPlan, setPremiumInitialPlan] = useState("yearly");
   const [showAbout, setShowAbout] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
+  const [requestOpenProviderScreen, setRequestOpenProviderScreen] = useState(false);
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
@@ -6247,13 +6255,13 @@ export default function Miloute() {
                 )
               : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} />}
-                {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} />}
+                {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToProviderSetup={() => { setRequestOpenProviderScreen(true); setScreen("profile"); }} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onNav={setScreen} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} />}
               </>
           }
         </div>
