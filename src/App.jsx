@@ -553,13 +553,21 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
   function closeMatch() { setMatchedWith(null); setIdx(i => Math.min(i + 1, filtered.length - 1)); }
 
-  function sendTreat() {
+  async function sendTreat() {
     if (!isPremium && treatsToday >= FREE_TREATS_PER_DAY) {
-      onPremium("monthly");
-      return;
+      // Quota gratuit dépassé : on tente d'abord un crédit acheté en boutique.
+      if (userProfile?.treatCredits > 0) {
+        const result = await spendCredit(userProfile, "treat");
+        if (!result.success) { onPremium("monthly"); return; }
+      } else {
+        onPremium("monthly");
+        return;
+      }
     }
     const targetProfile = profile;
-    setTreatsToday(t => { const next = t + 1; saveTreatsToday(next); return next; });
+    if (!isPremium && !(treatsToday >= FREE_TREATS_PER_DAY)) {
+      setTreatsToday(t => { const next = t + 1; saveTreatsToday(next); return next; });
+    }
     setTreatSentId(targetProfile.id);
     setTreatToast(targetProfile.name);
     setTimeout(() => setTreatSentId(null), 900);
@@ -759,10 +767,14 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
             {/* Confirmation d'envoi de friandise */}
             {treatToast && (
-              <div style={{ position: "absolute", bottom: 76, left: "50%", transform: "translateX(-50%)", zIndex: 6,
-                background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", pointerEvents: "none" }}>
-                {profile.species === "cat" ? "🐟" : "🦴"} Friandise envoyée à {treatToast} !
-              </div>
+              <>
+                <style>{`@keyframes treatToastPop { 0% { transform: translateX(-50%) scale(0.5); opacity: 0; } 60% { transform: translateX(-50%) scale(1.1); opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }`}</style>
+                <div style={{ position: "absolute", bottom: 76, left: "50%", zIndex: 6,
+                  background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", pointerEvents: "none",
+                  animation: "treatToastPop .4s cubic-bezier(.34,1.56,.64,1)" }}>
+                  {profile.species === "cat" ? "🐟" : "🦴"} Friandise envoyée à {treatToast} !
+                </div>
+              </>
             )}
 
             {/* Tap zones — pile sur la zone photo */}
@@ -3021,7 +3033,7 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
   );
 }
 
-function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () => {} }) {
+function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () => {}, onProfileUpdated = () => {} }) {
   const [match, setMatch] = useState(null); // { name, emoji, photo, owner }
   const [msgs, setMsgs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3029,6 +3041,9 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
   const [moderating, setModerating] = useState(false);
   const [moderationError, setModerationError] = useState(null);
   const [sendingPhoto, setSendingPhoto] = useState(false);
+  const [showGiftPicker, setShowGiftPicker] = useState(false);
+  const [sendingGift, setSendingGift] = useState(false);
+  const [giftError, setGiftError] = useState(null);
   const [suggestedSpot, setSuggestedSpot] = useState(null);
   const [loadingSpot, setLoadingSpot] = useState(true);
   const [proposing, setProposing] = useState(false);
@@ -3087,6 +3102,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           from: m.sender_user_id === userProfile.userId ? "me" : "them",
           text: m.text,
           imageUrl: m.image_url,
+          giftEmoji: m.gift_emoji,
           time: formatRelativeTime(m.created_at),
         })));
         setLoading(false);
@@ -3106,6 +3122,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           from: payload.new.sender_user_id === userProfile.userId ? "me" : "them",
           text: payload.new.text,
           imageUrl: payload.new.image_url,
+          giftEmoji: payload.new.gift_emoji,
           time: formatRelativeTime(payload.new.created_at),
         }]);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -3168,6 +3185,30 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
     setSendingPhoto(false);
   }
 
+  async function sendGift(emoji) {
+    if (!userProfile?.treatCredits) {
+      setGiftError("Plus de cadeaux disponibles — rendez-vous dans la Boutique Miloute.");
+      return;
+    }
+    setSendingGift(true);
+    setGiftError(null);
+    const result = await spendCredit(userProfile, "treat");
+    if (!result.success) {
+      setGiftError(result.error || "Impossible d'envoyer ce cadeau, réessayez.");
+      setSendingGift(false);
+      return;
+    }
+    onProfileUpdated({ ...userProfile, treatCredits: result.remaining });
+    const { error } = await supabase.from("messages").insert({
+      match_id: matchId,
+      sender_user_id: userProfile.userId,
+      gift_emoji: emoji,
+    });
+    if (error) setGiftError("Le cadeau n'a pas pu être envoyé, réessayez.");
+    else setShowGiftPicker(false);
+    setSendingGift(false);
+  }
+
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid #F3F4F6", background: "#fff" }}>
@@ -3197,11 +3238,20 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           <div style={{ textAlign: "center", color: "#9CA3AF", fontSize: 13, padding: 24 }}>Vous avez matché ! Dites bonjour 👋</div>
         ) : msgs.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
-            <div style={{ maxWidth: "75%", padding: msg.imageUrl ? 4 : "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
-              {msg.imageUrl && <img src={msg.imageUrl} alt="" style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 14, display: "block" }} />}
-              {msg.text && <div style={{ padding: msg.imageUrl ? "8px 8px 2px" : 0 }}>{msg.text}</div>}
-              <div style={{ fontSize: 10, opacity: .6, marginTop: 4, textAlign: msg.from === "me" ? "right" : "left", padding: msg.imageUrl ? "0 8px 4px" : 0 }}>{msg.time}</div>
-            </div>
+            {msg.giftEmoji ? (
+              <div style={{ maxWidth: "75%", padding: "16px 20px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: "linear-gradient(135deg,#FAF0EB,#F3E0D3)", textAlign: "center" }}>
+                <style>{`@keyframes giftPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 80% { transform: scale(0.95); } 100% { transform: scale(1); } }`}</style>
+                <div style={{ fontSize: 44, marginBottom: 4, animation: "giftPop .5s cubic-bezier(.34,1.56,.64,1)" }}>{msg.giftEmoji}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#8B3D28" }}>{msg.from === "me" ? "Vous avez envoyé un cadeau" : "A envoyé un cadeau"}</div>
+                <div style={{ fontSize: 10, opacity: .6, marginTop: 4, color: "#8B3D28" }}>{msg.time}</div>
+              </div>
+            ) : (
+              <div style={{ maxWidth: "75%", padding: msg.imageUrl ? 4 : "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
+                {msg.imageUrl && <img src={msg.imageUrl} alt="" style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 14, display: "block" }} />}
+                {msg.text && <div style={{ padding: msg.imageUrl ? "8px 8px 2px" : 0 }}>{msg.text}</div>}
+                <div style={{ fontSize: 10, opacity: .6, marginTop: 4, textAlign: msg.from === "me" ? "right" : "left", padding: msg.imageUrl ? "0 8px 4px" : 0 }}>{msg.time}</div>
+              </div>
+            )}
           </div>
         ))}
         <div ref={bottomRef} />
@@ -3212,9 +3262,36 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
       <div style={{ display: "flex", gap: 10, padding: "12px 16px", borderTop: "1px solid #F3F4F6", background: "#fff" }}>
         <input ref={photoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={sendPhoto} />
         <button onClick={() => photoInputRef.current?.click()} disabled={sendingPhoto} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: sendingPhoto ? "default" : "pointer", flexShrink: 0, opacity: sendingPhoto ? .5 : 1 }}>📷</button>
+        <button onClick={() => setShowGiftPicker(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>🎁</button>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={moderating ? "Vérification en cours..." : sendingPhoto ? "Envoi de la photo..." : "Écrire un message..."} disabled={moderating || sendingPhoto} style={{ flex: 1, padding: "10px 16px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB" }} />
         <button onClick={send} disabled={moderating || sendingPhoto} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
       </div>
+
+      {/* Sélecteur de cadeau */}
+      {showGiftPicker && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "flex-end" }} onClick={() => setShowGiftPicker(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 32px", width: "100%" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200" }}>🎁 Offrir un cadeau</div>
+              <div style={{ fontSize: 12, color: "#9CA3AF" }}>{userProfile?.treatCredits || 0} disponible{(userProfile?.treatCredits || 0) !== 1 ? "s" : ""}</div>
+            </div>
+            {giftError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{giftError}</div>}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {GIFT_CATALOG.map(g => (
+                <button key={g.emoji} onClick={() => sendGift(g.emoji)} disabled={sendingGift}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "16px 8px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#F9FAFB", cursor: sendingGift ? "default" : "pointer" }}>
+                  <span style={{ fontSize: 32 }}>{g.emoji}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#6B7280" }}>{g.label}</span>
+                </button>
+              ))}
+            </div>
+            {(userProfile?.treatCredits || 0) === 0 && (
+              <div style={{ fontSize: 12, color: "#9CA3AF", textAlign: "center", marginTop: 14 }}>Plus de cadeaux disponibles — rendez-vous dans la Boutique Miloute (Profil) pour en racheter.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3477,6 +3554,20 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [showShopModal, setShowShopModal] = useState(false);
+  const [buyingPackId, setBuyingPackId] = useState(null);
+  const [shopError, setShopError] = useState(null);
+
+  async function buyPack(packId) {
+    setBuyingPackId(packId);
+    setShopError(null);
+    try {
+      await startShopCheckout(packId, initialData);
+    } catch (err) {
+      setShopError(err.message || "L'achat a échoué, réessayez.");
+      setBuyingPackId(null);
+    }
+  }
   const [myBookingsAsClient, setMyBookingsAsClient] = useState([]);
   const [myBookingsAsProvider, setMyBookingsAsProvider] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -3573,7 +3664,16 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   const boostActive = boostEnd && boostEnd > Date.now();
 
-  function startBoost() {
+  async function startBoost() {
+    if (!isPremium) {
+      if (initialData?.boostCredits > 0) {
+        const result = await spendCredit(initialData, "boost");
+        if (!result.success) return;
+        onProfileUpdated({ ...initialData, boostCredits: result.remaining });
+      } else {
+        return; // pas de crédit et pas Premium : le bouton appelant gère déjà l'invite Premium/boutique
+      }
+    }
     const end = Date.now() + BOOST_DURATION_MS;
     setBoostEnd(end);
     try { localStorage.setItem("miloute_boost_end", String(end)); } catch {}
@@ -4120,7 +4220,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VISIBILITÉ</div>
                 {!isPremium && <span style={{ fontSize: 11 }}>👑</span>}
               </div>
-              <button onClick={() => (isPremium ? startBoost() : onPremium())}
+              <button onClick={() => (isPremium || initialData?.boostCredits > 0) ? startBoost() : onPremium()}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#fff", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left" }}>
                 <span style={{ fontSize: 22 }}>🚀</span>
                 <div style={{ flex: 1 }}>
@@ -4145,6 +4245,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
           <span style={{ fontSize: 20 }}>📅</span>
           <span>Mes réservations</span>
+        </button>
+
+        <button onClick={() => setShowShopModal(true)}
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>🛍️</span>
+          <span>Boutique Miloute{(initialData?.boostCredits > 0 || initialData?.treatCredits > 0) ? ` (${(initialData.boostCredits || 0) + (initialData.treatCredits || 0)})` : ""}</span>
         </button>
 
         <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
@@ -4431,6 +4537,65 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 ))}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Boutique Miloute */}
+      {showShopModal && (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 65, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <button onClick={() => setShowShopModal(false)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>🛍️ Boutique Miloute</div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 40px" }}>
+            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <div style={{ flex: 1, background: "#F9FAFB", borderRadius: 14, padding: "12px", textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>🚀 {initialData?.boostCredits || 0}</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF" }}>Boosts disponibles</div>
+              </div>
+              <div style={{ flex: 1, background: "#F9FAFB", borderRadius: 14, padding: "12px", textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>🎁 {initialData?.treatCredits || 0}</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF" }}>Cadeaux disponibles</div>
+              </div>
+            </div>
+
+            {isPremium && (
+              <div style={{ fontSize: 12, color: "#2E7D32", background: "#E8F5E9", borderRadius: 10, padding: "10px 12px", marginBottom: 16, lineHeight: 1.5 }}>
+                👑 Vous êtes Premium : boosts et friandises illimités inclus. Ces packs restent utiles si vous voulez en offrir davantage ou en garder en réserve.
+              </div>
+            )}
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>BOOSTS DE VISIBILITÉ</div>
+            {SHOP_PACKS.filter(p => p.type === "boost").map(p => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10, border: p.bestValue ? "1.5px solid #B25F46" : "1.5px solid transparent" }}>
+                <span style={{ fontSize: 24 }}>{p.emoji}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.label} {p.bestValue && <span style={{ fontSize: 10, color: "#B25F46", fontWeight: 800 }}>MEILLEURE OFFRE</span>}</div>
+                </div>
+                <button onClick={() => buyPack(p.id)} disabled={buyingPackId === p.id}
+                  style={{ background: buyingPackId === p.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingPackId === p.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingPackId === p.id ? "default" : "pointer" }}>
+                  {buyingPackId === p.id ? "..." : p.price}
+                </button>
+              </div>
+            ))}
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CADEAUX</div>
+            {SHOP_PACKS.filter(p => p.type === "treat").map(p => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10, border: p.bestValue ? "1.5px solid #B25F46" : "1.5px solid transparent" }}>
+                <span style={{ fontSize: 24 }}>{p.emoji}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.label} {p.bestValue && <span style={{ fontSize: 10, color: "#B25F46", fontWeight: 800 }}>MEILLEURE OFFRE</span>}</div>
+                </div>
+                <button onClick={() => buyPack(p.id)} disabled={buyingPackId === p.id}
+                  style={{ background: buyingPackId === p.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingPackId === p.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingPackId === p.id ? "default" : "pointer" }}>
+                  {buyingPackId === p.id ? "..." : p.price}
+                </button>
+              </div>
+            ))}
+
+            {shopError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 12px", marginTop: 10 }}>{shopError}</div>}
           </div>
         </div>
       )}
@@ -5369,6 +5534,8 @@ function profileFromRow(row) {
     providerInterest: row.provider_interest || null,
     stripeConnectAccountId: row.stripe_connect_account_id || null,
     stripeConnectOnboarded: row.stripe_connect_onboarded || false,
+    boostCredits: row.boost_credits || 0,
+    treatCredits: row.treat_credits || 0,
   };
 }
 // ── MARKETPLACE PRESTATAIRES ──────────────────────────────────────────────────
@@ -5536,6 +5703,59 @@ async function updateProfileLocation(profileId, lat, lng) {
 async function clearProfileLocation(profileId) {
   const { error } = await supabase.from("profiles").update({ lat: null, lng: null }).eq("id", profileId);
   if (error) console.error("clearProfileLocation error:", error);
+}
+
+// ── BOUTIQUE (boosts et friandises à l'unité) ────────────────────────────────
+const SHOP_PACKS = [
+  { id: "boost_1", label: "1 Boost", price: "2,99 €", type: "boost", amount: 1, emoji: "🚀" },
+  { id: "boost_5", label: "5 Boosts", price: "9,99 €", type: "boost", amount: 5, emoji: "🚀", bestValue: true },
+  { id: "treats_10", label: "10 Cadeaux", price: "1,99 €", type: "treat", amount: 10, emoji: "🎁" },
+  { id: "treats_30", label: "30 Cadeaux", price: "4,99 €", type: "treat", amount: 30, emoji: "🎁", bestValue: true },
+];
+
+// Un même crédit "cadeau" (treat_credits) sert à la fois pour le bouton
+// friandise en swipe (toujours le même, selon l'espèce) et pour la variété de
+// cadeaux qu'on peut offrir dans le chat une fois matché.
+const GIFT_CATALOG = [
+  { emoji: "🦴", label: "Os" },
+  { emoji: "🐟", label: "Poisson" },
+  { emoji: "💐", label: "Bouquet" },
+  { emoji: "👑", label: "Couronne" },
+  { emoji: "🎀", label: "Ruban" },
+];
+
+async function startShopCheckout(packId, userProfile) {
+  const res = await fetch("/api/shop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "create-checkout",
+      packId, profileId: userProfile.id, userId: userProfile.userId,
+      successUrl: window.location.origin + "?shop=success&session_id={CHECKOUT_SESSION_ID}",
+      cancelUrl: window.location.origin + "?shop=cancel",
+    }),
+  });
+  const data = await res.json();
+  if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+  else throw new Error(data.error || "Erreur inconnue");
+}
+
+async function verifyShopSession(sessionId) {
+  const res = await fetch("/api/shop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "verify-session", sessionId }),
+  });
+  return res.json();
+}
+
+async function spendCredit(userProfile, creditType) {
+  const res = await fetch("/api/shop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "spend-credit", profileId: userProfile.id, userId: userProfile.userId, creditType }),
+  });
+  return res.json();
 }
 
 async function setPremiumInDb(profileId, value) {
@@ -5983,6 +6203,7 @@ export default function Miloute() {
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [requestOpenProviderScreen, setRequestOpenProviderScreen] = useState(false);
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
+  const [showShopSuccess, setShowShopSuccess] = useState(false);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
 
@@ -6106,6 +6327,32 @@ export default function Miloute() {
           else setVerifyError("Le paiement de la réservation n'a pas pu être confirmé.");
         })
         .catch(() => setVerifyError("Impossible de vérifier le paiement de la réservation."));
+    }
+
+    if (status === "success" || status === "cancel") {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // Même logique, pour le retour d'un achat boutique (boosts/friandises).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("shop");
+    const sessionId = params.get("session_id");
+
+    if (status === "success" && sessionId) {
+      verifyShopSession(sessionId)
+        .then(data => {
+          if (data.paid) {
+            setShowShopSuccess(true);
+            if (userProfileRef.current) {
+              updateUserProfile({ ...userProfileRef.current, boostCredits: data.boostCredits, treatCredits: data.treatCredits });
+            }
+          } else {
+            setVerifyError("Le paiement n'a pas pu être confirmé.");
+          }
+        })
+        .catch(() => setVerifyError("Impossible de vérifier le paiement."));
     }
 
     if (status === "success" || status === "cancel") {
@@ -6260,7 +6507,7 @@ export default function Miloute() {
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
-                {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} />}
+                {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} onProfileUpdated={updateUserProfile} />}
                 {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} />}
               </>
           }
@@ -6355,6 +6602,21 @@ export default function Miloute() {
               <button onClick={() => { setShowBookingSuccess(false); setScreen("profile"); }}
                 style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
                 Voir mes réservations
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showShopSuccess && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+            onClick={() => setShowShopSuccess(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "32px 24px", width: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Achat confirmé !</div>
+              <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>Vos crédits ont été ajoutés à votre compte, prêts à être utilisés.</div>
+              <button onClick={() => setShowShopSuccess(false)}
+                style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Super !
               </button>
             </div>
           </div>
