@@ -4599,13 +4599,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 4px" }}>NOURRITURE</div>
             <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Chaque article acheté s'ajoute à votre stock personnel — utilisable dans Découvrir ou dans vos conversations.</div>
-            {GIFT_CATALOG.filter(g => g.category === "food").map(g => {
+            {GIFT_CATALOG.filter(g => g.category === "food" && g.species === initialData?.species).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
                 <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
                   <span style={{ fontSize: 24 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label} <span style={{ fontSize: 12 }}>{g.species === "cat" ? "🐱" : g.species === "dog" ? "🐕" : "🐾"}</span></div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label}</div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
                   <button onClick={() => buyItem(g.id, "gift")} disabled={buyingItemId === g.id}
@@ -4617,13 +4617,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             })}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CADEAUX</div>
-            {GIFT_CATALOG.filter(g => g.category === "gift").map(g => {
+            {GIFT_CATALOG.filter(g => g.category === "gift" && (g.species === "both" || g.species === initialData?.species)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
                 <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
                   <span style={{ fontSize: 24 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label} <span style={{ fontSize: 12 }}>{g.species === "cat" ? "🐱" : g.species === "dog" ? "🐕" : "🐾"}</span></div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label}</div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
                   <button onClick={() => buyItem(g.id, "gift")} disabled={buyingItemId === g.id}
