@@ -559,10 +559,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       // Quota gratuit dépassé : on tente d'abord un cadeau déjà acheté en boutique.
       if ((userProfile?.giftInventory?.[giftId] || 0) > 0) {
         const result = await spendGift(userProfile, giftId);
-        if (!result.success) { onPremium("monthly"); return; }
+        if (!result.success) { onGoToShop(); return; }
         onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
       } else {
-        onPremium("monthly");
+        onGoToShop();
         return;
       }
     }
