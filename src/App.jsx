@@ -643,10 +643,16 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           🐾 {breedFilter === "all" ? "Toutes les races" : breedFilter}
           <span style={{ fontSize: 10, color: "#9CA3AF", transform: showBreedMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
         </button>
-        <button onClick={() => setShowRadiusSheet(true)}
-          style={{ padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-          📍 {searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => setShowRadiusSheet(true)}
+            style={{ padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+            📍 {searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}
+          </button>
+          <button onClick={onGoToShop}
+            style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            🎁
+          </button>
+        </div>
 
         {showBreedMenu && (
           <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 16, background: "#fff", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,.15)", border: "1px solid #F3F4F6", zIndex: 30, overflow: "hidden", minWidth: 200, maxHeight: 280 }}>
@@ -744,12 +750,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 <div key={i} style={{ width: i === photo ? 24 : 16, height: 4, borderRadius: 2, background: i === photo ? "#B25F46" : "rgba(255,255,255,.6)", transition: "width .2s" }} />
               ))}
             </div>
-
-            {/* Raccourci boutique */}
-            <button onClick={e => { e.stopPropagation(); onGoToShop(); }}
-              style={{ position: "absolute", top: 12, right: 12, zIndex: 6, width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,.18)" }}>
-              🎁
-            </button>
 
             {/* Boutons d'action — même taille, alignés en bas de la photo */}
             <div style={{ position: "absolute", bottom: 14, left: 0, right: 0, zIndex: 6, display: "flex", justifyContent: "center", alignItems: "center", gap: 22, pointerEvents: "none" }}>
