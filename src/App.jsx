@@ -4581,8 +4581,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </div>
             )}
 
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 4px" }}>NOURRITURE</div>
-            <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Chaque article acheté s'ajoute à votre stock personnel — utilisable dans Découvrir ou dans vos conversations.</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>NOURRITURE</div>
             {GIFT_CATALOG.filter(g => g.category === "food" && g.species === initialData?.species).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
