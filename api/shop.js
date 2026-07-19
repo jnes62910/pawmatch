@@ -30,11 +30,11 @@ const GIFT_CATALOG = {
   bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 199 },
   meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 199 },
   fish:     { label: 'Poisson Miloute',   emoji: '🐟', amountCents: 99 },
-  tunapate: { label: 'Pâtée Câline',      emoji: '🥫', amountCents: 99 },
+  turkeypate: { label: 'Pâté de dinde',      emoji: '🥫', amountCents: 99 },
   sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 199 },
   shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 199 },
   milk:     { label: 'Lait Doux Miloute', emoji: '🥛', amountCents: 99 },
-  mixpate:  { label: 'Pâtée Surprise',    emoji: '🥫', amountCents: 99 },
+  Gourmetdish:  { label: 'Plateau Gourmet',    emoji: '🍱', amountCents: 299 },
   tennisball: { label: 'Balle Rebelle',   emoji: '🥎', amountCents: 199 },
   frisbee:    { label: 'Frisbee Fou',     emoji: '🥏', amountCents: 199 },
   chewrope:   { label: 'Corde à Mâchouiller', emoji: '🪢', amountCents: 199 },
@@ -59,12 +59,12 @@ const GIFT_CATALOG = {
 // achat, mais crédite chaque article du pack individuellement dans l'inventaire.
 const GIFT_BUNDLES = {
   gourmet_dog_pack: { label: 'Pack Gourmand', items: ['bone', 'chicken', 'bacon'], amountCents: 399 },
-  gourmet_cat_pack: { label: 'Pack Gourmand', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
+  gourmet_cat_pack: { label: 'Pack Gourmand', items: ['fish', 'turkeypate', 'milk'], amountCents: 199 },
   player_dog_pack:  { label: 'Pack Joueur', items: ['tennisball', 'frisbee', 'chewrope'], amountCents: 499 },
   player_cat_pack:  { label: 'Pack Joueur', items: ['yarn', 'mouse', 'feather'], amountCents: 499 },
   romance_pack:     { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur'], amountCents: 499 },
-  luxury_dog_pack:  { label: 'Pack Luxe', items: ['crown', 'steak', 'collar'], amountCents: 699 },
-  luxury_cat_pack:  { label: 'Pack Luxe', items: ['crown', 'sushi', 'collar'], amountCents: 599 },
+  luxury_dog_pack:  { label: 'Pack Luxe', items: ['crown', 'steak', 'doghouse'], amountCents: 699 },
+  luxury_cat_pack:  { label: 'Pack Luxe', items: ['crown', 'Gourmetdish', 'cattree'], amountCents: 699 },
 };
 
 // Quêtes ponctuelles — chacune ne peut être récompensée qu'une seule fois par
