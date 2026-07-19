@@ -2,12 +2,15 @@
 //
 // Boutique Miloute — vrai catalogue de cadeaux individuels (nourriture +
 // cadeaux), chacun avec son propre prix et son propre stock
-// (profiles.gift_inventory). Regroupé en une seule fonction serverless pour
-// rester sous la limite de 12 fonctions du plan Vercel Hobby. L'action
-// voulue est précisée dans le corps de la requête via `action`.
+// (profiles.gift_inventory), plus quelques packs groupés à prix réduit.
+// Regroupé en une seule fonction serverless pour rester sous la limite de 12
+// fonctions du plan Vercel Hobby. L'action voulue est précisée dans le corps
+// de la requête via `action`.
 //
 // Le Boost de visibilité a été retiré pour l'instant (pas assez d'utilisateurs
 // pour que ça ait un sens) — à réintroduire plus tard si besoin.
+// Pas de monnaie virtuelle intermédiaire (type "Milouttes") : achat direct en
+// euros, choix assumé pour rester simple et transparent.
 
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -21,24 +24,32 @@ const supabase = createClient(
 // Vrai catalogue de cadeaux — chacun a son propre prix et sa propre identité,
 // stocké individuellement dans profiles.gift_inventory (ex: {"bone": 3}).
 const GIFT_CATALOG = {
-  bone:    { label: 'Os doré',            emoji: '🦴', amountCents: 99 },
-  chicken: { label: 'Poulet rôti',        emoji: '🍗', amountCents: 119 },
-  steak:   { label: 'Steak XXL',          emoji: '🥩', amountCents: 229 },
-  bacon:   { label: 'Bacon',              emoji: '🥓', amountCents: 109 },
-  meatbone: { label: 'Viande sur os',     emoji: '🍖', amountCents: 139 },
-  fish:    { label: 'Poisson premium',    emoji: '🐟', amountCents: 99 },
-  tunapate: { label: 'Pâtée au thon',     emoji: '🥫', amountCents: 89 },
-  sushi:   { label: 'Sushi',              emoji: '🍣', amountCents: 149 },
-  shrimp:  { label: 'Crevette',          emoji: '🍤', amountCents: 179 },
-  milk:    { label: 'Bol de lait',        emoji: '🥛', amountCents: 89 },
-  tennisball: { label: 'Balle de tennis', emoji: '🎾', amountCents: 129 },
-  frisbee:    { label: 'Frisbee',         emoji: '🥏', amountCents: 179 },
-  yarn:       { label: 'Pelote de laine', emoji: '🧶', amountCents: 119 },
-  mouse:      { label: 'Souris en peluche', emoji: '🐭', amountCents: 139 },
-  bouquet: { label: 'Bouquet de fleurs',  emoji: '💐', amountCents: 149 },
-  crown:   { label: 'Couronne royale',    emoji: '👑', amountCents: 249 },
-  ribbon:  { label: 'Ruban élégant',      emoji: '🎀', amountCents: 129 },
-  cake:    { label: "Gâteau d'anniversaire", emoji: '🎂', amountCents: 199 },
+  bone:     { label: 'Os Miloute',        emoji: '🦴', amountCents: 99 },
+  chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 119 },
+  steak:    { label: 'Steak Câlin',       emoji: '🥩', amountCents: 229 },
+  bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 109 },
+  meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 139 },
+  fish:     { label: 'Poisson Miloute',   emoji: '🐟', amountCents: 99 },
+  tunapate: { label: 'Pâtée Câline',      emoji: '🥫', amountCents: 89 },
+  sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 149 },
+  shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 179 },
+  milk:     { label: 'Lait Doux Miloute', emoji: '🥛', amountCents: 89 },
+  tennisball: { label: 'Balle Rebelle',   emoji: '🎾', amountCents: 129 },
+  frisbee:    { label: 'Frisbee Fou',     emoji: '🥏', amountCents: 179 },
+  yarn:       { label: 'Pelote Magique',  emoji: '🧶', amountCents: 119 },
+  mouse:      { label: 'Souris Fuyante',  emoji: '🐭', amountCents: 139 },
+  bouquet: { label: 'Bouquet des Amoureux', emoji: '💐', amountCents: 149 },
+  crown:   { label: 'Couronne Miloute',   emoji: '👑', amountCents: 249 },
+  ribbon:  { label: 'Ruban Chic',         emoji: '🎀', amountCents: 129 },
+  cake:    { label: 'Gâteau Fiesta',      emoji: '🎂', amountCents: 199 },
+};
+
+// Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
+// achat, mais crédite chaque article du pack individuellement dans l'inventaire.
+const GIFT_BUNDLES = {
+  dog_pack:    { label: 'Pack Gourmand Chien', items: ['bone', 'chicken', 'bacon'], amountCents: 249 },
+  cat_pack:    { label: 'Pack Gourmand Chat', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
+  cuddle_pack: { label: 'Pack Câlin', items: ['bouquet', 'ribbon', 'cake'], amountCents: 399 },
 };
 
 module.exports = async (req, res) => {
@@ -49,12 +60,23 @@ module.exports = async (req, res) => {
   const { action } = req.body;
 
   try {
-    // ── Créer la session de paiement pour un cadeau précis ────────────────
+    // ── Créer la session de paiement (article seul ou pack groupé) ────────
     if (action === 'create-checkout') {
-      const { itemId, profileId, userId, successUrl, cancelUrl } = req.body;
-      const item = GIFT_CATALOG[itemId];
-      if (!item) return res.status(400).json({ error: 'Article inconnu' });
+      const { itemId, bundleId, profileId, userId, successUrl, cancelUrl } = req.body;
       if (!profileId || !userId) return res.status(400).json({ error: 'profileId and userId are required' });
+
+      let label, amountCents, metadata;
+      if (bundleId) {
+        const bundle = GIFT_BUNDLES[bundleId];
+        if (!bundle) return res.status(400).json({ error: 'Pack inconnu' });
+        label = bundle.label; amountCents = bundle.amountCents;
+        metadata = { bundleId, profileId, userId };
+      } else {
+        const item = GIFT_CATALOG[itemId];
+        if (!item) return res.status(400).json({ error: 'Article inconnu' });
+        label = item.label; amountCents = item.amountCents;
+        metadata = { itemId, profileId, userId };
+      }
 
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
@@ -62,12 +84,12 @@ module.exports = async (req, res) => {
         line_items: [{
           price_data: {
             currency: 'eur',
-            product_data: { name: `Miloute — ${item.label}` },
-            unit_amount: item.amountCents,
+            product_data: { name: `Miloute — ${label}` },
+            unit_amount: amountCents,
           },
           quantity: 1,
         }],
-        metadata: { itemId, profileId, userId },
+        metadata,
         success_url: successUrl,
         cancel_url: cancelUrl,
       });
@@ -94,6 +116,31 @@ module.exports = async (req, res) => {
       }
 
       const meta = session.metadata;
+
+      if (meta.bundleId) {
+        const bundle = GIFT_BUNDLES[meta.bundleId];
+        if (!bundle) return res.status(400).json({ error: 'Pack inconnu' });
+
+        const { data: profile, error: fetchError } = await supabase
+          .from('profiles').select('gift_inventory').eq('id', meta.profileId).single();
+        if (fetchError) throw fetchError;
+
+        const inventory = profile.gift_inventory || {};
+        const newInventory = { ...inventory };
+        bundle.items.forEach(id => { newInventory[id] = (newInventory[id] || 0) + 1; });
+
+        const { error: updateError } = await supabase
+          .from('profiles').update({ gift_inventory: newInventory }).eq('id', meta.profileId);
+        if (updateError) throw updateError;
+
+        await supabase.from('shop_purchases').insert({
+          user_id: meta.userId, profile_id: meta.profileId, pack_id: meta.bundleId,
+          stripe_checkout_session_id: sessionId, amount_cents: bundle.amountCents, credited_treats: bundle.items.length,
+        });
+
+        return res.status(200).json({ paid: true, giftInventory: newInventory, itemId: meta.bundleId });
+      }
+
       const gift = GIFT_CATALOG[meta.itemId];
       if (!gift) return res.status(400).json({ error: 'Article inconnu' });
 
