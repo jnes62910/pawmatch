@@ -803,8 +803,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             {showSwipeGiftPicker && (
               <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 20, display: "flex", alignItems: "flex-end" }}
                 onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(false); }}>
-                <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 28px", width: "100%" }}>
-                  <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
+                <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 28px", width: "100%", maxHeight: "75vh", overflowY: "auto" }}>
+                  <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px", position: "sticky", top: 0 }} />
                   <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>🎁 Envoyer à {profile.name}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                     {GIFT_CATALOG.filter(g => g.species === "both" || g.species === profile.species).map(g => {
@@ -3330,7 +3330,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
       {/* Sélecteur de cadeau */}
       {showGiftPicker && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "flex-end" }} onClick={() => setShowGiftPicker(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 32px", width: "100%" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 32px", width: "100%", maxHeight: "75vh", overflowY: "auto" }}>
             <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
             <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 16 }}>🎁 Offrir un cadeau</div>
             {giftError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{giftError}</div>}
