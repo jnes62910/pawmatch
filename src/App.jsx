@@ -4580,6 +4580,23 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Un geste qui se remarque — dans Découvrir pour attirer l'attention, ou directement dans vos conversations pour faire plaisir à un match.</div>
             </div>
 
+            {/* Quêtes ponctuelles — gagner gratuitement */}
+            <div style={{ background: "#FAF0EB", borderRadius: 14, padding: "12px 14px", marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#8B3D28", letterSpacing: 1, marginBottom: 10 }}>🎯 QUÊTES — À GAGNER GRATUITEMENT</div>
+              {QUEST_LIST.map(q => {
+                const done = !!initialData?.questsCompleted?.[q.id];
+                return (
+                  <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
+                    <span style={{ fontSize: 18, opacity: done ? 0.5 : 1 }}>{done ? "✅" : q.emoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: done ? "#9CA3AF" : "#2D1200", textDecoration: done ? "line-through" : "none" }}>{q.title}</div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF" }}>{q.rewardLabel(initialData?.species)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Récapitulatif de l'inventaire possédé */}
             {(() => {
               const owned = GIFT_CATALOG.filter(g => (initialData?.giftInventory?.[g.id] || 0) > 0);
@@ -5808,15 +5825,18 @@ const GIFT_CATALOG = [
   // Cadeaux chien
   { id: "tennisball", emoji: "🥎", label: "Balle Rebelle", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
   { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
+  { id: "chewrope", emoji: "🪢", label: "Corde à Mâchouiller", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
   // Cadeaux chat
   { id: "yarn", emoji: "🧶", label: "Pelote Magique", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
   { id: "mouse", emoji: "🐭", label: "Souris Fuyante", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
+  { id: "feather", emoji: "🪶", label: "Plume Chatouille", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
   // Cadeaux universels
   { id: "bouquet", emoji: "💐", label: "Bouquet des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "crown", emoji: "👑", label: "Couronne Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
   { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "cake", emoji: "🎂", label: "Gâteau Fiesta", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "rose", emoji: "🌹", label: "Rose des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "f" },
+  { id: "coeur", emoji: "💕", label: "Cœur Miloute", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   // Confort & Accessoires
   { id: "bed", emoji: "☁️", label: "Panier Douillet", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
   { id: "doghouse", emoji: "🏠", label: "Niche Royale", price: "2,99 €", category: "comfort", species: "dog", gender: "f" },
@@ -5828,9 +5848,26 @@ const GIFT_CATALOG = [
 // Packs groupés — quelques articles réunis à prix légèrement réduit, sans
 // monnaie intermédiaire : un simple achat direct comme le reste de la boutique.
 const GIFT_BUNDLES = [
-  { id: "dog_pack", label: "Pack Gourmand Chien", items: ["bone", "chicken", "bacon"], price: "3,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
-  { id: "cat_pack", label: "Pack Gourmand Chat", items: ["fish", "tunapate", "milk"], price: "1,99 €", originalPrice: "2,97 €", species: "cat", category: "food" },
-  { id: "cuddle_pack", label: "Pack Câlin", items: ["bouquet", "ribbon", "cake"], price: "4,99 €", originalPrice: "5,97 €", species: "both", category: "gift" },
+  // Pack Gourmand — différent selon l'espèce, même nom affiché
+  { id: "gourmet_dog_pack", label: "Pack Gourmand", items: ["bone", "chicken", "bacon"], price: "3,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
+  { id: "gourmet_cat_pack", label: "Pack Gourmand", items: ["fish", "tunapate", "milk"], price: "1,99 €", originalPrice: "2,97 €", species: "cat", category: "food" },
+  // Pack Joueur — différent selon l'espèce, même nom affiché
+  { id: "player_dog_pack", label: "Pack Joueur", items: ["tennisball", "frisbee", "chewrope"], price: "4,99 €", originalPrice: "5,97 €", species: "dog", category: "gift" },
+  { id: "player_cat_pack", label: "Pack Joueur", items: ["yarn", "mouse", "feather"], price: "4,99 €", originalPrice: "5,97 €", species: "cat", category: "gift" },
+  // Pack Romantique — universel, identique pour tous
+  { id: "romance_pack", label: "Pack Romantique", items: ["bouquet", "rose", "coeur"], price: "4,99 €", originalPrice: "5,97 €", species: "both", category: "gift" },
+  // Pack Luxe — universel, identique pour tous
+  { id: "luxury_pack", label: "Pack Luxe", items: ["crown", "coat", "collar"], price: "5,99 €", originalPrice: "6,97 €", species: "both", category: "comfort" },
+];
+
+// Quêtes ponctuelles — chacune ne se débloque qu'une fois, sans série
+// quotidienne ni rappel. La récompense "profil complet" dépend de l'espèce
+// (résolue à l'affichage), les autres sont fixes.
+const QUEST_LIST = [
+  { id: "profile_complete", emoji: "📋", title: "Compléter son profil à 100%", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
+  { id: "first_match", emoji: "💕", title: "Obtenir son premier match", rewardLabel: () => "1 Bouquet des Amoureux 💐" },
+  { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Cœur Miloute 📿" },
+  { id: "first_review", emoji: "⭐", title: "Laisser son premier avis prestataire", rewardLabel: () => "1 Rose des Amoureux 🌹" },
 ];
 
 async function startShopCheckout({ itemId, bundleId }, userProfile) {
