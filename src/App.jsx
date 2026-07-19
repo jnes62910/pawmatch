@@ -591,32 +591,34 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   }
 
   function onTouchStart(e) {
+    if (showSwipeGiftPicker) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setDragging(true);
   }
   function onTouchMove(e) {
-    if (!dragging || touchStartX.current === null) return;
+    if (showSwipeGiftPicker || !dragging || touchStartX.current === null) return;
     e.preventDefault();
     setDragX(e.touches[0].clientX - touchStartX.current);
   }
   function onTouchEnd() {
-    if (!dragging) return;
+    if (showSwipeGiftPicker || !dragging) return;
     if (dragX > THRESHOLD) swipe("like");
     else if (dragX < -THRESHOLD) swipe("nope");
     else { setDragX(0); setDragging(false); }
     touchStartX.current = null;
   }
   function onMouseDown(e) {
+    if (showSwipeGiftPicker) return;
     touchStartX.current = e.clientX;
     setDragging(true);
   }
   function onMouseMove(e) {
-    if (!dragging || touchStartX.current === null) return;
+    if (showSwipeGiftPicker || !dragging || touchStartX.current === null) return;
     setDragX(e.clientX - touchStartX.current);
   }
   function onMouseUp() {
-    if (!dragging) return;
+    if (showSwipeGiftPicker || !dragging) return;
     if (dragX > THRESHOLD) swipe("like");
     else if (dragX < -THRESHOLD) swipe("nope");
     else { setDragX(0); setDragging(false); }
