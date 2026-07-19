@@ -4593,7 +4593,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             ))}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>FRIANDISES</div>
-            {GIFT_CATALOG.filter(g => g.category === "food" && g.species === initialData?.species).map(g => {
+            {GIFT_CATALOG.filter(g => g.category === "food" && (g.species === "both" || g.species === initialData?.species)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
                 <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
@@ -4612,6 +4612,24 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CADEAUX</div>
             {GIFT_CATALOG.filter(g => g.category === "gift" && (g.species === "both" || g.species === initialData?.species)).map(g => {
+              const owned = initialData?.giftInventory?.[g.id] || 0;
+              return (
+                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
+                  <span style={{ fontSize: 24 }}>{g.emoji}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label}</div>
+                    {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
+                  </div>
+                  <button onClick={() => buyItem(g.id)} disabled={buyingItemId === g.id}
+                    style={{ background: buyingItemId === g.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
+                    {buyingItemId === g.id ? "..." : g.price}
+                  </button>
+                </div>
+              );
+            })}
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CONFORT & ACCESSOIRES</div>
+            {GIFT_CATALOG.filter(g => g.category === "comfort" && (g.species === "both" || g.species === initialData?.species)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
                 <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
@@ -5743,35 +5761,43 @@ async function clearProfileLocation(profileId) {
 const GIFT_CATALOG = [
   // Nourriture chien
   { id: "bone", emoji: "🦴", label: "Os Miloute", price: "0,99 €", category: "food", species: "dog", gender: "m" },
-  { id: "chicken", emoji: "🍗", label: "Cuisse Dorée", price: "1,19 €", category: "food", species: "dog", gender: "f" },
-  { id: "steak", emoji: "🥩", label: "Steak Câlin", price: "2,29 €", category: "food", species: "dog", gender: "m" },
-  { id: "bacon", emoji: "🥓", label: "Bacon Croustillant", price: "1,09 €", category: "food", species: "dog", gender: "m" },
-  { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,39 €", category: "food", species: "dog", gender: "f" },
+  { id: "chicken", emoji: "🍗", label: "Cuisse Dorée", price: "1,99 €", category: "food", species: "dog", gender: "f" },
+  { id: "steak", emoji: "🥩", label: "Steak Câlin", price: "2,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "bacon", emoji: "🥓", label: "Bacon Croustillant", price: "1,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
   { id: "fish", emoji: "🐟", label: "Poisson Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "tunapate", emoji: "🥫", label: "Pâtée Câline", price: "0,89 €", category: "food", species: "cat", gender: "f" },
-  { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,49 €", category: "food", species: "cat", gender: "m" },
-  { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,79 €", category: "food", species: "cat", gender: "f" },
-  { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,89 €", category: "food", species: "cat", gender: "m" },
+  { id: "tunapate", emoji: "🥫", label: "Pâtée Câline", price: "0,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  // Nourriture mixte
+  { id: "mixpate", emoji: "🥫", label: "Pâtée Surprise", price: "0,99 €", category: "food", species: "both", gender: "f" },
   // Cadeaux chien
-  { id: "tennisball", emoji: "🎾", label: "Balle Rebelle", price: "1,29 €", category: "gift", species: "dog", gender: "f" },
-  { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,79 €", category: "gift", species: "dog", gender: "m" },
+  { id: "tennisball", emoji: "🥎", label: "Balle Rebelle", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
+  { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
   // Cadeaux chat
-  { id: "yarn", emoji: "🧶", label: "Pelote Magique", price: "1,19 €", category: "gift", species: "cat", gender: "f" },
-  { id: "mouse", emoji: "🐭", label: "Souris Fuyante", price: "1,39 €", category: "gift", species: "cat", gender: "f" },
+  { id: "yarn", emoji: "🧶", label: "Pelote Magique", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
+  { id: "mouse", emoji: "🐭", label: "Souris Fuyante", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
   // Cadeaux universels
-  { id: "bouquet", emoji: "💐", label: "Bouquet des Amoureux", price: "1,49 €", category: "gift", species: "both", gender: "m" },
-  { id: "crown", emoji: "👑", label: "Couronne Miloute", price: "2,49 €", category: "gift", species: "both", gender: "f" },
-  { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,29 €", category: "gift", species: "both", gender: "m" },
+  { id: "bouquet", emoji: "💐", label: "Bouquet des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "m" },
+  { id: "crown", emoji: "👑", label: "Couronne Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
+  { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "cake", emoji: "🎂", label: "Gâteau Fiesta", price: "1,99 €", category: "gift", species: "both", gender: "m" },
+  // Confort & Accessoires
+  { id: "bed", emoji: "☁️", label: "Panier Douillet", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
+  { id: "doghouse", emoji: "🏠", label: "Niche Royale", price: "2,99 €", category: "comfort", species: "dog", gender: "f" },
+  { id: "cattree", emoji: "🌳", label: "Arbre Royal", price: "2,99 €", category: "comfort", species: "cat", gender: "m" },
+  { id: "collar", emoji: "📿", label: "Collier Cœur Miloute", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
+  { id: "coat", emoji: "🧥", label: "Manteau Chic", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
 ];
 
 // Packs groupés — quelques articles réunis à prix légèrement réduit, sans
 // monnaie intermédiaire : un simple achat direct comme le reste de la boutique.
 const GIFT_BUNDLES = [
-  { id: "dog_pack", label: "Pack Gourmand Chien", items: ["bone", "chicken", "bacon"], price: "2,49 €", originalPrice: "3,27 €", species: "dog", category: "food" },
-  { id: "cat_pack", label: "Pack Gourmand Chat", items: ["fish", "tunapate", "milk"], price: "1,99 €", originalPrice: "2,77 €", species: "cat", category: "food" },
-  { id: "cuddle_pack", label: "Pack Câlin", items: ["bouquet", "ribbon", "cake"], price: "3,99 €", originalPrice: "4,77 €", species: "both", category: "gift" },
+  { id: "dog_pack", label: "Pack Gourmand Chien", items: ["bone", "chicken", "bacon"], price: "3,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
+  { id: "cat_pack", label: "Pack Gourmand Chat", items: ["fish", "tunapate", "milk"], price: "1,99 €", originalPrice: "2,97 €", species: "cat", category: "food" },
+  { id: "cuddle_pack", label: "Pack Câlin", items: ["bouquet", "ribbon", "cake"], price: "4,99 €", originalPrice: "5,97 €", species: "both", category: "gift" },
 ];
 
 async function startShopCheckout({ itemId, bundleId }, userProfile) {
@@ -6672,7 +6698,7 @@ export default function Miloute() {
               <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Achat confirmé !</div>
               <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>
-                {shopSuccessCategory === "food" ? "Une friandise" : shopSuccessCategory === "gift" ? "Un cadeau" : "Votre achat"} a été ajouté{shopSuccessCategory === "food" ? "e" : ""} à votre compte. Vous pouvez le/la retrouver dans 🎁 Mon inventaire, dans la Boutique.
+                {shopSuccessCategory === "food" ? "Une friandise" : shopSuccessCategory === "gift" ? "Un cadeau" : shopSuccessCategory === "comfort" ? "Un accessoire" : "Votre achat"} a été ajouté{shopSuccessCategory === "food" ? "e" : ""} à votre compte. Vous pouvez le/la retrouver dans 🎁 Mon inventaire, dans la Boutique.
               </div>
               <button onClick={() => setShowShopSuccess(false)}
                 style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
