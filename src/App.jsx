@@ -5850,8 +5850,7 @@ const GIFT_CATALOG = [
   { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,99 €", category: "food", species: "cat", gender: "m" },
   { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,99 €", category: "food", species: "cat", gender: "f" },
   { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  // Nourriture mixte
-  { id: "Gourmetdish", emoji: "🍱", label: "Plateau Gourmet", price: "2,99 €", category: "food", species: "both", gender: "f" },
+  { id: "Gourmetdish", emoji: "🍱", label: "Plateau Gourmet", price: "2,99 €", category: "food", species: "cat", gender: "f" },
   // Cadeaux chien
   { id: "tennisball", emoji: "🥎", label: "Balle Rebelle", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
   { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
