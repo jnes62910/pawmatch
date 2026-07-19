@@ -5846,8 +5846,8 @@ const GIFT_CATALOG = [
   { id: "bacon", emoji: "🥓", label: "Bacon Croustillant", price: "1,99 €", category: "food", species: "dog", gender: "m" },
   { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
-  { id: "fish", emoji: "🐟", label: "Poisson Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "turkeypate", emoji: "🥫", label: "Pâté de Dinde ", price: "0,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "fish", emoji: "🐟", label: "Poisson du Chef", price: "1,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "turkeypate", emoji: "🥫", label: "Pâté de Dinde ", price: "1,99 €", category: "food", species: "cat", gender: "f" },
   { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,99 €", category: "food", species: "cat", gender: "m" },
   { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,99 €", category: "food", species: "cat", gender: "f" },
   { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
@@ -5881,8 +5881,8 @@ const GIFT_CATALOG = [
 // monnaie intermédiaire : un simple achat direct comme le reste de la boutique.
 const GIFT_BUNDLES = [
   // Pack Gourmand — différent selon l'espèce, même nom affiché
-  { id: "gourmet_dog_pack", label: "Pack Gourmand", items: ["bone", "chicken", "bacon"], price: "3,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
-  { id: "gourmet_cat_pack", label: "Pack Gourmand", items: ["fish", "tunapate", "milk"], price: "1,99 €", originalPrice: "2,97 €", species: "cat", category: "food" },
+  { id: "gourmet_dog_pack", label: "Pack Gourmand", items: ["bone", "chicken", "bacon"], price: "2,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
+  { id: "gourmet_cat_pack", label: "Pack Gourmand", items: ["fish", "turkeypate", "milk"], price: "2,99 €", originalPrice: "4,97 €", species: "cat", category: "food" },
   // Pack Joueur — différent selon l'espèce, même nom affiché
   { id: "player_dog_pack", label: "Pack Joueur", items: ["tennisball", "frisbee", "chewrope"], price: "4,99 €", originalPrice: "5,97 €", species: "dog", category: "gift" },
   { id: "player_cat_pack", label: "Pack Joueur", items: ["yarn", "mouse", "feather"], price: "4,99 €", originalPrice: "5,97 €", species: "cat", category: "gift" },
