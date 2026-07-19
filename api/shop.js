@@ -30,7 +30,7 @@ const GIFT_CATALOG = {
   croc:    { label: 'Croc'Miloute',       emoji: '🍪', amountCents: 99 }, 
   bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 199 },
   meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 199 },
-  fish:     { label: 'Poisson Miloute',   emoji: '🐟', amountCents: 99 },
+  fish:     { label: 'Poisson du Chef',   emoji: '🐟', amountCents: 199 },
   turkeypate: { label: 'Pâté de dinde',      emoji: '🥫', amountCents: 99 },
   sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 199 },
   shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 199 },
@@ -61,7 +61,7 @@ const GIFT_CATALOG = {
 // achat, mais crédite chaque article du pack individuellement dans l'inventaire.
 const GIFT_BUNDLES = {
   gourmet_dog_pack: { label: 'Pack Gourmand', items: ['bone', 'chicken', 'bacon'], amountCents: 399 },
-  gourmet_cat_pack: { label: 'Pack Gourmand', items: ['fish', 'turkeypate', 'milk'], amountCents: 199 },
+  gourmet_cat_pack: { label: 'Pack Gourmand', items: ['fish', 'turkeypate', 'milk'], amountCents: 399 },
   player_dog_pack:  { label: 'Pack Joueur', items: ['tennisball', 'frisbee', 'chewrope'], amountCents: 499 },
   player_cat_pack:  { label: 'Pack Joueur', items: ['yarn', 'mouse', 'feather'], amountCents: 499 },
   romance_dog_pack:     { label: 'Pack Romantique', items: ['bouquet', 'rose', 'Toutoucoeur'], amountCents: 499 },
