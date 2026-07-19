@@ -573,6 +573,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         emoji: giftInfo?.emoji || emoji,
         label: giftInfo?.label || "Cadeau",
         article: giftInfo?.gender === "f" ? "Une" : "Un",
+        pronoun: targetProfile.gender === "F" ? "elle" : "il",
       });
       setTimeout(() => setTreatSentId(null), 900);
       setTimeout(() => setTreatToast(null), 2600);
@@ -787,7 +788,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                     <div style={{ position: "absolute", left: "50%", top: 0, fontSize: 26, animation: "giftItemPop .6s cubic-bezier(.34,1.56,.64,1) .15s both" }}>{treatToast.emoji}</div>
                   </div>
                   <div style={{ background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", animation: "toastTextIn .3s ease-out .3s both" }}>
-                    {treatToast.article} {treatToast.label} a été envoyé{treatToast.article === "Une" ? "e" : ""} à {treatToast.name} !
+                    {treatToast.article} {treatToast.label} pour {treatToast.name} — {treatToast.pronoun} va adorer ! 🎉
                   </div>
                 </div>
               </>
@@ -3285,7 +3286,13 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
               <div style={{ maxWidth: "75%", padding: "16px 20px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: "linear-gradient(135deg,#FAF0EB,#F3E0D3)", textAlign: "center" }}>
                 <style>{`@keyframes giftPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 80% { transform: scale(0.95); } 100% { transform: scale(1); } }`}</style>
                 <div style={{ fontSize: 44, marginBottom: 4, animation: "giftPop .5s cubic-bezier(.34,1.56,.64,1)" }}>{msg.giftEmoji}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#8B3D28" }}>{msg.from === "me" ? "Vous avez envoyé un cadeau" : "A envoyé un cadeau"}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#8B3D28" }}>
+                  {(() => {
+                    const g = GIFT_CATALOG.find(x => x.emoji === msg.giftEmoji);
+                    const label = g?.label || "un cadeau";
+                    return msg.from === "me" ? `Vous avez envoyé ${label}` : `${match?.name || "Il/Elle"} vous a envoyé ${label}`;
+                  })()}
+                </div>
                 <div style={{ fontSize: 10, opacity: .6, marginTop: 4, color: "#8B3D28" }}>{msg.time}</div>
               </div>
             ) : (
@@ -3600,11 +3607,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [buyingItemId, setBuyingItemId] = useState(null);
   const [shopError, setShopError] = useState(null);
 
-  async function buyItem(itemId) {
-    setBuyingItemId(itemId);
+  async function buyItem(itemId, bundleId) {
+    setBuyingItemId(bundleId || itemId);
     setShopError(null);
     try {
-      await startShopCheckout(itemId, initialData);
+      await startShopCheckout({ itemId, bundleId }, initialData);
     } catch (err) {
       setShopError(err.message || "L'achat a échoué, réessayez.");
       setBuyingItemId(null);
@@ -4567,6 +4574,23 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 👑 Vous êtes Premium : cadeaux illimités inclus. Ces articles restent utiles si vous voulez en offrir davantage ou en garder en réserve.
               </div>
             )}
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>PACKS (prix réduit)</div>
+            {GIFT_BUNDLES.filter(b => b.species === "both" || b.species === initialData?.species).map(b => (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: "1.5px solid #E8B89F" }}>
+                <span style={{ fontSize: 24 }}>{b.items.map(id => GIFT_CATALOG.find(g => g.id === id)?.emoji).join("")}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{b.label}</div>
+                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>
+                    <span style={{ textDecoration: "line-through" }}>{b.originalPrice}</span> → <span style={{ color: "#B25F46", fontWeight: 700 }}>{b.price}</span>
+                  </div>
+                </div>
+                <button onClick={() => buyItem(null, b.id)} disabled={buyingItemId === b.id}
+                  style={{ background: buyingItemId === b.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingItemId === b.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
+                  {buyingItemId === b.id ? "..." : b.price}
+                </button>
+              </div>
+            ))}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>FRIANDISES</div>
             {GIFT_CATALOG.filter(g => g.category === "food" && g.species === initialData?.species).map(g => {
@@ -5718,37 +5742,45 @@ async function clearProfileLocation(profileId) {
 // choix complet proposé dans le chat une fois matché.
 const GIFT_CATALOG = [
   // Nourriture chien
-  { id: "bone", emoji: "🦴", label: "Os doré", price: "0,99 €", category: "food", species: "dog", gender: "m" },
-  { id: "chicken", emoji: "🍗", label: "Poulet rôti", price: "1,19 €", category: "food", species: "dog", gender: "m" },
-  { id: "steak", emoji: "🥩", label: "Steak XXL", price: "2,29 €", category: "food", species: "dog", gender: "m" },
-  { id: "bacon", emoji: "🥓", label: "Bacon", price: "1,09 €", category: "food", species: "dog", gender: "m" },
-  { id: "meatbone", emoji: "🍖", label: "Viande sur os", price: "1,39 €", category: "food", species: "dog", gender: "f" },
+  { id: "bone", emoji: "🦴", label: "Os Miloute", price: "0,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "chicken", emoji: "🍗", label: "Cuisse Dorée", price: "1,19 €", category: "food", species: "dog", gender: "f" },
+  { id: "steak", emoji: "🥩", label: "Steak Câlin", price: "2,29 €", category: "food", species: "dog", gender: "m" },
+  { id: "bacon", emoji: "🥓", label: "Bacon Croustillant", price: "1,09 €", category: "food", species: "dog", gender: "m" },
+  { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,39 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
-  { id: "fish", emoji: "🐟", label: "Poisson premium", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "tunapate", emoji: "🥫", label: "Pâtée au thon", price: "0,89 €", category: "food", species: "cat", gender: "f" },
-  { id: "sushi", emoji: "🍣", label: "Sushi", price: "1,49 €", category: "food", species: "cat", gender: "m" },
-  { id: "shrimp", emoji: "🍤", label: "Crevette", price: "1,79 €", category: "food", species: "cat", gender: "f" },
-  { id: "milk", emoji: "🥛", label: "Bol de lait", price: "0,89 €", category: "food", species: "cat", gender: "m" },
+  { id: "fish", emoji: "🐟", label: "Poisson Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "tunapate", emoji: "🥫", label: "Pâtée Câline", price: "0,89 €", category: "food", species: "cat", gender: "f" },
+  { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,49 €", category: "food", species: "cat", gender: "m" },
+  { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,79 €", category: "food", species: "cat", gender: "f" },
+  { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,89 €", category: "food", species: "cat", gender: "m" },
   // Cadeaux chien
-  { id: "tennisball", emoji: "🎾", label: "Balle de tennis", price: "1,29 €", category: "gift", species: "dog", gender: "f" },
-  { id: "frisbee", emoji: "🥏", label: "Frisbee", price: "1,79 €", category: "gift", species: "dog", gender: "m" },
+  { id: "tennisball", emoji: "🎾", label: "Balle Rebelle", price: "1,29 €", category: "gift", species: "dog", gender: "f" },
+  { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,79 €", category: "gift", species: "dog", gender: "m" },
   // Cadeaux chat
-  { id: "yarn", emoji: "🧶", label: "Pelote de laine", price: "1,19 €", category: "gift", species: "cat", gender: "f" },
-  { id: "mouse", emoji: "🐭", label: "Souris en peluche", price: "1,39 €", category: "gift", species: "cat", gender: "f" },
+  { id: "yarn", emoji: "🧶", label: "Pelote Magique", price: "1,19 €", category: "gift", species: "cat", gender: "f" },
+  { id: "mouse", emoji: "🐭", label: "Souris Fuyante", price: "1,39 €", category: "gift", species: "cat", gender: "f" },
   // Cadeaux universels
-  { id: "bouquet", emoji: "💐", label: "Bouquet de fleurs", price: "1,49 €", category: "gift", species: "both", gender: "m" },
-  { id: "crown", emoji: "👑", label: "Couronne royale", price: "2,49 €", category: "gift", species: "both", gender: "f" },
-  { id: "ribbon", emoji: "🎀", label: "Ruban élégant", price: "1,29 €", category: "gift", species: "both", gender: "m" },
-  { id: "cake", emoji: "🎂", label: "Gâteau d'anniversaire", price: "1,99 €", category: "gift", species: "both", gender: "m" },
+  { id: "bouquet", emoji: "💐", label: "Bouquet des Amoureux", price: "1,49 €", category: "gift", species: "both", gender: "m" },
+  { id: "crown", emoji: "👑", label: "Couronne Miloute", price: "2,49 €", category: "gift", species: "both", gender: "f" },
+  { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,29 €", category: "gift", species: "both", gender: "m" },
+  { id: "cake", emoji: "🎂", label: "Gâteau Fiesta", price: "1,99 €", category: "gift", species: "both", gender: "m" },
 ];
 
-async function startShopCheckout(itemId, userProfile) {
+// Packs groupés — quelques articles réunis à prix légèrement réduit, sans
+// monnaie intermédiaire : un simple achat direct comme le reste de la boutique.
+const GIFT_BUNDLES = [
+  { id: "dog_pack", label: "Pack Gourmand Chien", items: ["bone", "chicken", "bacon"], price: "2,49 €", originalPrice: "3,27 €", species: "dog", category: "food" },
+  { id: "cat_pack", label: "Pack Gourmand Chat", items: ["fish", "tunapate", "milk"], price: "1,99 €", originalPrice: "2,77 €", species: "cat", category: "food" },
+  { id: "cuddle_pack", label: "Pack Câlin", items: ["bouquet", "ribbon", "cake"], price: "3,99 €", originalPrice: "4,77 €", species: "both", category: "gift" },
+];
+
+async function startShopCheckout({ itemId, bundleId }, userProfile) {
   const res = await fetch("/api/shop", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "create-checkout",
-      itemId, profileId: userProfile.id, userId: userProfile.userId,
+      itemId, bundleId, profileId: userProfile.id, userId: userProfile.userId,
       successUrl: window.location.origin + "?shop=success&session_id={CHECKOUT_SESSION_ID}",
       cancelUrl: window.location.origin + "?shop=cancel",
     }),
@@ -6366,7 +6398,7 @@ export default function Miloute() {
       verifyShopSession(sessionId)
         .then(data => {
           if (data.paid) {
-            const purchasedItem = GIFT_CATALOG.find(g => g.id === data.itemId);
+            const purchasedItem = GIFT_CATALOG.find(g => g.id === data.itemId) || GIFT_BUNDLES.find(b => b.id === data.itemId);
             setShopSuccessCategory(purchasedItem?.category || null);
             setShowShopSuccess(true);
             if (userProfileRef.current) {
