@@ -4204,7 +4204,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           {isPremium && (
             <button onClick={openTreatsModal}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "12px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
-              <span style={{ fontSize: 22 }}>📦</span>
+              <span style={{ fontSize: 22 }}>💝</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Ma Boîte à Souvenirs</div>
                 <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
@@ -4421,7 +4421,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>📦 Ma Boîte à Souvenirs</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>💝 Ma Boîte à Souvenirs</div>
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
               {treatsReceived.length > 0 && (
