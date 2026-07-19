@@ -27,7 +27,7 @@ const GIFT_CATALOG = {
   bacon:   { label: 'Bacon',              emoji: '🥓', amountCents: 109 },
   fish:    { label: 'Poisson premium',    emoji: '🐟', amountCents: 99 },
   cheese:  { label: 'Fromage',            emoji: '🧀', amountCents: 89 },
-  shrimp:  { label: 'Crevettes',          emoji: '🍤', amountCents: 179 },
+  shrimp:  { label: 'Crevette',          emoji: '🍤', amountCents: 179 },
   milk:    { label: 'Bol de lait',        emoji: '🥛', amountCents: 89 },
   tennisball: { label: 'Balle de tennis', emoji: '🎾', amountCents: 129 },
   frisbee:    { label: 'Frisbee',         emoji: '🥏', amountCents: 179 },
@@ -88,7 +88,7 @@ module.exports = async (req, res) => {
         .from('shop_purchases').select('*').eq('stripe_checkout_session_id', sessionId).maybeSingle();
       if (existing) {
         const { data: profile } = await supabase.from('profiles').select('gift_inventory').eq('id', existing.profile_id).single();
-        return res.status(200).json({ paid: true, alreadyProcessed: true, giftInventory: profile?.gift_inventory });
+        return res.status(200).json({ paid: true, alreadyProcessed: true, giftInventory: profile?.gift_inventory, itemId: existing.pack_id });
       }
 
       const meta = session.metadata;
@@ -111,7 +111,7 @@ module.exports = async (req, res) => {
         stripe_checkout_session_id: sessionId, amount_cents: gift.amountCents, credited_treats: 1,
       });
 
-      return res.status(200).json({ paid: true, giftInventory: newInventory });
+      return res.status(200).json({ paid: true, giftInventory: newInventory, itemId: meta.itemId });
     }
 
     // ── Consommer un cadeau précis de l'inventaire ─────────────────────────
