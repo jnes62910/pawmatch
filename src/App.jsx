@@ -555,32 +555,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
   function closeMatch() { setMatchedWith(null); setIdx(i => Math.min(i + 1, filtered.length - 1)); }
 
-  async function sendTreat() {
-    const giftId = profile?.species === "cat" ? "fish" : "bone";
-    if (!isPremium && treatsToday >= FREE_TREATS_PER_DAY) {
-      // Quota gratuit dépassé : on tente d'abord un cadeau déjà acheté en boutique.
-      if ((userProfile?.giftInventory?.[giftId] || 0) > 0) {
-        const result = await spendGift(userProfile, giftId);
-        if (!result.success) { onGoToShop(); return; }
-        onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
-      } else {
-        onGoToShop();
-        return;
-      }
-    }
-    const targetProfile = profile;
-    if (!isPremium && !(treatsToday >= FREE_TREATS_PER_DAY)) {
-      setTreatsToday(t => { const next = t + 1; saveTreatsToday(next); return next; });
-    }
-    setTreatSentId(targetProfile.id);
-    setTreatToast(targetProfile.name);
-    setTimeout(() => setTreatSentId(null), 900);
-    setTimeout(() => setTreatToast(null), 2200);
-    if (!targetProfile.isDemo) {
-      sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
-    }
-  }
-
   async function sendChosenGift(giftId, emoji) {
     if (!(userProfile?.giftInventory?.[giftId] > 0)) {
       setShowSwipeGiftPicker(false);
@@ -592,10 +566,16 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     if (result.success) {
       onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
       const targetProfile = profile;
+      const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
       setTreatSentId(targetProfile.id);
-      setTreatToast(targetProfile.name);
+      setTreatToast({
+        name: targetProfile.name,
+        emoji: giftInfo?.emoji || emoji,
+        label: giftInfo?.label || "Cadeau",
+        article: giftInfo?.gender === "f" ? "Une" : "Un",
+      });
       setTimeout(() => setTreatSentId(null), 900);
-      setTimeout(() => setTreatToast(null), 2200);
+      setTimeout(() => setTreatToast(null), 2600);
       if (!targetProfile.isDemo) {
         sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
       }
@@ -793,14 +773,22 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               </button>
             </div>
 
-            {/* Confirmation d'envoi de friandise */}
+            {/* Confirmation d'envoi de cadeau — l'article "sort" du cadeau avec un rebond */}
             {treatToast && (
               <>
-                <style>{`@keyframes treatToastPop { 0% { transform: translateX(-50%) scale(0.5); opacity: 0; } 60% { transform: translateX(-50%) scale(1.1); opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }`}</style>
-                <div style={{ position: "absolute", bottom: 76, left: "50%", zIndex: 6,
-                  background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", pointerEvents: "none",
-                  animation: "treatToastPop .4s cubic-bezier(.34,1.56,.64,1)" }}>
-                  🎁 Friandise envoyée à {treatToast} !
+                <style>{`
+                  @keyframes giftBoxShake { 0%,100% { transform: scale(1) rotate(0deg); } 25% { transform: scale(0.94) rotate(-4deg); } 75% { transform: scale(0.94) rotate(4deg); } }
+                  @keyframes giftItemPop { 0% { transform: translate(-50%, 6px) scale(0); opacity: 0; } 55% { transform: translate(-50%, -20px) scale(1.3); opacity: 1; } 100% { transform: translate(-50%, -16px) scale(1); opacity: 1; } }
+                  @keyframes toastTextIn { 0% { opacity: 0; transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
+                `}</style>
+                <div style={{ position: "absolute", bottom: 76, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
+                  <div style={{ position: "relative", width: 46, height: 46, marginBottom: 6 }}>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, animation: "giftBoxShake .5s ease-out" }}>🎁</div>
+                    <div style={{ position: "absolute", left: "50%", top: 0, fontSize: 26, animation: "giftItemPop .6s cubic-bezier(.34,1.56,.64,1) .15s both" }}>{treatToast.emoji}</div>
+                  </div>
+                  <div style={{ background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", animation: "toastTextIn .3s ease-out .3s both" }}>
+                    {treatToast.article} {treatToast.label} a été envoyé{treatToast.article === "Une" ? "e" : ""} à {treatToast.name} !
+                  </div>
                 </div>
               </>
             )}
@@ -5730,26 +5718,26 @@ async function clearProfileLocation(profileId) {
 // choix complet proposé dans le chat une fois matché.
 const GIFT_CATALOG = [
   // Nourriture chien
-  { id: "bone", emoji: "🦴", label: "Os doré", price: "0,99 €", category: "food", species: "dog" },
-  { id: "chicken", emoji: "🍗", label: "Poulet rôti", price: "1,19 €", category: "food", species: "dog" },
-  { id: "steak", emoji: "🥩", label: "Steak XXL", price: "2,29 €", category: "food", species: "dog" },
-  { id: "bacon", emoji: "🥓", label: "Bacon", price: "1,09 €", category: "food", species: "dog" },
+  { id: "bone", emoji: "🦴", label: "Os doré", price: "0,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "chicken", emoji: "🍗", label: "Poulet rôti", price: "1,19 €", category: "food", species: "dog", gender: "m" },
+  { id: "steak", emoji: "🥩", label: "Steak XXL", price: "2,29 €", category: "food", species: "dog", gender: "m" },
+  { id: "bacon", emoji: "🥓", label: "Bacon", price: "1,09 €", category: "food", species: "dog", gender: "m" },
   // Nourriture chat
-  { id: "fish", emoji: "🐟", label: "Poisson premium", price: "0,99 €", category: "food", species: "cat" },
-  { id: "cheese", emoji: "🧀", label: "Fromage", price: "0,89 €", category: "food", species: "cat" },
-  { id: "shrimp", emoji: "🍤", label: "Crevettes", price: "1,79 €", category: "food", species: "cat" },
-  { id: "milk", emoji: "🥛", label: "Bol de lait", price: "0,89 €", category: "food", species: "cat" },
+  { id: "fish", emoji: "🐟", label: "Poisson premium", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "cheese", emoji: "🧀", label: "Fromage", price: "0,89 €", category: "food", species: "cat", gender: "m" },
+  { id: "shrimp", emoji: "🍤", label: "Crevette", price: "1,79 €", category: "food", species: "cat", gender: "f" },
+  { id: "milk", emoji: "🥛", label: "Bol de lait", price: "0,89 €", category: "food", species: "cat", gender: "m" },
   // Cadeaux chien
-  { id: "tennisball", emoji: "🎾", label: "Balle de tennis", price: "1,29 €", category: "gift", species: "dog" },
-  { id: "frisbee", emoji: "🥏", label: "Frisbee", price: "1,79 €", category: "gift", species: "dog" },
+  { id: "tennisball", emoji: "🎾", label: "Balle de tennis", price: "1,29 €", category: "gift", species: "dog", gender: "f" },
+  { id: "frisbee", emoji: "🥏", label: "Frisbee", price: "1,79 €", category: "gift", species: "dog", gender: "m" },
   // Cadeaux chat
-  { id: "yarn", emoji: "🧶", label: "Pelote de laine", price: "1,19 €", category: "gift", species: "cat" },
-  { id: "mouse", emoji: "🐭", label: "Souris en peluche", price: "1,39 €", category: "gift", species: "cat" },
+  { id: "yarn", emoji: "🧶", label: "Pelote de laine", price: "1,19 €", category: "gift", species: "cat", gender: "f" },
+  { id: "mouse", emoji: "🐭", label: "Souris en peluche", price: "1,39 €", category: "gift", species: "cat", gender: "f" },
   // Cadeaux universels
-  { id: "bouquet", emoji: "💐", label: "Bouquet de fleurs", price: "1,49 €", category: "gift", species: "both" },
-  { id: "crown", emoji: "👑", label: "Couronne royale", price: "2,49 €", category: "gift", species: "both" },
-  { id: "ribbon", emoji: "🎀", label: "Ruban élégant", price: "1,29 €", category: "gift", species: "both" },
-  { id: "cake", emoji: "🎂", label: "Gâteau d'anniversaire", price: "1,99 €", category: "gift", species: "both" },
+  { id: "bouquet", emoji: "💐", label: "Bouquet de fleurs", price: "1,49 €", category: "gift", species: "both", gender: "m" },
+  { id: "crown", emoji: "👑", label: "Couronne royale", price: "2,49 €", category: "gift", species: "both", gender: "f" },
+  { id: "ribbon", emoji: "🎀", label: "Ruban élégant", price: "1,29 €", category: "gift", species: "both", gender: "m" },
+  { id: "cake", emoji: "🎂", label: "Gâteau d'anniversaire", price: "1,99 €", category: "gift", species: "both", gender: "m" },
 ];
 
 async function startShopCheckout(itemId, userProfile) {
@@ -6235,6 +6223,7 @@ export default function Miloute() {
   function goToShop() { setRequestOpenShop(true); setScreen("profile"); }
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
   const [showShopSuccess, setShowShopSuccess] = useState(false);
+  const [shopSuccessCategory, setShopSuccessCategory] = useState(null);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
 
@@ -6375,6 +6364,8 @@ export default function Miloute() {
       verifyShopSession(sessionId)
         .then(data => {
           if (data.paid) {
+            const purchasedItem = GIFT_CATALOG.find(g => g.id === data.itemId);
+            setShopSuccessCategory(purchasedItem?.category || null);
             setShowShopSuccess(true);
             if (userProfileRef.current) {
               const updates = {};
@@ -6646,7 +6637,9 @@ export default function Miloute() {
             <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "32px 24px", width: "100%", textAlign: "center" }}>
               <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Achat confirmé !</div>
-              <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>Vos crédits ont été ajoutés à votre compte, prêts à être utilisés.</div>
+              <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>
+                {shopSuccessCategory === "food" ? "Une friandise" : shopSuccessCategory === "gift" ? "Un cadeau" : "Votre achat"} a été ajouté{shopSuccessCategory === "food" ? "e" : ""} à votre compte. Vous pouvez le/la retrouver dans 🎁 Mon inventaire, dans la Boutique.
+              </div>
               <button onClick={() => setShowShopSuccess(false)}
                 style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
                 Super !
