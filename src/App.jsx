@@ -5722,9 +5722,11 @@ const GIFT_CATALOG = [
   { id: "chicken", emoji: "🍗", label: "Poulet rôti", price: "1,19 €", category: "food", species: "dog", gender: "m" },
   { id: "steak", emoji: "🥩", label: "Steak XXL", price: "2,29 €", category: "food", species: "dog", gender: "m" },
   { id: "bacon", emoji: "🥓", label: "Bacon", price: "1,09 €", category: "food", species: "dog", gender: "m" },
+  { id: "meatbone", emoji: "🍖", label: "Viande sur os", price: "1,39 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
   { id: "fish", emoji: "🐟", label: "Poisson premium", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "cheese", emoji: "🧀", label: "Fromage", price: "0,89 €", category: "food", species: "cat", gender: "m" },
+  { id: "tunapate", emoji: "🥫", label: "Pâtée au thon", price: "0,89 €", category: "food", species: "cat", gender: "f" },
+  { id: "sushi", emoji: "🍣", label: "Sushi", price: "1,49 €", category: "food", species: "cat", gender: "m" },
   { id: "shrimp", emoji: "🍤", label: "Crevette", price: "1,79 €", category: "food", species: "cat", gender: "f" },
   { id: "milk", emoji: "🥛", label: "Bol de lait", price: "0,89 €", category: "food", species: "cat", gender: "m" },
   // Cadeaux chien
