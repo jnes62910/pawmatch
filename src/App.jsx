@@ -5888,7 +5888,7 @@ const GIFT_BUNDLES = [
   { id: "romance_pack", label: "Pack Romantique", items: ["bouquet", "rose", "coeur"], price: "4,99 €", originalPrice: "5,97 €", species: "both", category: "gift" },
   // Pack Luxe — universel, identique pour tous
   { id: "luxury_dog_pack", label: "Pack Luxe", items: ["crown", "steak", "doghouse"], price: "6,99 €", originalPrice: "8,97 €", species: "dog", category: "comfort" },
-  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "Gourmetplate", "cattree"], price: "6,99 €", originalPrice: "8,97 €", species: "cat", category: "comfort" },
+  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "Gourmetdish", "cattree"], price: "6,99 €", originalPrice: "8,97 €", species: "cat", category: "comfort" },
 ];
 
 // Quêtes ponctuelles — chacune ne se débloque qu'une fois, sans série
