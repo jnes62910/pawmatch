@@ -24,7 +24,7 @@ const supabase = createClient(
 // Vrai catalogue de cadeaux — chacun a son propre prix et sa propre identité,
 // stocké individuellement dans profiles.gift_inventory (ex: {"bone": 3}).
 const GIFT_CATALOG = {
-  bone:     { label: 'Os Miloute',        emoji: '🦴', amountCents: 99 },
+  bone:     { label: 'Os du Chef',        emoji: '🦴', amountCents: 99 },
   chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 199 },
   steak:    { label: 'Steak Royal',       emoji: '🥩', amountCents: 299 },
   croc:    { label: 'Croc'Miloute',       emoji: '🍪', amountCents: 99 }, 
@@ -53,7 +53,7 @@ const GIFT_CATALOG = {
   bed:      { label: 'Panier Douillet',   emoji: '☁️', amountCents: 199 },
   doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299 },
   cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299 },
-  collar:   { label: 'Collier Cœur Miloute', emoji: '📿', amountCents: 199 },
+  collar:   { label: 'Collier Elégance', emoji: '📿', amountCents: 199 },
 };
 
 // Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
@@ -74,7 +74,7 @@ const GIFT_BUNDLES = {
 const QUESTS = {
   profile_complete: { rewardLabel: '1 friandise' },
   first_match:      { rewardItemId: 'bouquet', rewardLabel: '1 Bouquet des Amoureux' },
-  first_video:      { rewardItemId: 'collar', rewardLabel: '1 Collier Cœur Miloute' },
+  first_video:      { rewardItemId: 'collar', rewardLabel: '1 Collier Elégance' },
   first_review:     { rewardItemId: 'rose', rewardLabel: '1 Rose des Amoureux' },
 };
 
