@@ -782,19 +782,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 22, color: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
                 ✕
               </button>
-              <button onClick={e => { e.stopPropagation(); sendTreat(); }}
+              <button onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(true); }}
                 style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)", position: "relative",
                   transform: treatSentId === profile.id ? "scale(1.2)" : "scale(1)", transition: "transform .25s" }}>
                 🎁
-                {!isPremium && (
-                  <span style={{ position: "absolute", bottom: -3, right: -3, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {Math.max(0, FREE_TREATS_PER_DAY - treatsToday)}
-                  </span>
-                )}
-                <span onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(true); }}
-                  style={{ position: "absolute", top: -6, left: -6, width: 20, height: 20, borderRadius: "50%", background: "#fff", border: "1.5px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#8B3D28", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }}>
-                  ▾
-                </span>
               </button>
               <button onClick={e => { e.stopPropagation(); swipe("like"); }}
                 style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
