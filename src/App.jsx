@@ -583,7 +583,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       setTimeout(() => setTreatSentId(null), 900);
       setTimeout(() => setTreatToast(null), 2600);
       if (!targetProfile.isDemo) {
-        sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
+        sendTreatToProfile(userProfile, targetProfile, giftId).catch(err => console.error("sendTreat error:", err));
       }
     }
     setSendingSwipeGift(false);
@@ -3390,7 +3390,7 @@ const INIT_PET = {
 // ── À PROPOS / AIDE ──────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   { q: "Comment fonctionne le matching sur Miloute ?", a: "Vous créez le profil de votre animal (race, caractère, ce qu'il recherche), puis vous parcourez les profils d'autres animaux à proximité. Si vous likez un profil et que son propriétaire vous like en retour, c'est un match ! Vous pouvez alors échanger des messages pour organiser une rencontre." },
-  { q: "L'application est-elle gratuite ?", a: "Oui, l'essentiel de Miloute est gratuit : créer un profil, swiper, matcher, discuter. L'abonnement Premium (4,99€/mois ou 39,99€/an) débloque des fonctionnalités de confort comme voir qui vous a liké, un rayon de recherche illimité et des statistiques avancées." },
+  { q: "L'application est-elle gratuite ?", a: "Oui, l'essentiel de Miloute est gratuit : créer un profil, swiper, matcher, discuter. L'abonnement Premium (4,99€/mois ou 39,99€/an) débloque des fonctionnalités de confort comme voir qui craque pour votre animal, un rayon de recherche illimité et des statistiques avancées." },
   { q: "Comment fonctionne le module Reproduction ?", a: "C'est un espace dédié aux éleveurs et particuliers souhaitant faire reproduire leur animal. Chaque profil reproducteur peut afficher pedigree, bilan génétique et documents sanitaires. La mise en relation est réservée aux membres Premium ; le prix de la saillie se négocie ensuite directement entre les deux propriétaires, en dehors de l'application." },
   { q: "Mes données sont-elles partagées avec d'autres utilisateurs ?", a: "Seules les informations que vous choisissez de rendre publiques (profil de votre animal, photos, distance approximative) sont visibles par les autres utilisateurs. Votre position exacte, votre email et vos données de paiement ne sont jamais partagés. Voir notre politique de confidentialité pour plus de détails." },
   { q: "Comment supprimer mon compte ?", a: "Vous pouvez demander la suppression de votre compte et de toutes vos données à tout moment en nous contactant à l'adresse indiquée dans la section Contact. Nous traitons les demandes sous 30 jours maximum, conformément au RGPD." },
@@ -3712,6 +3712,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     return () => { active = false; };
   }, [initialData?.id, initialData?.userId, initialData?.species]);
   const [treatsReceived, setTreatsReceived] = useState([]);
+  const [treatsFilterCategory, setTreatsFilterCategory] = useState("all");
   const [unseenTreatsCount, setUnseenTreatsCount] = useState(0);
   const [showTreatsModal, setShowTreatsModal] = useState(false);
 
@@ -4288,7 +4289,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>👁️ Qui a liké {pet.name}</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>👁️ Qui craque pour {pet.name}</div>
                 <button onClick={() => setShowLikesModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
             </div>
@@ -4417,29 +4418,46 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                 <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>🎁 Friandises/cadeaux reçus</div>
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
+              {treatsReceived.length > 0 && (
+                <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>{treatsReceived.length} cadeau{treatsReceived.length > 1 ? "x" : ""} reçu{treatsReceived.length > 1 ? "s" : ""} depuis ton inscription</div>
+              )}
+              <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+                {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"]].map(([v, l]) => (
+                  <button key={v} onClick={() => setTreatsFilterCategory(v)}
+                    style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
-              {treatsReceived.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>🎁</div>
-                  <div style={{ fontSize: 14 }}>Pas encore de friandise reçue</div>
-                </div>
-              ) : treatsReceived.map(t => (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-                    {t.photo ? <img src={t.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : t.emoji}
+              {(() => {
+                const filtered = treatsFilterCategory === "all" ? treatsReceived : treatsReceived.filter(t => t.giftCategory === treatsFilterCategory);
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>🎁</div>
+                      <div style={{ fontSize: 14 }}>{treatsReceived.length === 0 ? "Pas encore de friandise reçue" : "Rien dans cette catégorie pour l'instant"}</div>
+                    </div>
+                  );
+                }
+                return filtered.map(t => (
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB" }}>
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                      {t.photo ? <img src={t.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : t.emoji}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{t.name} vous a envoyé {t.giftEmoji} {t.giftLabel}</div>
+                      <div style={{ fontSize: 12, color: "#9CA3AF" }}>{t.breed} · {t.time}</div>
+                    </div>
+                    {!t.seen && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#B25F46", flexShrink: 0 }} />}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{t.name} vous a envoyé une friandise {t.emoji}</div>
-                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{t.breed} · {t.time}</div>
-                  </div>
-                  {!t.seen && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#B25F46", flexShrink: 0 }} />}
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
         </div>
@@ -4829,7 +4847,6 @@ const PLANS = [
 ];
 
 const FEATURES = [
-  ["👁️", "Voir qui a liké votre animal"],
   ["🌱", "Accès reproduction complète"],
   ["🏆", "Publier dans la communauté"],
   ["📊", "Statistiques avancées"],
@@ -4921,6 +4938,11 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile
 
             {/* Features */}
             <div style={{ background: "#FAF0EB", borderRadius: 16, padding: "14px 16px", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
+                <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>👁️</span>
+                <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Voir qui craque pour {userProfile?.name || "votre animal"}</span>
+                <span style={{ marginLeft: "auto", fontSize: 14, color: "#2E7D32" }}>✓</span>
+              </div>
               {FEATURES.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{icon}</span>
@@ -5087,6 +5109,11 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile
             </div>
 
             <div style={{ width: "100%", background: "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
+                <span style={{ fontSize: 18 }}>👁️</span>
+                <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Voir qui craque pour {userProfile?.name || "votre animal"}</span>
+                <span style={{ marginLeft: "auto", color: "#2E7D32", fontWeight: 700 }}>✓</span>
+              </div>
               {FEATURES.map(([icon, label]) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 0" }}>
                   <span style={{ fontSize: 18 }}>{icon}</span>
@@ -6053,12 +6080,13 @@ async function toggleCommunityLike(userProfile, postId, currentlyLiked) {
   }
 }
 
-async function sendTreatToProfile(userProfile, targetProfile) {
+async function sendTreatToProfile(userProfile, targetProfile, giftId) {
   const { error } = await supabase.from("treats").insert({
     sender_user_id: userProfile.userId,
     sender_profile_id: userProfile.id,
     target_user_id: targetProfile.userId,
     target_profile_id: targetProfile.id,
+    gift_id: giftId || null,
   });
   if (error) throw new Error(error.message);
 }
@@ -6161,6 +6189,7 @@ async function fetchReceivedTreats(userProfile) {
 
   return treatRows.map(t => {
     const sender = byId[t.sender_profile_id];
+    const giftInfo = GIFT_CATALOG.find(g => g.id === t.gift_id);
     return {
       id: t.id,
       seen: t.seen,
@@ -6170,6 +6199,10 @@ async function fetchReceivedTreats(userProfile) {
       photo: sender?.photos?.[0]?.url || null,
       emoji: sender?.species === "cat" ? "🐱" : "🐕",
       senderProfileId: t.sender_profile_id,
+      giftId: t.gift_id || null,
+      giftLabel: giftInfo?.label || "Cadeau",
+      giftEmoji: giftInfo?.emoji || "🎁",
+      giftCategory: giftInfo?.category || null,
     };
   });
 }
