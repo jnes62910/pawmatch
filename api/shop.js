@@ -1,7 +1,7 @@
 // api/shop.js
 //
 // Boutique Miloute — vrai catalogue de cadeaux individuels (nourriture +
-// cadeaux), chacun avec son propre prix et son propre stock
+// cadeaux + confort), chacun avec son propre prix et son propre stock
 // (profiles.gift_inventory), plus quelques packs groupés à prix réduit.
 // Regroupé en une seule fonction serverless pour rester sous la limite de 12
 // fonctions du plan Vercel Hobby. L'action voulue est précisée dans le corps
@@ -25,31 +25,37 @@ const supabase = createClient(
 // stocké individuellement dans profiles.gift_inventory (ex: {"bone": 3}).
 const GIFT_CATALOG = {
   bone:     { label: 'Os Miloute',        emoji: '🦴', amountCents: 99 },
-  chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 119 },
-  steak:    { label: 'Steak Câlin',       emoji: '🥩', amountCents: 229 },
-  bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 109 },
-  meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 139 },
+  chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 199 },
+  steak:    { label: 'Steak Câlin',       emoji: '🥩', amountCents: 299 },
+  bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 199 },
+  meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 199 },
   fish:     { label: 'Poisson Miloute',   emoji: '🐟', amountCents: 99 },
-  tunapate: { label: 'Pâtée Câline',      emoji: '🥫', amountCents: 89 },
-  sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 149 },
-  shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 179 },
-  milk:     { label: 'Lait Doux Miloute', emoji: '🥛', amountCents: 89 },
-  tennisball: { label: 'Balle Rebelle',   emoji: '🎾', amountCents: 129 },
-  frisbee:    { label: 'Frisbee Fou',     emoji: '🥏', amountCents: 179 },
-  yarn:       { label: 'Pelote Magique',  emoji: '🧶', amountCents: 119 },
-  mouse:      { label: 'Souris Fuyante',  emoji: '🐭', amountCents: 139 },
-  bouquet: { label: 'Bouquet des Amoureux', emoji: '💐', amountCents: 149 },
-  crown:   { label: 'Couronne Miloute',   emoji: '👑', amountCents: 249 },
-  ribbon:  { label: 'Ruban Chic',         emoji: '🎀', amountCents: 129 },
+  tunapate: { label: 'Pâtée Câline',      emoji: '🥫', amountCents: 99 },
+  sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 199 },
+  shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 199 },
+  milk:     { label: 'Lait Doux Miloute', emoji: '🥛', amountCents: 99 },
+  mixpate:  { label: 'Pâtée Surprise',    emoji: '🥫', amountCents: 99 },
+  tennisball: { label: 'Balle Rebelle',   emoji: '🥎', amountCents: 199 },
+  frisbee:    { label: 'Frisbee Fou',     emoji: '🥏', amountCents: 199 },
+  yarn:       { label: 'Pelote Magique',  emoji: '🧶', amountCents: 199 },
+  mouse:      { label: 'Souris Fuyante',  emoji: '🐭', amountCents: 199 },
+  bouquet: { label: 'Bouquet des Amoureux', emoji: '💐', amountCents: 199 },
+  crown:   { label: 'Couronne Miloute',   emoji: '👑', amountCents: 299 },
+  ribbon:  { label: 'Ruban Chic',         emoji: '🎀', amountCents: 199 },
   cake:    { label: 'Gâteau Fiesta',      emoji: '🎂', amountCents: 199 },
+  bed:      { label: 'Panier Douillet',   emoji: '☁️', amountCents: 199 },
+  doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299 },
+  cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299 },
+  collar:   { label: 'Collier Cœur Miloute', emoji: '📿', amountCents: 199 },
+  coat:     { label: 'Manteau Chic',      emoji: '🧥', amountCents: 199 },
 };
 
 // Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
 // achat, mais crédite chaque article du pack individuellement dans l'inventaire.
 const GIFT_BUNDLES = {
-  dog_pack:    { label: 'Pack Gourmand Chien', items: ['bone', 'chicken', 'bacon'], amountCents: 249 },
+  dog_pack:    { label: 'Pack Gourmand Chien', items: ['bone', 'chicken', 'bacon'], amountCents: 399 },
   cat_pack:    { label: 'Pack Gourmand Chat', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
-  cuddle_pack: { label: 'Pack Câlin', items: ['bouquet', 'ribbon', 'cake'], amountCents: 399 },
+  cuddle_pack: { label: 'Pack Câlin', items: ['bouquet', 'ribbon', 'cake'], amountCents: 499 },
 };
 
 module.exports = async (req, res) => {
