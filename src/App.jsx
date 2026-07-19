@@ -5873,7 +5873,7 @@ const GIFT_CATALOG = [
   { id: "bed", emoji: "☁️", label: "Panier Douillet", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
   { id: "doghouse", emoji: "🏠", label: "Niche Royale", price: "2,99 €", category: "comfort", species: "dog", gender: "f" },
   { id: "cattree", emoji: "🌳", label: "Arbre Royal", price: "2,99 €", category: "comfort", species: "cat", gender: "m" },
-  { id: "collar", emoji: "📿", label: "Collier Cœur Miloute", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
+  { id: "collar", emoji: "📿", label: "Collier Elégance", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
 ];
 
 // Packs groupés — quelques articles réunis à prix légèrement réduit, sans
@@ -5898,7 +5898,7 @@ const GIFT_BUNDLES = [
 const QUEST_LIST = [
   { id: "profile_complete", emoji: "📋", title: "Compléter son profil à 100%", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
   { id: "first_match", emoji: "💕", title: "Obtenir son premier match", rewardLabel: () => "1 Bouquet des Amoureux 💐" },
-  { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Cœur Miloute 📿" },
+  { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Elégance 📿" },
   { id: "first_review", emoji: "⭐", title: "Laisser son premier avis prestataire", rewardLabel: () => "1 Rose des Amoureux 🌹" },
 ];
 
