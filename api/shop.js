@@ -37,13 +37,16 @@ const GIFT_CATALOG = {
   mixpate:  { label: 'Pâtée Surprise',    emoji: '🥫', amountCents: 99 },
   tennisball: { label: 'Balle Rebelle',   emoji: '🥎', amountCents: 199 },
   frisbee:    { label: 'Frisbee Fou',     emoji: '🥏', amountCents: 199 },
+  chewrope:   { label: 'Corde à Mâchouiller', emoji: '🪢', amountCents: 199 },
   yarn:       { label: 'Pelote Magique',  emoji: '🧶', amountCents: 199 },
   mouse:      { label: 'Souris Fuyante',  emoji: '🐭', amountCents: 199 },
+  feather:    { label: 'Plume Chatouille', emoji: '🪶', amountCents: 199 },
   bouquet: { label: 'Bouquet des Amoureux', emoji: '💐', amountCents: 199 },
   crown:   { label: 'Couronne Miloute',   emoji: '👑', amountCents: 299 },
   ribbon:  { label: 'Ruban Chic',         emoji: '🎀', amountCents: 199 },
   cake:    { label: 'Gâteau Fiesta',      emoji: '🎂', amountCents: 199 },
   rose:    { label: 'Rose des Amoureux',  emoji: '🌹', amountCents: 199 },
+  coeur:   { label: 'Cœur Miloute',       emoji: '💕', amountCents: 199 },
   bed:      { label: 'Panier Douillet',   emoji: '☁️', amountCents: 199 },
   doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299 },
   cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299 },
@@ -54,9 +57,12 @@ const GIFT_CATALOG = {
 // Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
 // achat, mais crédite chaque article du pack individuellement dans l'inventaire.
 const GIFT_BUNDLES = {
-  dog_pack:    { label: 'Pack Gourmand Chien', items: ['bone', 'chicken', 'bacon'], amountCents: 399 },
-  cat_pack:    { label: 'Pack Gourmand Chat', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
-  cuddle_pack: { label: 'Pack Câlin', items: ['bouquet', 'ribbon', 'cake'], amountCents: 499 },
+  gourmet_dog_pack: { label: 'Pack Gourmand', items: ['bone', 'chicken', 'bacon'], amountCents: 399 },
+  gourmet_cat_pack: { label: 'Pack Gourmand', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
+  player_dog_pack:  { label: 'Pack Joueur', items: ['tennisball', 'frisbee', 'chewrope'], amountCents: 499 },
+  player_cat_pack:  { label: 'Pack Joueur', items: ['yarn', 'mouse', 'feather'], amountCents: 499 },
+  romance_pack:     { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur'], amountCents: 499 },
+  luxury_pack:      { label: 'Pack Luxe', items: ['crown', 'coat', 'collar'], amountCents: 599 },
 };
 
 // Quêtes ponctuelles — chacune ne peut être récompensée qu'une seule fois par
