@@ -540,6 +540,11 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             user_a: userProfile.userId, user_b: swipedProfile.userId,
             profile_a: userProfile.id, profile_b: swipedProfile.id,
           });
+          if (!userProfile?.questsCompleted?.first_match) {
+            claimQuest(userProfile, "first_match").then(result => {
+              if (result.claimed) onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
+            }).catch(() => {});
+          }
         }
       }
     } catch (err) {
@@ -1687,6 +1692,11 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       setShowReviewForm(false);
       setReviewRating(0);
       setReviewText("");
+      if (!userProfile?.questsCompleted?.first_review) {
+        claimQuest(userProfile, "first_review").then(result => {
+          if (result.claimed) onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
+        }).catch(() => {});
+      }
     } catch (err) {
       setReviewError("L'avis n'a pas pu être publié, réessayez.");
     }
@@ -3596,6 +3606,24 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       onShopOpened();
     }
   }, [autoOpenShop]);
+
+  const [questToast, setQuestToast] = useState(null);
+  async function tryClaimQuest(questId) {
+    if (initialData?.questsCompleted?.[questId]) return;
+    const result = await claimQuest(initialData, questId);
+    if (result.claimed) {
+      onProfileUpdated({ ...initialData, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
+      const rewardInfo = GIFT_CATALOG.find(g => g.id === result.rewardItemId);
+      setQuestToast(rewardInfo ? `🎉 Quête accomplie ! +1 ${rewardInfo.label} ${rewardInfo.emoji}` : "🎉 Quête accomplie !");
+      setTimeout(() => setQuestToast(null), 3500);
+    }
+  }
+  useEffect(() => {
+    const completeness = (pet.photos.length > 0 ? 25 : 0) + (pet.video ? 20 : 0) + (pet.bio ? 20 : 0) + (pet.temper.length > 0 ? 15 : 0) + (pet.vaccinated ? 10 : 0) + (pet.repro.active && pet.repro.price ? 10 : 0);
+    if (completeness >= 100) tryClaimQuest("profile_complete");
+    if (pet.video) tryClaimQuest("first_video");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pet.photos.length, pet.video, pet.bio, pet.temper.length, pet.vaccinated, pet.repro.active, pet.repro.price]);
   const [providerServices, setProviderServices] = useState([]);
   const [commissionRate, setCommissionRate] = useState(15);
   const [connectOnboarded, setConnectOnboarded] = useState(false);
@@ -4051,6 +4079,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     <div style={{ flex: 1, overflowY: "auto" }}>
       {saved && (
         <div style={{ position: "absolute", top: 60, left: "50%", transform: "translateX(-50%)", background: "#1B5E3B", color: "#fff", padding: "10px 20px", borderRadius: 20, fontWeight: 700, fontSize: 14, zIndex: 99, boxShadow: "0 4px 16px rgba(0,0,0,.2)", whiteSpace: "nowrap" }}>✅ Profil mis à jour !</div>
+      )}
+
+      {questToast && (
+        <div style={{ position: "absolute", top: 60, left: "50%", transform: "translateX(-50%)", background: "#B25F46", color: "#fff", padding: "10px 20px", borderRadius: 20, fontWeight: 700, fontSize: 14, zIndex: 99, boxShadow: "0 4px 16px rgba(0,0,0,.2)", whiteSpace: "nowrap" }}>{questToast}</div>
       )}
 
       {/* Cover */}
@@ -5584,6 +5616,7 @@ function profileFromRow(row) {
     stripeConnectOnboarded: row.stripe_connect_onboarded || false,
     boostCredits: row.boost_credits || 0,
     giftInventory: row.gift_inventory || {},
+    questsCompleted: row.quests_completed || {},
   };
 }
 // ── MARKETPLACE PRESTATAIRES ──────────────────────────────────────────────────
@@ -5784,6 +5817,7 @@ const GIFT_CATALOG = [
   { id: "crown", emoji: "👑", label: "Couronne Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
   { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "cake", emoji: "🎂", label: "Gâteau Fiesta", price: "1,99 €", category: "gift", species: "both", gender: "m" },
+  { id: "rose", emoji: "🌹", label: "Rose des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "f" },
   // Confort & Accessoires
   { id: "bed", emoji: "☁️", label: "Panier Douillet", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
   { id: "doghouse", emoji: "🏠", label: "Niche Royale", price: "2,99 €", category: "comfort", species: "dog", gender: "f" },
@@ -5830,6 +5864,15 @@ async function spendGift(userProfile, giftId) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "spend-gift", profileId: userProfile.id, userId: userProfile.userId, giftId }),
+  });
+  return res.json();
+}
+
+async function claimQuest(userProfile, questId) {
+  const res = await fetch("/api/shop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "claim-quest", profileId: userProfile.id, userId: userProfile.userId, questId }),
   });
   return res.json();
 }
@@ -6503,6 +6546,8 @@ export default function Miloute() {
       bio: form.bio,
       photos: uploadedPhotos,
       provider_interest: form.providerInterest,
+      // Bonus de bienvenue : un aperçu gratuit de la boutique dès l'inscription.
+      gift_inventory: { [form.species === "cat" ? "fish" : "bone"]: 1, bouquet: 1 },
     }).select().single();
 
     if (insertError) throw new Error(insertError.message);
