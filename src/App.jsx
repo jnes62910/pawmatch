@@ -5856,17 +5856,18 @@ const GIFT_CATALOG = [
   { id: "tennisball", emoji: "🥎", label: "Balle Rebelle", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
   { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
   { id: "chewrope", emoji: "🪢", label: "Corde à Mâchouiller", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
+  { id: "coeur", emoji: "💓", label: "Cœur du Toutou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
   // Cadeaux chat
   { id: "yarn", emoji: "🧶", label: "Pelote Magique", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
   { id: "mouse", emoji: "🐭", label: "Souris Fuyante", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
   { id: "feather", emoji: "🪶", label: "Plume Chatouille", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
+  { id: "coeur", emoji: "💓", label: "Cœur du Miaouw", price: "1,99 €", category: "gift", species: "cat", gender: "m" },
   // Cadeaux universels
   { id: "bouquet", emoji: "💐", label: "Bouquet des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "crown", emoji: "👑", label: "Couronne Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
   { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "cake", emoji: "🎂", label: "Gâteau Fiesta", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "rose", emoji: "🌹", label: "Rose des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "f" },
-  { id: "coeur", emoji: "💕", label: "Cœur Miloute", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "medal", emoji: "🏅", label: "Médaille Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
   { id: "plush", emoji: "🧸", label: "Doudou Câlin", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   // Confort & Accessoires
