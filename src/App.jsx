@@ -785,7 +785,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               <button onClick={e => { e.stopPropagation(); sendTreat(); }}
                 style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)", position: "relative",
                   transform: treatSentId === profile.id ? "scale(1.2)" : "scale(1)", transition: "transform .25s" }}>
-                {profile.species === "cat" ? "🐟" : "🦴"}
+                🎁
                 {!isPremium && (
                   <span style={{ position: "absolute", bottom: -3, right: -3, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {Math.max(0, FREE_TREATS_PER_DAY - treatsToday)}
@@ -809,7 +809,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 <div style={{ position: "absolute", bottom: 76, left: "50%", zIndex: 6,
                   background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", pointerEvents: "none",
                   animation: "treatToastPop .4s cubic-bezier(.34,1.56,.64,1)" }}>
-                  {profile.species === "cat" ? "🐟" : "🦴"} Friandise envoyée à {treatToast} !
+                  🎁 Friandise envoyée à {treatToast} !
                 </div>
               </>
             )}
@@ -4183,7 +4183,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "12px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
             <span style={{ fontSize: 22 }}>{pet.species === "cat" ? "🐟" : "🦴"}</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Friandises reçues</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Friandises/cadeaux reçus</div>
               <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
             </div>
             {unseenTreatsCount > 0 && (
@@ -4391,7 +4391,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>{pet.species === "cat" ? "🐟" : "🦴"} Friandises reçues</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>{pet.species === "cat" ? "🐟" : "🦴"} Friandises/cadeaux reçus</div>
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
             </div>
@@ -4581,7 +4581,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </div>
             )}
 
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>NOURRITURE</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>FRIANDISES</div>
             {GIFT_CATALOG.filter(g => g.category === "food" && g.species === initialData?.species).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
