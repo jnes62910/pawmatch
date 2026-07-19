@@ -3622,7 +3622,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     const completeness = (pet.photos.length > 0 ? 25 : 0) + (pet.video ? 20 : 0) + (pet.bio ? 20 : 0) + (pet.temper.length > 0 ? 15 : 0) + (pet.vaccinated ? 10 : 0) + (pet.repro.active && pet.repro.price ? 10 : 0);
     if (completeness >= 100) tryClaimQuest("profile_complete");
     if (pet.video) tryClaimQuest("first_video");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pet.photos.length, pet.video, pet.bio, pet.temper.length, pet.vaccinated, pet.repro.active, pet.repro.price]);
   const [providerServices, setProviderServices] = useState([]);
   const [commissionRate, setCommissionRate] = useState(15);
