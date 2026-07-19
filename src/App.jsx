@@ -5839,7 +5839,7 @@ async function clearProfileLocation(profileId) {
 // choix complet proposé dans le chat une fois matché.
 const GIFT_CATALOG = [
   // Nourriture chien
-  { id: "bone", emoji: "🦴", label: "Os Miloute", price: "0,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "bone", emoji: "🦴", label: "Os du Chef", price: "0,99 €", category: "food", species: "dog", gender: "m" },
   { id: "chicken", emoji: "🍗", label: "Cuisse Dorée", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   { id: "steak", emoji: "🥩", label: "Steak Royal", price: "2,99 €", category: "food", species: "dog", gender: "m" },
   { id: "croc", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "dog", gender: "f" },
