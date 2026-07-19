@@ -27,6 +27,7 @@ const GIFT_CATALOG = {
   bone:     { label: 'Os Miloute',        emoji: '🦴', amountCents: 99 },
   chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 199 },
   steak:    { label: 'Steak Royal',       emoji: '🥩', amountCents: 299 },
+  croc:    { label: 'Croc'Miloute',       emoji: '🍪', amountCents: 99 }, 
   bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 199 },
   meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 199 },
   fish:     { label: 'Poisson Miloute',   emoji: '🐟', amountCents: 99 },
