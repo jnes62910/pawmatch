@@ -4170,18 +4170,20 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           {/* Friandises reçues */}
-          <button onClick={openTreatsModal}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "12px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
-            <span style={{ fontSize: 22 }}>{pet.species === "cat" ? "🐟" : "🦴"}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Friandises/cadeaux reçus</div>
-              <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
-            </div>
-            {unseenTreatsCount > 0 && (
-              <span style={{ background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>{unseenTreatsCount}</span>
-            )}
-            <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>
-          </button>
+          {isPremium && (
+            <button onClick={openTreatsModal}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "12px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
+              <span style={{ fontSize: 22 }}>🎁</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Friandises/cadeaux reçus</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
+              </div>
+              {unseenTreatsCount > 0 && (
+                <span style={{ background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>{unseenTreatsCount}</span>
+              )}
+              <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>
+            </button>
+          )}
 
           <div style={{ height: 1, background: "#E5E7EB", marginBottom: 14 }} />
 
@@ -4223,6 +4225,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
         <button onClick={openEdit} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>✏️ Modifier le profil de {pet.name}</button>
 
+        <button onClick={() => setShowShopModal(true)}
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>🛍️</span>
+          <span>Boutique Miloute{(() => {
+            const totalGifts = Object.values(initialData?.giftInventory || {}).reduce((s, n) => s + n, 0);
+            return totalGifts > 0 ? ` (${totalGifts})` : "";
+          })()}</span>
+        </button>
+
         <button onClick={() => setShowProviderScreen(true)}
           style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
           <span style={{ fontSize: 20 }}>🏥</span>
@@ -4235,14 +4246,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <span>Mes réservations</span>
         </button>
 
-        <button onClick={() => setShowShopModal(true)}
-          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-          <span style={{ fontSize: 20 }}>🛍️</span>
-          <span>Boutique Miloute{(() => {
-            const totalGifts = Object.values(initialData?.giftInventory || {}).reduce((s, n) => s + n, 0);
-            return totalGifts > 0 ? ` (${totalGifts})` : "";
-          })()}</span>
-        </button>
 
         <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
           Se déconnecter
@@ -4270,14 +4273,19 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   <div style={{ fontSize: 32, marginBottom: 8 }}>👁️</div>
                   <div style={{ fontSize: 14 }}>Pas encore de like reçu</div>
                 </div>
-              ) : likesReceived.map((like, i) => (
+              ) : likesReceived.map((like, i) => {
+                const alsoSentGift = treatsReceived.some(t => t.senderProfileId === like.profileId);
+                return (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative" }}>
                   <div onClick={() => isPremium ? setSelectedLike(like) : onPremium()} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
                     <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, filter: isPremium ? "none" : "blur(6px)" }}>
                       {photoUrl(like.photo) ? <img src={photoUrl(like.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : like.emoji}
                     </div>
                     <div style={{ flex: 1, filter: isPremium ? "none" : "blur(4px)" }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{isPremium ? like.name : "???"}</div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 6 }}>
+                        {isPremium ? like.name : "???"}
+                        {isPremium && alsoSentGift && <span title="A aussi envoyé un cadeau" style={{ fontSize: 12 }}>🎁</span>}
+                      </div>
                       <div style={{ fontSize: 12, color: "#9CA3AF" }}>{like.breed} · {like.time}</div>
                     </div>
                   </div>
@@ -4290,7 +4298,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   )}
                   {isPremium && <span onClick={() => setSelectedLike(like)} style={{ fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>›</span>}
                 </div>
-              ))}
+              );})}
             </div>
 
             {!isPremium && (
@@ -4382,14 +4390,14 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>{pet.species === "cat" ? "🐟" : "🦴"} Friandises/cadeaux reçus</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>🎁 Friandises/cadeaux reçus</div>
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
               {treatsReceived.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>{pet.species === "cat" ? "🐟" : "🦴"}</div>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🎁</div>
                   <div style={{ fontSize: 14 }}>Pas encore de friandise reçue</div>
                 </div>
               ) : treatsReceived.map(t => (
@@ -6032,6 +6040,7 @@ async function fetchReceivedTreats(userProfile) {
       breed: sender?.breed || "",
       photo: sender?.photos?.[0]?.url || null,
       emoji: sender?.species === "cat" ? "🐱" : "🐕",
+      senderProfileId: t.sender_profile_id,
     };
   });
 }
