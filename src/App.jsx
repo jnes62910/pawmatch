@@ -5846,7 +5846,7 @@ const GIFT_CATALOG = [
   { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
   { id: "fish", emoji: "🐟", label: "Poisson Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "tunapate", emoji: "🥫", label: "Pâté de Thon ", price: "0,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "turkeypate", emoji: "🥫", label: "Pâté de Dinde ", price: "0,99 €", category: "food", species: "cat", gender: "f" },
   { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,99 €", category: "food", species: "cat", gender: "m" },
   { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,99 €", category: "food", species: "cat", gender: "f" },
   { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
@@ -5888,8 +5888,8 @@ const GIFT_BUNDLES = [
   // Pack Romantique — universel, identique pour tous
   { id: "romance_pack", label: "Pack Romantique", items: ["bouquet", "rose", "coeur"], price: "4,99 €", originalPrice: "5,97 €", species: "both", category: "gift" },
   // Pack Luxe — universel, identique pour tous
-  { id: "luxury_dog_pack", label: "Pack Luxe", items: ["crown", "steak", "collar"], price: "6,99 €", originalPrice: "7,97 €", species: "dog", category: "comfort" },
-  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "sushi", "collar"], price: "5,99 €", originalPrice: "6,97 €", species: "cat", category: "comfort" },
+  { id: "luxury_dog_pack", label: "Pack Luxe", items: ["crown", "steak", "doghouse"], price: "6,99 €", originalPrice: "8,97 €", species: "dog", category: "comfort" },
+  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "Gourmetplate", "cattree"], price: "6,99 €", originalPrice: "8,97 €", species: "cat", category: "comfort" },
 ];
 
 // Quêtes ponctuelles — chacune ne se débloque qu'une fois, sans série
