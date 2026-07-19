@@ -34,7 +34,7 @@ const GIFT_CATALOG = {
   turkeypate: { label: 'Pâté de dinde',      emoji: '🥫', amountCents: 99 },
   sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 199 },
   shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 199 },
-  milk:     { label: 'Lait Doux Miloute', emoji: '🥛', amountCents: 99 },
+  milk:     { label: 'Douceur Lactée', emoji: '🥛', amountCents: 99 },
   Gourmetdish:  { label: 'Plateau Gourmet',    emoji: '🍱', amountCents: 299 },
   tennisball: { label: 'Balle Rebelle',   emoji: '🥎', amountCents: 199 },
   frisbee:    { label: 'Frisbee Fou',     emoji: '🥏', amountCents: 199 },
