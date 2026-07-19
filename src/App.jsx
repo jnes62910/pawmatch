@@ -418,6 +418,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [showRadiusSheet, setShowRadiusSheet] = useState(false);
   const [treatsToday, setTreatsToday] = useState(loadTreatsToday);
   const [treatSentId, setTreatSentId] = useState(null);
+  const [showSwipeGiftPicker, setShowSwipeGiftPicker] = useState(false);
+  const [sendingSwipeGift, setSendingSwipeGift] = useState(false);
   const [treatToast, setTreatToast] = useState(null); // nom de l'animal
   const [breedFilter, setBreedFilter] = useState("all");
   const [showBreedMenu, setShowBreedMenu] = useState(false);
@@ -577,6 +579,29 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     if (!targetProfile.isDemo) {
       sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
     }
+  }
+
+  async function sendChosenGift(giftId, emoji) {
+    if (!(userProfile?.giftInventory?.[giftId] > 0)) {
+      setShowSwipeGiftPicker(false);
+      onGoToShop();
+      return;
+    }
+    setSendingSwipeGift(true);
+    const result = await spendGift(userProfile, giftId);
+    if (result.success) {
+      onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
+      const targetProfile = profile;
+      setTreatSentId(targetProfile.id);
+      setTreatToast(targetProfile.name);
+      setTimeout(() => setTreatSentId(null), 900);
+      setTimeout(() => setTreatToast(null), 2200);
+      if (!targetProfile.isDemo) {
+        sendTreatToProfile(userProfile, targetProfile).catch(err => console.error("sendTreat error:", err));
+      }
+    }
+    setSendingSwipeGift(false);
+    setShowSwipeGiftPicker(false);
   }
 
   function onTouchStart(e) {
@@ -766,6 +791,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                     {Math.max(0, FREE_TREATS_PER_DAY - treatsToday)}
                   </span>
                 )}
+                <span onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(true); }}
+                  style={{ position: "absolute", top: -6, left: -6, width: 20, height: 20, borderRadius: "50%", background: "#fff", border: "1.5px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#8B3D28", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }}>
+                  ▾
+                </span>
               </button>
               <button onClick={e => { e.stopPropagation(); swipe("like"); }}
                 style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
@@ -783,6 +812,33 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                   {profile.species === "cat" ? "🐟" : "🦴"} Friandise envoyée à {treatToast} !
                 </div>
               </>
+            )}
+
+            {/* Sélecteur rapide de cadeau (ouvert via le chevron du bouton friandise) */}
+            {showSwipeGiftPicker && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 20, display: "flex", alignItems: "flex-end" }}
+                onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(false); }}>
+                <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 28px", width: "100%" }}>
+                  <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>🎁 Envoyer à {profile.name}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                    {GIFT_CATALOG.filter(g => g.species === "both" || g.species === profile.species).map(g => {
+                      const owned = userProfile?.giftInventory?.[g.id] || 0;
+                      return (
+                        <button key={g.id} onClick={() => sendChosenGift(g.id, g.emoji)} disabled={sendingSwipeGift}
+                          style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "10px 4px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#F9FAFB", cursor: sendingSwipeGift ? "default" : "pointer", opacity: owned > 0 ? 1 : .65 }}>
+                          {owned > 0 && (
+                            <span style={{ position: "absolute", top: 2, right: 2, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{owned}</span>
+                          )}
+                          <span style={{ fontSize: 22 }}>{g.emoji}</span>
+                          <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", textAlign: "center" }}>{g.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 12 }}>Un article grisé n'est plus en stock — tapez dessus pour l'acheter dans la Boutique.</div>
+                </div>
+              </div>
             )}
 
             {/* Tap zones — pile sur la zone photo */}
@@ -4494,6 +4550,31 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 40px" }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Offrez une friandise ou un cadeau à celui ou celle qui compte 🐾</div>
+              <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Un geste qui se remarque — dans Découvrir pour attirer l'attention, ou directement dans vos conversations pour faire plaisir à un match.</div>
+            </div>
+
+            {/* Récapitulatif de l'inventaire possédé */}
+            {(() => {
+              const owned = GIFT_CATALOG.filter(g => (initialData?.giftInventory?.[g.id] || 0) > 0);
+              if (owned.length === 0) return null;
+              return (
+                <div style={{ background: "#F9FAFB", borderRadius: 14, padding: "12px 14px", marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>MON INVENTAIRE</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {owned.map(g => (
+                      <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid #E5E7EB", borderRadius: 20, padding: "5px 10px 5px 6px" }}>
+                        <span style={{ fontSize: 16 }}>{g.emoji}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#2D1200" }}>{initialData.giftInventory[g.id]}</span>
+                        <span style={{ fontSize: 11, color: "#9CA3AF" }}>{g.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {isPremium && (
               <div style={{ fontSize: 12, color: "#2E7D32", background: "#E8F5E9", borderRadius: 10, padding: "10px 12px", marginBottom: 16, lineHeight: 1.5 }}>
                 👑 Vous êtes Premium : cadeaux illimités inclus. Ces articles restent utiles si vous voulez en offrir davantage ou en garder en réserve.
