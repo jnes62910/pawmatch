@@ -43,6 +43,7 @@ const GIFT_CATALOG = {
   crown:   { label: 'Couronne Miloute',   emoji: '👑', amountCents: 299 },
   ribbon:  { label: 'Ruban Chic',         emoji: '🎀', amountCents: 199 },
   cake:    { label: 'Gâteau Fiesta',      emoji: '🎂', amountCents: 199 },
+  rose:    { label: 'Rose des Amoureux',  emoji: '🌹', amountCents: 199 },
   bed:      { label: 'Panier Douillet',   emoji: '☁️', amountCents: 199 },
   doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299 },
   cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299 },
@@ -56,6 +57,16 @@ const GIFT_BUNDLES = {
   dog_pack:    { label: 'Pack Gourmand Chien', items: ['bone', 'chicken', 'bacon'], amountCents: 399 },
   cat_pack:    { label: 'Pack Gourmand Chat', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
   cuddle_pack: { label: 'Pack Câlin', items: ['bouquet', 'ribbon', 'cake'], amountCents: 499 },
+};
+
+// Quêtes ponctuelles — chacune ne peut être récompensée qu'une seule fois par
+// profil (suivi dans profiles.quests_completed). Pas de série quotidienne, pas
+// de notification de rappel : uniquement de vraies étapes utiles du parcours.
+const QUESTS = {
+  profile_complete: { rewardLabel: '1 friandise' },
+  first_match:      { rewardItemId: 'bouquet', rewardLabel: '1 Bouquet des Amoureux' },
+  first_video:      { rewardItemId: 'collar', rewardLabel: '1 Collier Cœur Miloute' },
+  first_review:     { rewardItemId: 'rose', rewardLabel: '1 Rose des Amoureux' },
 };
 
 module.exports = async (req, res) => {
@@ -191,6 +202,58 @@ module.exports = async (req, res) => {
       if (updateError) throw updateError;
 
       return res.status(200).json({ success: true, giftInventory: newInventory });
+    }
+
+    // ── Réclamer la récompense d'une quête ponctuelle ─────────────────────
+    if (action === 'claim-quest') {
+      const { profileId, userId, questId } = req.body;
+      const quest = QUESTS[questId];
+      if (!quest) return res.status(400).json({ error: 'Quête inconnue' });
+      if (!profileId || !userId) return res.status(400).json({ error: 'profileId and userId are required' });
+
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles').select('*').eq('id', profileId).single();
+      if (fetchError || !profile) throw fetchError || new Error('Profil introuvable');
+      if (profile.user_id !== userId) return res.status(403).json({ error: 'Ce profil ne vous appartient pas.' });
+
+      const completed = profile.quests_completed || {};
+      if (completed[questId]) {
+        return res.status(200).json({ claimed: false, alreadyClaimed: true });
+      }
+
+      // Vérification serveur de l'éligibilité réelle — jamais fait confiance
+      // au client seul pour valider qu'une quête est bien accomplie.
+      let eligible = false;
+      let rewardItemId = quest.rewardItemId;
+
+      if (questId === 'profile_complete') {
+        const score = (profile.photos?.length > 0 ? 25 : 0) + (profile.video ? 20 : 0) + (profile.bio ? 20 : 0)
+          + (profile.temper?.length > 0 ? 15 : 0) + (profile.vaccinated ? 10 : 0)
+          + (profile.repro?.active && profile.repro?.price ? 10 : 0);
+        eligible = score >= 100;
+        rewardItemId = profile.species === 'cat' ? 'fish' : 'bone';
+      } else if (questId === 'first_match') {
+        const { count } = await supabase.from('matches').select('id', { count: 'exact', head: true })
+          .or(`user_a.eq.${userId},user_b.eq.${userId}`);
+        eligible = (count || 0) >= 1;
+      } else if (questId === 'first_video') {
+        eligible = !!profile.video;
+      } else if (questId === 'first_review') {
+        const { count } = await supabase.from('provider_reviews').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+        eligible = (count || 0) >= 1;
+      }
+
+      if (!eligible) return res.status(200).json({ claimed: false, eligible: false });
+
+      const inventory = profile.gift_inventory || {};
+      const newInventory = { ...inventory, [rewardItemId]: (inventory[rewardItemId] || 0) + 1 };
+      const newCompleted = { ...completed, [questId]: true };
+
+      const { error: updateError } = await supabase
+        .from('profiles').update({ gift_inventory: newInventory, quests_completed: newCompleted }).eq('id', profileId);
+      if (updateError) throw updateError;
+
+      return res.status(200).json({ claimed: true, giftInventory: newInventory, questsCompleted: newCompleted, rewardItemId });
     }
 
     return res.status(400).json({ error: 'Action inconnue' });
