@@ -418,6 +418,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [showRadiusSheet, setShowRadiusSheet] = useState(false);
   const [treatsToday, setTreatsToday] = useState(loadTreatsToday);
   const [treatSentId, setTreatSentId] = useState(null);
+  const [likeBurstId, setLikeBurstId] = useState(null);
   const [showSwipeGiftPicker, setShowSwipeGiftPicker] = useState(false);
   const [sendingSwipeGift, setSendingSwipeGift] = useState(false);
   const [treatToast, setTreatToast] = useState(null); // nom de l'animal
@@ -780,8 +781,21 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                   transform: treatSentId === profile.id ? "scale(1.2)" : "scale(1)", transition: "transform .25s" }}>
                 🎁
               </button>
-              <button onClick={e => { e.stopPropagation(); swipe("like"); }}
-                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
+              <button onClick={e => { e.stopPropagation(); setLikeBurstId(profile.id); setTimeout(() => setLikeBurstId(null), 700); swipe("like"); }}
+                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)", position: "relative",
+                  transform: likeBurstId === profile.id ? "scale(1.25)" : "scale(1)", transition: "transform .25s cubic-bezier(.34,1.56,.64,1)" }}>
+                {likeBurstId === profile.id && (
+                  <>
+                    <style>{`
+                      @keyframes likeGlowPulse { 0% { transform: scale(0.6); opacity: .8; } 100% { transform: scale(2.4); opacity: 0; } }
+                      @keyframes likeBurstFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(90deg); opacity: 0; } }
+                    `}</style>
+                    <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle, rgba(178,95,70,.5) 0%, transparent 70%)", animation: "likeGlowPulse .7s ease-out", pointerEvents: "none" }} />
+                    {[["-34px","-20px"], ["36px","-18px"], ["-32px","22px"], ["34px","24px"]].map(([tx, ty], idx) => (
+                      <span key={idx} style={{ position: "absolute", left: "50%", top: "50%", fontSize: 14, "--tx": tx, "--ty": ty, animation: `likeBurstFly .7s ease-out ${idx * 0.05}s both`, pointerEvents: "none" }}>🐾</span>
+                    ))}
+                  </>
+                )}
                 <PawLogo size={24} color="#B25F46" />
               </button>
             </div>
