@@ -102,12 +102,12 @@ module.exports = async (req, res) => {
         const bundle = GIFT_BUNDLES[bundleId];
         if (!bundle) return res.status(400).json({ error: 'Pack inconnu' });
         label = bundle.label; amountCents = bundle.amountCents;
-        metadata = { bundleId, profileId, userId };
+        metadata = { type: 'shop', bundleId, profileId, userId };
       } else {
         const item = GIFT_CATALOG[itemId];
         if (!item) return res.status(400).json({ error: 'Article inconnu' });
         label = item.label; amountCents = item.amountCents;
-        metadata = { itemId, profileId, userId };
+        metadata = { type: 'shop', itemId, profileId, userId };
       }
 
       const session = await stripe.checkout.sessions.create({
