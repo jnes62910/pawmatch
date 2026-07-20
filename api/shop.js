@@ -24,18 +24,18 @@ const supabase = createClient(
 // Vrai catalogue de cadeaux — chacun a son propre prix et sa propre identité,
 // stocké individuellement dans profiles.gift_inventory (ex: {"bone": 3}).
 const GIFT_CATALOG = {
-  bone:     { label: 'Os Miloute',        emoji: '🦴', amountCents: 99 },
+  bone:     { label: 'Os du Chef',        emoji: '🦴', amountCents: 99 },
   chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 199 },
   steak:    { label: 'Steak Royal',       emoji: '🥩', amountCents: 299 },
   bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 199 },
   meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 199 },
-  fish:     { label: 'Poisson Miloute',   emoji: '🐟', amountCents: 99 },
-  tunapate: { label: 'Pâtée Câline',      emoji: '🥫', amountCents: 99 },
+  fish:     { label: 'Poisson du Chef',   emoji: '🐟', amountCents: 99 },
+  tunapate: { label: 'Pâtée de Dinde',    emoji: '🥫', amountCents: 99 },
   sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 199 },
   shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 199 },
-  milk:     { label: 'Lait Doux Miloute', emoji: '🥛', amountCents: 99 },
-  croc:     { label: "Croc'Miloute",      emoji: '🍪', amountCents: 99 },
-  mixpate:  { label: 'Pâtée Surprise',    emoji: '🥫', amountCents: 99 },
+  milk:     { label: 'Douceur Lactée',    emoji: '🥛', amountCents: 99 },
+  croc_cat: { label: "Croc'Miloute",      emoji: '🍪', amountCents: 99 },
+  croc_dog: { label: "Croc'Miloute",      emoji: '🍪', amountCents: 99 },
   tennisball: { label: 'Balle Rebelle',   emoji: '🥎', amountCents: 199 },
   frisbee:    { label: 'Frisbee Fou',     emoji: '🥏', amountCents: 199 },
   chewrope:   { label: 'Corde à Mâchouiller', emoji: '🪢', amountCents: 199 },
@@ -47,13 +47,14 @@ const GIFT_CATALOG = {
   ribbon:  { label: 'Ruban Chic',         emoji: '🎀', amountCents: 199 },
   cake:    { label: 'Gâteau Fiesta',      emoji: '🎂', amountCents: 199 },
   rose:    { label: 'Rose des Amoureux',  emoji: '🌹', amountCents: 199 },
-  coeur:   { label: 'Cœur Miloute',       emoji: '💕', amountCents: 199 },
+  coeur_dog: { label: 'Cœur de Toutou',   emoji: '💕', amountCents: 199 },
+  coeur_cat: { label: 'Cœur de Miaouw',   emoji: '💕', amountCents: 199 },
   medal:   { label: 'Médaille Miloute',   emoji: '🏅', amountCents: 299 },
   plush:   { label: 'Doudou Câlin',       emoji: '🧸', amountCents: 199 },
   bed:      { label: 'Panier Douillet',   emoji: '☁️', amountCents: 199 },
   doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299 },
   cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299 },
-  collar:   { label: 'Collier Cœur Miloute', emoji: '📿', amountCents: 199 },
+  collar:   { label: 'Collier Élégance',  emoji: '📿', amountCents: 199 },
 };
 
 // Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
@@ -63,9 +64,10 @@ const GIFT_BUNDLES = {
   gourmet_cat_pack: { label: 'Pack Gourmand', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
   player_dog_pack:  { label: 'Pack Joueur', items: ['tennisball', 'frisbee', 'chewrope'], amountCents: 499 },
   player_cat_pack:  { label: 'Pack Joueur', items: ['yarn', 'mouse', 'feather'], amountCents: 499 },
-  romance_pack:     { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur'], amountCents: 499 },
-  luxury_dog_pack:  { label: 'Pack Luxe', items: ['crown', 'steak', 'collar'], amountCents: 699 },
-  luxury_cat_pack:  { label: 'Pack Luxe', items: ['crown', 'sushi', 'collar'], amountCents: 599 },
+  romance_dog_pack: { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur_dog'], amountCents: 499 },
+  romance_cat_pack: { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur_cat'], amountCents: 499 },
+  luxury_dog_pack:  { label: 'Pack Luxe', items: ['crown', 'steak', 'doghouse'], amountCents: 799 },
+  luxury_cat_pack:  { label: 'Pack Luxe', items: ['crown', 'sushi', 'cattree'], amountCents: 699 },
 };
 
 // Quêtes ponctuelles — chacune ne peut être récompensée qu'une seule fois par
@@ -79,7 +81,7 @@ const QUESTS = {
   first_post:        { rewardItemId: 'plush', rewardLabel: '1 Doudou Câlin' },
   become_provider:   { rewardItemId: 'medal', rewardLabel: '1 Médaille Miloute' },
   first_booking:     { rewardLabel: '1 friandise' },
-  first_gift_sent:   { rewardItemId: 'coeur', rewardLabel: '1 Cœur Miloute' },
+  first_gift_sent:   { rewardLabel: '1 Cœur (selon l\'espèce)' },
 };
 
 module.exports = async (req, res) => {
@@ -268,6 +270,7 @@ module.exports = async (req, res) => {
         const { count: treatCount } = await supabase.from('treats').select('*', { count: 'exact', head: true }).eq('sender_user_id', userId);
         const { count: chatGiftCount } = await supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sender_user_id', userId).not('gift_emoji', 'is', null);
         eligible = (treatCount || 0) + (chatGiftCount || 0) >= 1;
+        rewardItemId = profile.species === 'cat' ? 'coeur_cat' : 'coeur_dog';
       }
 
       if (!eligible) return res.status(200).json({ claimed: false, eligible: false });
