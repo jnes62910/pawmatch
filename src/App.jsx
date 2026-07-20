@@ -3122,6 +3122,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
   }
   const [sendingGift, setSendingGift] = useState(false);
   const [sentGiftToast, setSentGiftToast] = useState(null);
+  const seenGiftIdsRef = useRef(loadSeenGiftIds());
   const [giftError, setGiftError] = useState(null);
   const [suggestedSpot, setSuggestedSpot] = useState(null);
   const [loadingSpot, setLoadingSpot] = useState(true);
@@ -3178,6 +3179,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
         .order("created_at", { ascending: true });
       if (active) {
         setMsgs((history || []).map(m => ({
+          id: m.id,
           from: m.sender_user_id === userProfile.userId ? "me" : "them",
           text: m.text,
           imageUrl: m.image_url,
@@ -3198,6 +3200,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
       .channel(`messages-${matchId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` }, (payload) => {
         setMsgs(m => [...m, {
+          id: payload.new.id,
           from: payload.new.sender_user_id === userProfile.userId ? "me" : "them",
           text: payload.new.text,
           imageUrl: payload.new.image_url,
@@ -3214,6 +3217,20 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
 
     return () => { active = false; supabase.removeChannel(channel); };
   }, [matchId, userProfile?.userId]);
+
+  // Marque les cadeaux actuellement affichés comme "déjà vus" — l'animation
+  // complète ne se rejouera plus pour eux la prochaine fois, seulement pour
+  // un cadeau réellement nouveau.
+  useEffect(() => {
+    let changed = false;
+    msgs.forEach(m => {
+      if (m.giftEmoji && m.id && !seenGiftIdsRef.current.has(m.id)) {
+        seenGiftIdsRef.current.add(m.id);
+        changed = true;
+      }
+    });
+    if (changed) saveSeenGiftIds(seenGiftIdsRef.current);
+  }, [msgs]);
 
   async function send() {
     const text = input.trim();
@@ -3361,19 +3378,24 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           <div style={{ textAlign: "center", color: "#9CA3AF", fontSize: 13, padding: 24 }}>Vous avez matché ! Dites bonjour 👋</div>
         ) : msgs.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
-            {msg.giftEmoji ? (
+            {msg.giftEmoji ? (() => {
+              const isFirstView = !msg.id || !seenGiftIdsRef.current.has(msg.id);
+              return (
               <div style={{ position: "relative", maxWidth: "75%", padding: "22px 26px", borderRadius: msg.from === "me" ? "20px 20px 4px 20px" : "20px 20px 20px 4px", background: "linear-gradient(135deg,#FFF3D6,#FFE29A,#FFD966,#FFE29A)", backgroundSize: "300% 100%", textAlign: "center", overflow: "visible", boxShadow: "0 6px 22px rgba(230,168,0,.35)", border: "1.5px solid rgba(230,168,0,.4)" }}>
-                <style>{`
-                  @keyframes giftPopWow { 0% { transform: scale(0) rotate(-18deg); opacity: 0; } 50% { transform: scale(1.4) rotate(10deg); opacity: 1; } 70% { transform: scale(0.9) rotate(-5deg); } 85% { transform: scale(1.08) rotate(2deg); } 100% { transform: scale(1) rotate(0deg); } }
-                  @keyframes giftGlowPulse { 0% { transform: scale(0.5); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
-                  @keyframes sparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(180deg); opacity: 0; } }
-                  @keyframes bubbleShimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-                `}</style>
-                <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", background: "radial-gradient(circle, rgba(255,215,0,.55) 0%, transparent 70%)", animation: "giftGlowPulse .9s ease-out", pointerEvents: "none" }} />
-                {[["-42px","-32px"], ["46px","-26px"], ["-46px","22px"], ["42px","32px"], ["4px","-46px"], ["-6px","42px"]].map(([tx, ty], idx) => (
+                {isFirstView && (
+                  <style>{`
+                    @keyframes giftPopWow { 0% { transform: scale(0) rotate(-18deg); opacity: 0; } 50% { transform: scale(1.4) rotate(10deg); opacity: 1; } 70% { transform: scale(0.9) rotate(-5deg); } 85% { transform: scale(1.08) rotate(2deg); } 100% { transform: scale(1) rotate(0deg); } }
+                    @keyframes giftGlowPulse { 0% { transform: scale(0.5); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
+                    @keyframes sparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(180deg); opacity: 0; } }
+                  `}</style>
+                )}
+                {isFirstView && (
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", background: "radial-gradient(circle, rgba(255,215,0,.55) 0%, transparent 70%)", animation: "giftGlowPulse .9s ease-out", pointerEvents: "none" }} />
+                )}
+                {isFirstView && [["-42px","-32px"], ["46px","-26px"], ["-46px","22px"], ["42px","32px"], ["4px","-46px"], ["-6px","42px"]].map(([tx, ty], idx) => (
                   <span key={idx} style={{ position: "absolute", left: "50%", top: "40%", fontSize: 13, "--tx": tx, "--ty": ty, animation: `sparkleFly .9s ease-out ${0.1 + idx * 0.07}s both`, pointerEvents: "none" }}>✨</span>
                 ))}
-                <div style={{ position: "relative", fontSize: 52, marginBottom: 6, animation: "giftPopWow .7s cubic-bezier(.34,1.56,.64,1)" }}>{msg.giftEmoji}</div>
+                <div style={{ position: "relative", fontSize: 52, marginBottom: 6, animation: isFirstView ? "giftPopWow .7s cubic-bezier(.34,1.56,.64,1)" : "none" }}>{msg.giftEmoji}</div>
                 <div style={{ position: "relative", fontSize: 12, fontWeight: 800, color: "#7A4A00" }}>
                   {(() => {
                     const candidates = GIFT_CATALOG.filter(x => x.emoji === msg.giftEmoji);
@@ -3385,7 +3407,8 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
                 </div>
                 <div style={{ position: "relative", fontSize: 10, opacity: .65, marginTop: 4, color: "#7A4A00" }}>{msg.time}</div>
               </div>
-            ) : (
+              );
+            })() : (
               <div style={{ maxWidth: "75%", padding: msg.imageUrl ? 4 : "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
                 {msg.imageUrl && <img src={msg.imageUrl} alt="" style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 14, display: "block" }} />}
                 {msg.text && <div style={{ padding: msg.imageUrl ? "8px 8px 2px" : 0 }}>{msg.text}</div>}
@@ -6397,6 +6420,17 @@ async function fetchMatchesForUser(userProfile) {
       unread: 0,
     };
   });
+}
+
+// Mémorise, par appareil, quels messages-cadeaux ont déjà été vus avec
+// l'animation complète — pour ne jouer l'effet "waouh" qu'une seule fois par
+// personne, la toute première fois qu'elle découvre ce cadeau précis.
+function loadSeenGiftIds() {
+  try { return new Set(JSON.parse(localStorage.getItem("miloute_seen_gift_msgs") || "[]")); }
+  catch { return new Set(); }
+}
+function saveSeenGiftIds(set) {
+  try { localStorage.setItem("miloute_seen_gift_msgs", JSON.stringify([...set])); } catch {}
 }
 
 function loadPremiumStatus() {
