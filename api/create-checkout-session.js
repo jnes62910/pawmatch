@@ -1,20 +1,17 @@
 // api/create-checkout-session.js
-// Crée une session Stripe Checkout pour l'abonnement Premium Miloute.
-// L'argent va directement sur le compte de la plateforme — pas de Connect,
-// pas de commission à répartir, c'est un paiement classique.
+//
+// Crée la session Stripe Checkout pour l'abonnement Premium. Corrigé pour
+// attacher l'identité de l'utilisateur (profileId, userId) dès la création
+// du paiement — nécessaire pour que verify-session.js et le webhook de
+// secours puissent savoir à qui attribuer le paiement, sans jamais dépendre
+// du navigateur pour décider qui devient Premium.
 
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Montants en centimes
-const PLAN_AMOUNTS = {
-  monthly: 499,   // 4,99 €
-  yearly: 3999,   // 39,99 €
-};
-
-const PLAN_INTERVALS = {
-  monthly: 'month',
-  yearly: 'year',
+const PLANS = {
+  monthly: { label: 'Miloute Premium — Mensuel', amountCents: 499 },
+  yearly:  { label: 'Miloute Premium — Annuel', amountCents: 3999 },
 };
 
 module.exports = async (req, res) => {
@@ -23,36 +20,30 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { plan, successUrl, cancelUrl } = req.body;
-
-    if (!plan || !PLAN_AMOUNTS[plan]) {
-      return res.status(400).json({ error: 'plan must be "monthly" or "yearly"' });
-    }
+    const { plan, profileId, userId } = req.body;
+    const planInfo = PLANS[plan];
+    if (!planInfo) return res.status(400).json({ error: 'Plan inconnu' });
+    if (!profileId || !userId) return res.status(400).json({ error: 'profileId and userId are required' });
 
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
+      mode: 'payment',
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: `Miloute Premium — ${plan === 'monthly' ? 'Mensuel' : 'Annuel'}`,
-              description: 'Swipes illimités, qui t\'a liké, boost de visibilité, reproduction complète',
-            },
-            unit_amount: PLAN_AMOUNTS[plan],
-            recurring: { interval: PLAN_INTERVALS[plan] },
-          },
-          quantity: 1,
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: { name: planInfo.label },
+          unit_amount: planInfo.amountCents,
         },
-      ],
-      success_url: successUrl || 'https://jnes62910-pawmatch.vercel.app/?premium=success&session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: cancelUrl || 'https://jnes62910-pawmatch.vercel.app/?premium=cancel',
+        quantity: 1,
+      }],
+      metadata: { type: 'premium', plan, profileId, userId },
+      success_url: `${req.headers.origin}?premium=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin}?premium=cancel`,
     });
 
     return res.status(200).json({ checkoutUrl: session.url });
   } catch (err) {
-    console.error('Stripe Checkout error:', err);
+    console.error('create-checkout-session error:', err);
     return res.status(500).json({ error: err.message });
   }
 };
