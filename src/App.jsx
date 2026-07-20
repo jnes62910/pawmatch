@@ -585,6 +585,11 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       if (!targetProfile.isDemo) {
         sendTreatToProfile(userProfile, targetProfile, giftId).catch(err => console.error("sendTreat error:", err));
       }
+      if (!userProfile?.questsCompleted?.first_gift_sent) {
+        claimQuest(userProfile, "first_gift_sent").then(r => {
+          if (r.claimed) onProfileUpdated({ ...userProfile, giftInventory: r.giftInventory, questsCompleted: r.questsCompleted });
+        }).catch(() => {});
+      }
     }
     setSendingSwipeGift(false);
     setShowSwipeGiftPicker(false);
@@ -2469,7 +2474,7 @@ const INIT_COMMENTS = {
   ],
 };
 
-function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
+function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUpdated = () => {} }) {
   const [breedFilter, setBreedFilter] = useState("all");
   const [showBreedMenu, setShowBreedMenu] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
@@ -2627,6 +2632,11 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null }) {
       await createCommunityPost(userProfile, { text, photoUrl, tag: null });
       setComposerText(""); setComposerPhoto(null); setShowComposer(false);
       await reloadPosts();
+      if (!userProfile?.questsCompleted?.first_post) {
+        claimQuest(userProfile, "first_post").then(result => {
+          if (result.claimed) onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
+        }).catch(() => {});
+      }
     } catch (err) {
       setPostError(err.message || "La publication a échoué, réessayez.");
     }
@@ -3261,7 +3271,14 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
       gift_emoji: emoji,
     });
     if (error) setGiftError("Le cadeau n'a pas pu être envoyé, réessayez.");
-    else setShowGiftPicker(false);
+    else {
+      setShowGiftPicker(false);
+      if (!userProfile?.questsCompleted?.first_gift_sent) {
+        claimQuest(userProfile, "first_gift_sent").then(r => {
+          if (r.claimed) onProfileUpdated({ ...userProfile, giftInventory: r.giftInventory, questsCompleted: r.questsCompleted });
+        }).catch(() => {});
+      }
+    }
     setSendingGift(false);
   }
 
@@ -4202,7 +4219,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           {isPremium && (
             <button onClick={openTreatsModal}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "12px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left", position: "relative" }}>
-              <span style={{ fontSize: 22 }}>💝</span>
+              <span style={{ fontSize: 22 }}>📦</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Ma Boîte à Souvenirs</div>
                 <div style={{ fontSize: 11, color: "#9CA3AF" }}>{treatsReceived.length} au total</div>
@@ -4419,7 +4436,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>💝 Ma Boîte à Souvenirs</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>📦 Ma Boîte à Souvenirs</div>
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
               {treatsReceived.length > 0 && (
@@ -4545,7 +4562,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         <AddServiceForm
           userProfile={initialData}
           onClose={() => setShowAddService(false)}
-          onAdded={async () => { setShowAddService(false); setProviderServices(await fetchProviderServices(initialData.id)); }}
+          onAdded={async () => {
+            setShowAddService(false);
+            setProviderServices(await fetchProviderServices(initialData.id));
+            if (!initialData?.questsCompleted?.become_provider) {
+              claimQuest(initialData, "become_provider").then(result => {
+                if (result.claimed) onProfileUpdated({ ...initialData, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
+              }).catch(() => {});
+            }
+          }}
         />
       )}
 
@@ -4598,23 +4623,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Offrez une friandise ou un cadeau à celui ou celle qui compte 🐾</div>
               <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Un geste qui se remarque — dans Découvrir pour attirer l'attention, ou directement dans vos conversations pour faire plaisir à un match.</div>
-            </div>
-
-            {/* Quêtes ponctuelles — gagner gratuitement */}
-            <div style={{ background: "#FAF0EB", borderRadius: 14, padding: "12px 14px", marginBottom: 20 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#8B3D28", letterSpacing: 1, marginBottom: 10 }}>🎯 QUÊTES — À GAGNER GRATUITEMENT</div>
-              {QUEST_LIST.map(q => {
-                const done = !!initialData?.questsCompleted?.[q.id];
-                return (
-                  <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
-                    <span style={{ fontSize: 18, opacity: done ? 0.5 : 1 }}>{done ? "✅" : q.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: done ? "#9CA3AF" : "#2D1200", textDecoration: done ? "line-through" : "none" }}>{q.title}</div>
-                      <div style={{ fontSize: 11, color: "#9CA3AF" }}>{q.rewardLabel(initialData?.species)}</div>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
 
             {/* Récapitulatif de l'inventaire possédé */}
@@ -4713,6 +4721,23 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 </div>
               );
             })}
+
+            {/* Quêtes ponctuelles — gagner gratuitement, sous les articles pour ne pas surcharger l'ouverture */}
+            <div style={{ background: "#FAF0EB", borderRadius: 14, padding: "12px 14px", marginTop: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#8B3D28", letterSpacing: 1, marginBottom: 10 }}>🎯 QUÊTES — À GAGNER GRATUITEMENT</div>
+              {QUEST_LIST.map(q => {
+                const done = !!initialData?.questsCompleted?.[q.id];
+                return (
+                  <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
+                    <span style={{ fontSize: 18, opacity: done ? 0.5 : 1 }}>{done ? "✅" : q.emoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: done ? "#9CA3AF" : "#2D1200", textDecoration: done ? "line-through" : "none" }}>{q.title}</div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF" }}>{q.rewardLabel(initialData?.species)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             {shopError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 12px", marginTop: 10 }}>{shopError}</div>}
           </div>
@@ -4847,7 +4872,7 @@ const PLANS = [
 ];
 
 const FEATURES = [
-  ["💝", "Boîte à Souvenirs de vos cadeaux"],
+  ["📦", "Boîte à Souvenirs de vos cadeaux"],
   ["🌱", "Accès reproduction complète"],
   ["🏆", "Publier dans la communauté"],
   ["📊", "Statistiques avancées"],
@@ -5839,59 +5864,58 @@ async function clearProfileLocation(profileId) {
 // choix complet proposé dans le chat une fois matché.
 const GIFT_CATALOG = [
   // Nourriture chien
-  { id: "bone", emoji: "🦴", label: "Os du Chef", price: "0,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "bone", emoji: "🦴", label: "Os Miloute", price: "0,99 €", category: "food", species: "dog", gender: "m" },
   { id: "chicken", emoji: "🍗", label: "Cuisse Dorée", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   { id: "steak", emoji: "🥩", label: "Steak Royal", price: "2,99 €", category: "food", species: "dog", gender: "m" },
-  { id: "croc_dog", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "dog", gender: "f" },
   { id: "bacon", emoji: "🥓", label: "Bacon Croustillant", price: "1,99 €", category: "food", species: "dog", gender: "m" },
   { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
-  { id: "fish", emoji: "🐟", label: "Poisson du Chef", price: "1,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "turkeypate", emoji: "🥫", label: "Pâté de Dinde ", price: "1,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "fish", emoji: "🐟", label: "Poisson Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "tunapate", emoji: "🥫", label: "Pâtée Câline", price: "0,99 €", category: "food", species: "cat", gender: "f" },
   { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "croc_cat", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
   { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,99 €", category: "food", species: "cat", gender: "f" },
-  { id: "milk", emoji: "🥛", label: "Douceur lactée", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "Gourmetdish", emoji: "🍱", label: "Plateau Gourmet", price: "2,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "croc", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  // Nourriture mixte
+  { id: "mixpate", emoji: "🥫", label: "Pâtée Surprise", price: "0,99 €", category: "food", species: "both", gender: "f" },
   // Cadeaux chien
   { id: "tennisball", emoji: "🥎", label: "Balle Rebelle", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
   { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
   { id: "chewrope", emoji: "🪢", label: "Corde à Mâchouiller", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
-  { id: "coeur", emoji: "💓", label: "Cœur du Toutou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
   // Cadeaux chat
   { id: "yarn", emoji: "🧶", label: "Pelote Magique", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
   { id: "mouse", emoji: "🐭", label: "Souris Fuyante", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
   { id: "feather", emoji: "🪶", label: "Plume Chatouille", price: "1,99 €", category: "gift", species: "cat", gender: "f" },
-  { id: "coeur", emoji: "💓", label: "Cœur du Miaouw", price: "1,99 €", category: "gift", species: "cat", gender: "m" },
   // Cadeaux universels
   { id: "bouquet", emoji: "💐", label: "Bouquet des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "crown", emoji: "👑", label: "Couronne Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
   { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "cake", emoji: "🎂", label: "Gâteau Fiesta", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "rose", emoji: "🌹", label: "Rose des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "f" },
+  { id: "coeur", emoji: "💕", label: "Cœur Miloute", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "medal", emoji: "🏅", label: "Médaille Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
   { id: "plush", emoji: "🧸", label: "Doudou Câlin", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   // Confort & Accessoires
   { id: "bed", emoji: "☁️", label: "Panier Douillet", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
   { id: "doghouse", emoji: "🏠", label: "Niche Royale", price: "2,99 €", category: "comfort", species: "dog", gender: "f" },
   { id: "cattree", emoji: "🌳", label: "Arbre Royal", price: "2,99 €", category: "comfort", species: "cat", gender: "m" },
-  { id: "collar", emoji: "📿", label: "Collier Elégance", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
+  { id: "collar", emoji: "📿", label: "Collier Cœur Miloute", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
 ];
 
 // Packs groupés — quelques articles réunis à prix légèrement réduit, sans
 // monnaie intermédiaire : un simple achat direct comme le reste de la boutique.
 const GIFT_BUNDLES = [
   // Pack Gourmand — différent selon l'espèce, même nom affiché
-  { id: "gourmet_dog_pack", label: "Pack Gourmand", items: ["bone", "chicken", "bacon"], price: "2,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
-  { id: "gourmet_cat_pack", label: "Pack Gourmand", items: ["fish", "turkeypate", "milk"], price: "2,99 €", originalPrice: "4,97 €", species: "cat", category: "food" },
+  { id: "gourmet_dog_pack", label: "Pack Gourmand", items: ["bone", "chicken", "bacon"], price: "3,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
+  { id: "gourmet_cat_pack", label: "Pack Gourmand", items: ["fish", "tunapate", "milk"], price: "1,99 €", originalPrice: "2,97 €", species: "cat", category: "food" },
   // Pack Joueur — différent selon l'espèce, même nom affiché
   { id: "player_dog_pack", label: "Pack Joueur", items: ["tennisball", "frisbee", "chewrope"], price: "4,99 €", originalPrice: "5,97 €", species: "dog", category: "gift" },
   { id: "player_cat_pack", label: "Pack Joueur", items: ["yarn", "mouse", "feather"], price: "4,99 €", originalPrice: "5,97 €", species: "cat", category: "gift" },
   // Pack Romantique — universel, identique pour tous
   { id: "romance_pack", label: "Pack Romantique", items: ["bouquet", "rose", "coeur"], price: "4,99 €", originalPrice: "5,97 €", species: "both", category: "gift" },
   // Pack Luxe — universel, identique pour tous
-  { id: "luxury_dog_pack", label: "Pack Luxe", items: ["crown", "steak", "doghouse"], price: "6,99 €", originalPrice: "8,97 €", species: "dog", category: "comfort" },
-  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "Gourmetdish", "cattree"], price: "6,99 €", originalPrice: "8,97 €", species: "cat", category: "comfort" },
+  { id: "luxury_dog_pack", label: "Pack Luxe", items: ["crown", "steak", "collar"], price: "6,99 €", originalPrice: "7,97 €", species: "dog", category: "comfort" },
+  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "sushi", "collar"], price: "5,99 €", originalPrice: "6,97 €", species: "cat", category: "comfort" },
 ];
 
 // Quêtes ponctuelles — chacune ne se débloque qu'une fois, sans série
@@ -5900,8 +5924,12 @@ const GIFT_BUNDLES = [
 const QUEST_LIST = [
   { id: "profile_complete", emoji: "📋", title: "Compléter son profil à 100%", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
   { id: "first_match", emoji: "💕", title: "Obtenir son premier match", rewardLabel: () => "1 Bouquet des Amoureux 💐" },
-  { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Elégance 📿" },
+  { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Cœur Miloute 📿" },
   { id: "first_review", emoji: "⭐", title: "Laisser son premier avis prestataire", rewardLabel: () => "1 Rose des Amoureux 🌹" },
+  { id: "first_post", emoji: "📢", title: "Publier son premier post dans la Communauté", rewardLabel: () => "1 Doudou Câlin 🧸" },
+  { id: "become_provider", emoji: "🏥", title: "Devenir prestataire (configuration terminée)", rewardLabel: () => "1 Médaille Miloute 🏅" },
+  { id: "first_booking", emoji: "📅", title: "Effectuer sa première réservation", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
+  { id: "first_gift_sent", emoji: "🎁", title: "Envoyer son premier cadeau", rewardLabel: () => "1 Cœur Miloute 💕" },
 ];
 
 async function startShopCheckout({ itemId, bundleId }, userProfile) {
@@ -6522,7 +6550,14 @@ export default function Miloute() {
     if (status === "success" && sessionId) {
       verifyBookingSession(sessionId)
         .then(data => {
-          if (data.paid) setShowBookingSuccess(true);
+          if (data.paid) {
+            setShowBookingSuccess(true);
+            if (userProfileRef.current && !userProfileRef.current?.questsCompleted?.first_booking) {
+              claimQuest(userProfileRef.current, "first_booking").then(result => {
+                if (result.claimed) updateUserProfile({ ...userProfileRef.current, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
+              }).catch(() => {});
+            }
+          }
           else setVerifyError("Le paiement de la réservation n'a pas pu être confirmé.");
         })
         .catch(() => setVerifyError("Impossible de vérifier le paiement de la réservation."));
@@ -6710,7 +6745,7 @@ export default function Miloute() {
                 {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToProviderSetup={() => { setRequestOpenProviderScreen(true); setScreen("profile"); }} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 
-                {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} />}
+                {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} onProfileUpdated={updateUserProfile} onGoToShop={goToShop} />}
                 {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} />}
