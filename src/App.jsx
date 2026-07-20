@@ -4645,12 +4645,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               );
             })()}
 
-            {isPremium && (
-              <div style={{ fontSize: 12, color: "#2E7D32", background: "#E8F5E9", borderRadius: 10, padding: "10px 12px", marginBottom: 16, lineHeight: 1.5 }}>
-                👑 Vous êtes Premium : cadeaux illimités inclus. Ces articles restent utiles si vous voulez en offrir davantage ou en garder en réserve.
-              </div>
-            )}
-
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>PACKS (prix réduit)</div>
             {GIFT_BUNDLES.filter(b => b.species === "both" || b.species === initialData?.species).map(b => (
               <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: "1.5px solid #E8B89F" }}>
