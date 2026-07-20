@@ -4890,7 +4890,7 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, profileId: userProfile?.id, userId: userProfile?.userId }),
       });
       const data = await res.json();
       if (data.checkoutUrl) {
@@ -5975,12 +5975,6 @@ async function claimQuest(userProfile, questId) {
   return res.json();
 }
 
-async function setPremiumInDb(profileId, value) {
-  if (!profileId) return;
-  const { error } = await supabase.from("profiles").update({ is_premium: value }).eq("id", profileId);
-  if (error) console.error("setPremiumInDb error:", error);
-}
-
 async function fetchProfileForUser(userId) {
   const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle();
   if (error) { console.error("fetchProfileForUser error:", error); return null; }
@@ -6508,12 +6502,11 @@ export default function Miloute() {
       fetch(`/api/verify-session?session_id=${encodeURIComponent(sessionId)}`)
         .then(res => res.json())
         .then(data => {
-          if (data.paid) {
+          if (data.paid && data.activated) {
             setIsPremium(true);
             savePremiumStatus(true);
             setShowPremiumSuccess(true);
             if (userProfileRef.current?.id) {
-              setPremiumInDb(userProfileRef.current.id, true);
               updateUserProfile({ ...userProfileRef.current, isPremium: true });
             }
             // Revient à l'écran où l'utilisateur était avant d'être envoyé
@@ -6522,6 +6515,8 @@ export default function Miloute() {
               const previousScreen = localStorage.getItem("miloute_screen_before_checkout");
               if (previousScreen) { setScreen(previousScreen); localStorage.removeItem("miloute_screen_before_checkout"); }
             } catch {}
+          } else if (data.paid && !data.activated) {
+            setVerifyError("Paiement confirmé, mais l'activation n'a pas pu être finalisée automatiquement. Contactez le support avec votre reçu Stripe.");
           } else {
             setVerifyError("Le paiement n'a pas pu être confirmé. Si vous avez bien payé, contactez le support.");
           }
@@ -6691,16 +6686,6 @@ export default function Miloute() {
       setShowPremiumTunnel(true);
     }
   }
-  function onPremiumSuccess() {
-    setIsPremium(true);
-    savePremiumStatus(true);
-    setShowPremiumTunnel(false);
-    if (userProfile?.id) {
-      setPremiumInDb(userProfile.id, true);
-      updateUserProfile({ ...userProfile, isPremium: true });
-    }
-  }
-
   
   const NAV = [
     { id: "swipe", label: "Découvrir", icon: null, logo: true },
@@ -6785,7 +6770,7 @@ export default function Miloute() {
 
         {/* Premium tunnel */}
         {showPremiumTunnel && (
-          <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} onSuccess={onPremiumSuccess} initialPlan={premiumInitialPlan} userProfile={userProfile} />
+          <PremiumTunnel onClose={() => setShowPremiumTunnel(false)} initialPlan={premiumInitialPlan} userProfile={userProfile} />
         )}
 
         {/* Vérification du paiement en cours */}
