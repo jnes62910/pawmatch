@@ -3108,6 +3108,18 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
   const [moderationError, setModerationError] = useState(null);
   const [sendingPhoto, setSendingPhoto] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
+  const [showMatchProfile, setShowMatchProfile] = useState(false);
+  const [matchProfile, setMatchProfile] = useState(null);
+  const [loadingMatchProfile, setLoadingMatchProfile] = useState(false);
+
+  async function openMatchProfile() {
+    if (!match?.otherUserId) return;
+    setShowMatchProfile(true);
+    setLoadingMatchProfile(true);
+    const profile = await fetchProfileForUser(match.otherUserId);
+    setMatchProfile(profile);
+    setLoadingMatchProfile(false);
+  }
   const [sendingGift, setSendingGift] = useState(false);
   const [giftError, setGiftError] = useState(null);
   const [suggestedSpot, setSuggestedSpot] = useState(null);
@@ -3286,10 +3298,12 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid #F3F4F6", background: "#fff" }}>
         <button onClick={onBack} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer" }}>←</button>
-        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-          {match?.photo ? <img src={match.photo} alt={match.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : match?.emoji}
-        </div>
-        <div><div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div><div style={{ fontSize: 12, color: "#9CA3AF" }}>{match?.owner}</div></div>
+        <button onClick={openMatchProfile} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+            {match?.photo ? <img src={match.photo} alt={match.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : match?.emoji}
+          </div>
+          <div><div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div><div style={{ fontSize: 12, color: "#9CA3AF" }}>{match?.owner}</div></div>
+        </button>
       </div>
       <div style={{ margin: "10px 14px 0", padding: "10px 14px", background: "#FAF0EB", borderRadius: 12, display: "flex", alignItems: "center", gap: 10 }}>
         <span>📍</span>
@@ -3371,6 +3385,57 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
               })}
             </div>
             <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 14 }}>Un cadeau grisé n'est plus en stock — tapez dessus pour l'acheter dans la Boutique.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Profil complet du match */}
+      {showMatchProfile && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 200, display: "flex", alignItems: "flex-end" }} onClick={() => setShowMatchProfile(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85vh", overflowY: "auto", boxSizing: "border-box" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "12px auto 0" }} />
+            {loadingMatchProfile ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: 60 }}><PawLogo size={32} color="#E8B89F" /></div>
+            ) : !matchProfile ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: "#9CA3AF" }}>Profil introuvable.</div>
+            ) : (
+              <>
+                <div style={{ width: "100%", aspectRatio: "1", background: "#FAF0EB", position: "relative" }}>
+                  {photoUrl(matchProfile.photos?.[0]) ? (
+                    <img src={photoUrl(matchProfile.photos[0])} alt={matchProfile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>{matchProfile.species === "cat" ? "🐱" : "🐕"}</div>
+                  )}
+                  <button onClick={() => setShowMatchProfile(false)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,.9)", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer" }}>✕</button>
+                </div>
+                <div style={{ padding: "18px 20px 32px" }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{matchProfile.name}, {matchProfile.age} {matchProfile.gender === "F" ? "♀" : "♂"}</div>
+                  <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 12 }}>{matchProfile.breed}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                    {(matchProfile.temper || []).map(t => (
+                      <span key={t} style={{ background: "#FAF0EB", color: "#B25F46", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20 }}>{t}</span>
+                    ))}
+                    {matchProfile.vaccinated && <span style={{ background: "#E8F5E9", color: "#2E7D32", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20 }}>Vacciné·e ✓</span>}
+                  </div>
+                  {matchProfile.bio && (
+                    <>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 6 }}>À PROPOS</div>
+                      <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginBottom: 14 }}>{matchProfile.bio}</div>
+                    </>
+                  )}
+                  {(matchProfile.seeking || []).length > 0 && (
+                    <>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 6 }}>RECHERCHE</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {matchProfile.seeking.map(s => (
+                          <span key={s} style={{ background: "#F3F4F6", color: "#4B5563", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20 }}>{s}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -4866,7 +4931,7 @@ const PLANS = [
 ];
 
 const FEATURES = [
-  ["📦", "Boîte à Souvenirs de vos cadeaux"],
+  ["💝", "Boîte à Souvenirs de vos cadeaux"],
   ["🌱", "Accès reproduction complète"],
   ["🏆", "Publier dans la communauté"],
   ["📊", "Statistiques avancées"],
