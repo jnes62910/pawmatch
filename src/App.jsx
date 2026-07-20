@@ -4669,7 +4669,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             ))}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>FRIANDISES</div>
-            {GIFT_CATALOG.filter(g => g.category === "food" && (g.species === "both" || g.species === initialData?.species)).map(g => {
+            {GIFT_CATALOG.filter(g => g.category === "food" && (g.species === "both" || g.species === initialData?.species)).sort((a, b) => parseGiftPrice(a.price) - parseGiftPrice(b.price)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
                 <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
@@ -4687,7 +4687,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             })}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CADEAUX</div>
-            {GIFT_CATALOG.filter(g => g.category === "gift" && (g.species === "both" || g.species === initialData?.species)).map(g => {
+            {GIFT_CATALOG.filter(g => g.category === "gift" && (g.species === "both" || g.species === initialData?.species)).sort((a, b) => parseGiftPrice(a.price) - parseGiftPrice(b.price)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
                 <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
@@ -4705,7 +4705,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             })}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CONFORT & ACCESSOIRES</div>
-            {GIFT_CATALOG.filter(g => g.category === "comfort" && (g.species === "both" || g.species === initialData?.species)).map(g => {
+            {GIFT_CATALOG.filter(g => g.category === "comfort" && (g.species === "both" || g.species === initialData?.species)).sort((a, b) => parseGiftPrice(a.price) - parseGiftPrice(b.price)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               return (
                 <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
@@ -5864,20 +5864,19 @@ async function clearProfileLocation(profileId) {
 // choix complet proposé dans le chat une fois matché.
 const GIFT_CATALOG = [
   // Nourriture chien
-  { id: "bone", emoji: "🦴", label: "Os Miloute", price: "0,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "bone", emoji: "🦴", label: "Os du Chef", price: "0,99 €", category: "food", species: "dog", gender: "m" },
   { id: "chicken", emoji: "🍗", label: "Cuisse Dorée", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   { id: "steak", emoji: "🥩", label: "Steak Royal", price: "2,99 €", category: "food", species: "dog", gender: "m" },
   { id: "bacon", emoji: "🥓", label: "Bacon Croustillant", price: "1,99 €", category: "food", species: "dog", gender: "m" },
   { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
-  { id: "fish", emoji: "🐟", label: "Poisson Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "tunapate", emoji: "🥫", label: "Pâtée Câline", price: "0,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "fish", emoji: "🐟", label: "Poisson du Chef", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "tunapate", emoji: "🥫", label: "Pâtée de Dinde", price: "0,99 €", category: "food", species: "cat", gender: "f" },
   { id: "sushi", emoji: "🍣", label: "Sushi d'Amour", price: "1,99 €", category: "food", species: "cat", gender: "m" },
   { id: "shrimp", emoji: "🍤", label: "Crevette Coquine", price: "1,99 €", category: "food", species: "cat", gender: "f" },
-  { id: "milk", emoji: "🥛", label: "Lait Doux Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  { id: "croc", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
-  // Nourriture mixte
-  { id: "mixpate", emoji: "🥫", label: "Pâtée Surprise", price: "0,99 €", category: "food", species: "both", gender: "f" },
+  { id: "milk", emoji: "🥛", label: "Douceur Lactée", price: "0,99 €", category: "food", species: "cat", gender: "f" },
+  { id: "croc_cat", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "cat", gender: "m" },
+  { id: "croc_dog", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "dog", gender: "f" },
   // Cadeaux chien
   { id: "tennisball", emoji: "🥎", label: "Balle Rebelle", price: "1,99 €", category: "gift", species: "dog", gender: "f" },
   { id: "frisbee", emoji: "🥏", label: "Frisbee Fou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
@@ -5892,18 +5891,24 @@ const GIFT_CATALOG = [
   { id: "ribbon", emoji: "🎀", label: "Ruban Chic", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "cake", emoji: "🎂", label: "Gâteau Fiesta", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   { id: "rose", emoji: "🌹", label: "Rose des Amoureux", price: "1,99 €", category: "gift", species: "both", gender: "f" },
-  { id: "coeur", emoji: "💕", label: "Cœur Miloute", price: "1,99 €", category: "gift", species: "both", gender: "m" },
+  { id: "coeur_dog", emoji: "💕", label: "Cœur de Toutou", price: "1,99 €", category: "gift", species: "dog", gender: "m" },
+  { id: "coeur_cat", emoji: "💕", label: "Cœur de Miaouw", price: "1,99 €", category: "gift", species: "cat", gender: "m" },
   { id: "medal", emoji: "🏅", label: "Médaille Miloute", price: "2,99 €", category: "gift", species: "both", gender: "f" },
   { id: "plush", emoji: "🧸", label: "Doudou Câlin", price: "1,99 €", category: "gift", species: "both", gender: "m" },
   // Confort & Accessoires
   { id: "bed", emoji: "☁️", label: "Panier Douillet", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
   { id: "doghouse", emoji: "🏠", label: "Niche Royale", price: "2,99 €", category: "comfort", species: "dog", gender: "f" },
   { id: "cattree", emoji: "🌳", label: "Arbre Royal", price: "2,99 €", category: "comfort", species: "cat", gender: "m" },
-  { id: "collar", emoji: "📿", label: "Collier Cœur Miloute", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
+  { id: "collar", emoji: "📿", label: "Collier Élégance", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
 ];
 
 // Packs groupés — quelques articles réunis à prix légèrement réduit, sans
 // monnaie intermédiaire : un simple achat direct comme le reste de la boutique.
+// Convertit "1,99 €" en nombre exploitable pour trier par prix croissant.
+function parseGiftPrice(priceStr) {
+  return parseFloat(priceStr.replace("€", "").replace(",", ".").trim());
+}
+
 const GIFT_BUNDLES = [
   // Pack Gourmand — différent selon l'espèce, même nom affiché
   { id: "gourmet_dog_pack", label: "Pack Gourmand", items: ["bone", "chicken", "bacon"], price: "3,99 €", originalPrice: "4,97 €", species: "dog", category: "food" },
@@ -5912,10 +5917,11 @@ const GIFT_BUNDLES = [
   { id: "player_dog_pack", label: "Pack Joueur", items: ["tennisball", "frisbee", "chewrope"], price: "4,99 €", originalPrice: "5,97 €", species: "dog", category: "gift" },
   { id: "player_cat_pack", label: "Pack Joueur", items: ["yarn", "mouse", "feather"], price: "4,99 €", originalPrice: "5,97 €", species: "cat", category: "gift" },
   // Pack Romantique — universel, identique pour tous
-  { id: "romance_pack", label: "Pack Romantique", items: ["bouquet", "rose", "coeur"], price: "4,99 €", originalPrice: "5,97 €", species: "both", category: "gift" },
+  { id: "romance_dog_pack", label: "Pack Romantique", items: ["bouquet", "rose", "coeur_dog"], price: "4,99 €", originalPrice: "5,97 €", species: "dog", category: "gift" },
+  { id: "romance_cat_pack", label: "Pack Romantique", items: ["bouquet", "rose", "coeur_cat"], price: "4,99 €", originalPrice: "5,97 €", species: "cat", category: "gift" },
   // Pack Luxe — universel, identique pour tous
-  { id: "luxury_dog_pack", label: "Pack Luxe", items: ["crown", "steak", "collar"], price: "6,99 €", originalPrice: "7,97 €", species: "dog", category: "comfort" },
-  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "sushi", "collar"], price: "5,99 €", originalPrice: "6,97 €", species: "cat", category: "comfort" },
+  { id: "luxury_dog_pack", label: "Pack Luxe", items: ["crown", "steak", "doghouse"], price: "7,99 €", originalPrice: "8,97 €", species: "dog", category: "comfort" },
+  { id: "luxury_cat_pack", label: "Pack Luxe", items: ["crown", "sushi", "cattree"], price: "6,99 €", originalPrice: "7,97 €", species: "cat", category: "comfort" },
 ];
 
 // Quêtes ponctuelles — chacune ne se débloque qu'une fois, sans série
@@ -5924,12 +5930,12 @@ const GIFT_BUNDLES = [
 const QUEST_LIST = [
   { id: "profile_complete", emoji: "📋", title: "Compléter son profil à 100%", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
   { id: "first_match", emoji: "💕", title: "Obtenir son premier match", rewardLabel: () => "1 Bouquet des Amoureux 💐" },
-  { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Cœur Miloute 📿" },
+  { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Élégance 📿" },
   { id: "first_review", emoji: "⭐", title: "Laisser son premier avis prestataire", rewardLabel: () => "1 Rose des Amoureux 🌹" },
   { id: "first_post", emoji: "📢", title: "Publier son premier post dans la Communauté", rewardLabel: () => "1 Doudou Câlin 🧸" },
   { id: "become_provider", emoji: "🏥", title: "Devenir prestataire (configuration terminée)", rewardLabel: () => "1 Médaille Miloute 🏅" },
   { id: "first_booking", emoji: "📅", title: "Effectuer sa première réservation", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
-  { id: "first_gift_sent", emoji: "🎁", title: "Envoyer son premier cadeau", rewardLabel: () => "1 Cœur Miloute 💕" },
+  { id: "first_gift_sent", emoji: "🎁", title: "Envoyer son premier cadeau", rewardLabel: (species) => `1 ${species === "cat" ? "Cœur de Miaouw" : "Cœur de Toutou"} 💕` },
 ];
 
 async function startShopCheckout({ itemId, bundleId }, userProfile) {
