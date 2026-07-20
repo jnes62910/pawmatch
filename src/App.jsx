@@ -2988,7 +2988,7 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
                   <span style={{ fontWeight: 700, color: "#2D1200", fontSize: 15 }}>{m.name}</span>
                   <span style={{ fontSize: 12, color: "#9CA3AF" }}>{m.time}</span>
                 </div>
-                <div style={{ fontSize: 13, color: m.unread ? "#8B3D28" : "#6B7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: m.unread ? 600 : 400 }}>{m.lastMsg}</div>
+                <div style={{ fontSize: 13, color: m.lastMsgIsGift ? "#B25F46" : (m.unread ? "#8B3D28" : "#6B7280"), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: m.lastMsgIsGift || m.unread ? 700 : 400 }}>{m.lastMsg}</div>
                 <div style={{ fontSize: 11, color: "#9CA3AF" }}>{m.owner}</div>
               </div>
               {m.unread > 0 && <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#B25F46", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{m.unread}</div>}
@@ -3286,8 +3286,19 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
     if (error) setGiftError("Le cadeau n'a pas pu être envoyé, réessayez.");
     else {
       setShowGiftPicker(false);
+      // Enregistré aussi dans "treats" pour apparaître dans Ma Boîte à
+      // Souvenirs, comme les cadeaux envoyés depuis Découvrir.
+      if (match?.otherProfileId) {
+        supabase.from("treats").insert({
+          sender_user_id: userProfile.userId,
+          sender_profile_id: userProfile.id,
+          target_user_id: match.otherUserId,
+          target_profile_id: match.otherProfileId,
+          gift_id: giftId,
+        }).then(({ error: treatError }) => { if (treatError) console.error("treats insert error:", treatError); });
+      }
       const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
-      setSentGiftToast({ emoji: giftInfo?.emoji || emoji, label: giftInfo?.label || "Cadeau" });
+      setSentGiftToast({ emoji: giftInfo?.emoji || emoji, label: giftInfo?.label || "Cadeau", article: giftInfo?.gender === "f" ? "une" : "un" });
       setTimeout(() => setSentGiftToast(null), 2200);
       if (!userProfile?.questsCompleted?.first_gift_sent) {
         claimQuest(userProfile, "first_gift_sent").then(r => {
@@ -3324,7 +3335,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
               <div style={{ position: "absolute", left: "50%", top: 0, fontSize: 26, animation: "chatGiftItemPop .6s cubic-bezier(.34,1.56,.64,1) .15s both" }}>{sentGiftToast.emoji}</div>
             </div>
             <div style={{ background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", animation: "chatToastTextIn .3s ease-out .3s both" }}>
-              {sentGiftToast.label} envoyé à {match?.name} !
+              {sentGiftToast.article} {sentGiftToast.label} envoyé à {match?.name} !
             </div>
           </div>
         </>
@@ -3351,17 +3362,28 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
         ) : msgs.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
             {msg.giftEmoji ? (
-              <div style={{ maxWidth: "75%", padding: "16px 20px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: "linear-gradient(135deg,#FAF0EB,#F3E0D3)", textAlign: "center" }}>
-                <style>{`@keyframes giftPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 80% { transform: scale(0.95); } 100% { transform: scale(1); } }`}</style>
-                <div style={{ fontSize: 44, marginBottom: 4, animation: "giftPop .5s cubic-bezier(.34,1.56,.64,1)" }}>{msg.giftEmoji}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#8B3D28" }}>
+              <div style={{ position: "relative", maxWidth: "75%", padding: "22px 26px", borderRadius: msg.from === "me" ? "20px 20px 4px 20px" : "20px 20px 20px 4px", background: "linear-gradient(135deg,#FFF3D6,#FFE29A,#FFD966,#FFE29A)", backgroundSize: "300% 100%", textAlign: "center", overflow: "visible", boxShadow: "0 6px 22px rgba(230,168,0,.35)", border: "1.5px solid rgba(230,168,0,.4)" }}>
+                <style>{`
+                  @keyframes giftPopWow { 0% { transform: scale(0) rotate(-18deg); opacity: 0; } 50% { transform: scale(1.4) rotate(10deg); opacity: 1; } 70% { transform: scale(0.9) rotate(-5deg); } 85% { transform: scale(1.08) rotate(2deg); } 100% { transform: scale(1) rotate(0deg); } }
+                  @keyframes giftGlowPulse { 0% { transform: scale(0.5); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
+                  @keyframes sparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(180deg); opacity: 0; } }
+                  @keyframes bubbleShimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+                `}</style>
+                <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", background: "radial-gradient(circle, rgba(255,215,0,.55) 0%, transparent 70%)", animation: "giftGlowPulse .9s ease-out", pointerEvents: "none" }} />
+                {[["-42px","-32px"], ["46px","-26px"], ["-46px","22px"], ["42px","32px"], ["4px","-46px"], ["-6px","42px"]].map(([tx, ty], idx) => (
+                  <span key={idx} style={{ position: "absolute", left: "50%", top: "40%", fontSize: 13, "--tx": tx, "--ty": ty, animation: `sparkleFly .9s ease-out ${0.1 + idx * 0.07}s both`, pointerEvents: "none" }}>✨</span>
+                ))}
+                <div style={{ position: "relative", fontSize: 52, marginBottom: 6, animation: "giftPopWow .7s cubic-bezier(.34,1.56,.64,1)" }}>{msg.giftEmoji}</div>
+                <div style={{ position: "relative", fontSize: 12, fontWeight: 800, color: "#7A4A00" }}>
                   {(() => {
-                    const g = GIFT_CATALOG.find(x => x.emoji === msg.giftEmoji);
+                    const candidates = GIFT_CATALOG.filter(x => x.emoji === msg.giftEmoji);
+                    const g = candidates.find(x => x.species === match?.species) || candidates.find(x => x.species === "both") || candidates[0];
                     const label = g?.label || "un cadeau";
-                    return msg.from === "me" ? `Vous avez envoyé ${label}` : `${match?.name || "Il/Elle"} vous a envoyé ${label}`;
+                    const article = g?.gender === "f" ? "une" : "un";
+                    return msg.from === "me" ? `Vous avez envoyé ${article} ${label}` : `${match?.name || "Il/Elle"} vous a envoyé ${article} ${label}`;
                   })()}
                 </div>
-                <div style={{ fontSize: 10, opacity: .6, marginTop: 4, color: "#8B3D28" }}>{msg.time}</div>
+                <div style={{ position: "relative", fontSize: 10, opacity: .65, marginTop: 4, color: "#7A4A00" }}>{msg.time}</div>
               </div>
             ) : (
               <div style={{ maxWidth: "75%", padding: msg.imageUrl ? 4 : "10px 14px", borderRadius: msg.from === "me" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.from === "me" ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: msg.from === "me" ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.5 }}>
@@ -6349,7 +6371,7 @@ async function fetchMatchesForUser(userProfile) {
 
   const { data: lastMessages } = await supabase
     .from("messages")
-    .select("match_id, text, created_at")
+    .select("match_id, text, gift_emoji, sender_user_id, created_at")
     .in("match_id", matchRows.map(m => m.id))
     .order("created_at", { ascending: false });
   const lastByMatch = {};
@@ -6359,15 +6381,18 @@ async function fetchMatchesForUser(userProfile) {
     const otherId = m.profile_a === userProfile.id ? m.profile_b : m.profile_a;
     const other = profileById[otherId];
     const last = lastByMatch[m.id];
+    const lastIsGift = !!last?.gift_emoji;
     return {
       id: m.id,
       otherUserId: m.user_a === userProfile.userId ? m.user_b : m.user_a,
+      otherProfileId: otherId,
       name: other?.pet_name || "Profil",
       species: other?.species,
       emoji: other?.species === "cat" ? "🐱" : "🐕",
       photo: other?.photos?.[0]?.url || null,
       owner: other?.owner_name || "",
-      lastMsg: last?.text || "Vous avez matché ! Dites bonjour 👋",
+      lastMsg: last ? (lastIsGift ? `🎁 ${last.sender_user_id === userProfile.userId ? "Vous avez envoyé" : "A envoyé"} un cadeau` : last.text) : "Vous avez matché ! Dites bonjour 👋",
+      lastMsgIsGift: lastIsGift,
       time: last ? formatRelativeTime(last.created_at) : "",
       unread: 0,
     };
