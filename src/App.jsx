@@ -786,18 +786,24 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               </button>
             </div>
 
-            {/* Confirmation d'envoi de cadeau — l'article "sort" du cadeau avec un rebond */}
+            {/* Confirmation d'envoi de cadeau — même effet waouh que dans le chat */}
             {treatToast && (
               <>
                 <style>{`
-                  @keyframes giftBoxShake { 0%,100% { transform: scale(1) rotate(0deg); } 25% { transform: scale(0.94) rotate(-4deg); } 75% { transform: scale(0.94) rotate(4deg); } }
-                  @keyframes giftItemPop { 0% { transform: translate(-50%, 6px) scale(0); opacity: 0; } 55% { transform: translate(-50%, -20px) scale(1.3); opacity: 1; } 100% { transform: translate(-50%, -16px) scale(1); opacity: 1; } }
+                  @keyframes giftBoxShake { 0%,100% { transform: scale(1) rotate(0deg); } 25% { transform: scale(0.9) rotate(-8deg); } 75% { transform: scale(0.9) rotate(8deg); } }
+                  @keyframes giftItemPop { 0% { transform: translate(-50%, 6px) scale(0) rotate(-18deg); opacity: 0; } 50% { transform: translate(-50%, -24px) scale(1.4) rotate(10deg); opacity: 1; } 70% { transform: translate(-50%, -18px) scale(0.92) rotate(-4deg); } 100% { transform: translate(-50%, -18px) scale(1) rotate(0deg); opacity: 1; } }
+                  @keyframes toastGlowPulse { 0% { transform: scale(0.5); opacity: .9; } 100% { transform: scale(2.8); opacity: 0; } }
+                  @keyframes toastSparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(180deg); opacity: 0; } }
                   @keyframes toastTextIn { 0% { opacity: 0; transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
                 `}</style>
                 <div style={{ position: "absolute", bottom: 76, left: "50%", transform: "translateX(-50%)", zIndex: 6, display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
-                  <div style={{ position: "relative", width: 46, height: 46, marginBottom: 6 }}>
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, animation: "giftBoxShake .5s ease-out" }}>🎁</div>
-                    <div style={{ position: "absolute", left: "50%", top: 0, fontSize: 26, animation: "giftItemPop .6s cubic-bezier(.34,1.56,.64,1) .15s both" }}>{treatToast.emoji}</div>
+                  <div style={{ position: "relative", width: 60, height: 60, marginBottom: 8 }}>
+                    <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,215,0,.6) 0%, transparent 70%)", animation: "toastGlowPulse .9s ease-out" }} />
+                    {[["-38px","-28px"], ["40px","-24px"], ["-40px","20px"], ["36px","28px"], ["2px","-40px"]].map(([tx, ty], idx) => (
+                      <span key={idx} style={{ position: "absolute", left: "50%", top: "44%", fontSize: 13, "--tx": tx, "--ty": ty, animation: `toastSparkleFly .9s ease-out ${0.1 + idx * 0.07}s both` }}>✨</span>
+                    ))}
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, animation: "giftBoxShake .5s ease-out" }}>🎁</div>
+                    <div style={{ position: "absolute", left: "50%", top: 0, fontSize: 28, animation: "giftItemPop .7s cubic-bezier(.34,1.56,.64,1) .15s both" }}>{treatToast.emoji}</div>
                   </div>
                   <div style={{ background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", animation: "toastTextIn .3s ease-out .3s both" }}>
                     {treatToast.article} {treatToast.label} pour {treatToast.name} — {treatToast.pronoun} va adorer ! 🎉
@@ -4455,7 +4461,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   <div style={{ fontSize: 14 }}>Pas encore de like reçu</div>
                 </div>
               ) : likesReceived.map((like, i) => {
-                const alsoSentGift = treatsReceived.some(t => t.senderProfileId === like.profileId);
                 return (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", position: "relative" }}>
                   <div onClick={() => isPremium ? setSelectedLike(like) : onPremium()} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
@@ -4465,7 +4470,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     <div style={{ flex: 1, filter: isPremium ? "none" : "blur(4px)" }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 6 }}>
                         {isPremium ? like.name : "???"}
-                        {isPremium && alsoSentGift && <span title="A aussi envoyé un cadeau" style={{ fontSize: 12 }}>🎁</span>}
+                        {isPremium && like.viaGift && (
+                          <span title={like.viaLike ? "A aussi envoyé un cadeau" : "A envoyé un cadeau"} style={{ fontSize: 12 }}>🎁</span>
+                        )}
                       </div>
                       <div style={{ fontSize: 12, color: "#9CA3AF" }}>{like.breed} · {like.time}</div>
                     </div>
@@ -4598,8 +4605,17 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   );
                 }
                 return filtered.map(t => (
-                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB" }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                  <div key={t.id} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", borderRadius: !t.seen ? 12 : 0, background: !t.seen ? "linear-gradient(135deg,#FFF3D6,#FFE8B8)" : "transparent", overflow: "visible" }}>
+                    {!t.seen && (
+                      <style>{`
+                        @keyframes boxRevealPop { 0% { transform: scale(0) rotate(-18deg); opacity: 0; } 55% { transform: scale(1.2) rotate(8deg); opacity: 1; } 75% { transform: scale(0.94) rotate(-3deg); } 100% { transform: scale(1) rotate(0deg); } }
+                        @keyframes boxSparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(160deg); opacity: 0; } }
+                      `}</style>
+                    )}
+                    {!t.seen && [["-30px","-18px"], ["32px","-16px"], ["-30px","18px"], ["30px","20px"]].map(([tx, ty], idx) => (
+                      <span key={idx} style={{ position: "absolute", left: 24, top: "45%", fontSize: 11, "--tx": tx, "--ty": ty, animation: `boxSparkleFly .8s ease-out ${0.1 + idx * 0.08}s both`, pointerEvents: "none" }}>✨</span>
+                    ))}
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, animation: !t.seen ? "boxRevealPop .6s cubic-bezier(.34,1.56,.64,1)" : "none" }}>
                       {t.photo ? <img src={t.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : t.emoji}
                     </div>
                     <div style={{ flex: 1 }}>
@@ -6272,24 +6288,38 @@ async function markMessagesRead(matchId, userId) {
 // dans Messages, inutile de les faire apparaître deux fois.
 async function fetchLikesReceived(userProfile) {
   if (!userProfile?.id || !userProfile?.userId) return [];
-  const { data: likeRows, error } = await supabase
-    .from("swipes")
-    .select("swiper_user_id, created_at")
-    .eq("target_profile_id", userProfile.id)
-    .eq("direction", "like")
-    .order("created_at", { ascending: false });
-  if (error || !likeRows || likeRows.length === 0) return [];
+
+  const [{ data: likeRows }, { data: treatRows }] = await Promise.all([
+    supabase.from("swipes").select("swiper_user_id, created_at").eq("target_profile_id", userProfile.id).eq("direction", "like"),
+    supabase.from("treats").select("sender_user_id, created_at").eq("target_profile_id", userProfile.id),
+  ]);
+
+  // Un cadeau agit comme un signal au moins aussi fort qu'un like — on
+  // fusionne les deux : quelqu'un peut apparaître ici en n'ayant *que*
+  // envoyé un cadeau, sans avoir swipé à droite.
+  const byUser = {};
+  (likeRows || []).forEach(l => {
+    byUser[l.swiper_user_id] = byUser[l.swiper_user_id] || {};
+    byUser[l.swiper_user_id].likedAt = l.created_at;
+  });
+  (treatRows || []).forEach(t => {
+    byUser[t.sender_user_id] = byUser[t.sender_user_id] || {};
+    const existing = byUser[t.sender_user_id].giftedAt;
+    if (!existing || t.created_at > existing) byUser[t.sender_user_id].giftedAt = t.created_at;
+  });
+
+  const allUserIds = Object.keys(byUser);
+  if (allUserIds.length === 0) return [];
 
   const { data: matchRows } = await supabase
     .from("matches")
     .select("user_a, user_b")
     .or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`);
   const matchedUserIds = new Set((matchRows || []).flatMap(m => [m.user_a, m.user_b]));
-  const pending = likeRows.filter(l => !matchedUserIds.has(l.swiper_user_id));
-  if (pending.length === 0) return [];
+  const pendingUserIds = allUserIds.filter(id => !matchedUserIds.has(id));
+  if (pendingUserIds.length === 0) return [];
 
-  const senderUserIds = [...new Set(pending.map(l => l.swiper_user_id))];
-  const { data: senderProfiles } = await supabase.from("profiles").select("*").in("user_id", senderUserIds);
+  const { data: senderProfiles } = await supabase.from("profiles").select("*").in("user_id", pendingUserIds);
   const byUserId = Object.fromEntries((senderProfiles || []).map(p => [p.user_id, p]));
 
   // Exclut les profils déjà rejetés (swipe "nope" de ma part) — sinon ils
@@ -6300,9 +6330,11 @@ async function fetchLikesReceived(userProfile) {
     .eq("swiper_user_id", userProfile.userId).eq("direction", "nope").in("target_profile_id", senderProfileIds);
   const declinedIds = new Set((myNopes || []).map(s => s.target_profile_id));
 
-  return pending.map(l => {
-    const p = byUserId[l.swiper_user_id];
+  return pendingUserIds.map(userId => {
+    const p = byUserId[userId];
     if (!p || declinedIds.has(p.id)) return null;
+    const { likedAt, giftedAt } = byUser[userId];
+    const mostRecent = [likedAt, giftedAt].filter(Boolean).sort().reverse()[0];
     return {
       profileId: p.id, userId: p.user_id,
       name: p.pet_name, species: p.species, breed: p.breed, age: p.age, gender: p.gender,
@@ -6310,7 +6342,8 @@ async function fetchLikesReceived(userProfile) {
       photo: p.photos?.[0]?.url || null,
       bio: p.bio, temper: p.temper || [], seeking: p.seeking || [],
       energy: p.energy, vaccinated: p.vaccinated, sterilized: p.sterilized,
-      time: formatRelativeTime(l.created_at),
+      time: formatRelativeTime(mostRecent),
+      viaLike: !!likedAt, viaGift: !!giftedAt,
       isDemo: false,
     };
   }).filter(Boolean);
