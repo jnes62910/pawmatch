@@ -53,6 +53,7 @@ module.exports = async (req, res) => {
         quantity: 1,
       }],
       metadata: {
+        type: 'booking',
         serviceId, clientProfileId, clientUserId,
         providerProfileId: provider.id, providerUserId: provider.user_id,
       },
