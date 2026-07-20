@@ -3121,6 +3121,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
     setLoadingMatchProfile(false);
   }
   const [sendingGift, setSendingGift] = useState(false);
+  const [sentGiftToast, setSentGiftToast] = useState(null);
   const [giftError, setGiftError] = useState(null);
   const [suggestedSpot, setSuggestedSpot] = useState(null);
   const [loadingSpot, setLoadingSpot] = useState(true);
@@ -3285,6 +3286,9 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
     if (error) setGiftError("Le cadeau n'a pas pu être envoyé, réessayez.");
     else {
       setShowGiftPicker(false);
+      const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
+      setSentGiftToast({ emoji: giftInfo?.emoji || emoji, label: giftInfo?.label || "Cadeau" });
+      setTimeout(() => setSentGiftToast(null), 2200);
       if (!userProfile?.questsCompleted?.first_gift_sent) {
         claimQuest(userProfile, "first_gift_sent").then(r => {
           if (r.claimed) onProfileUpdated({ ...userProfile, giftInventory: r.giftInventory, questsCompleted: r.questsCompleted });
@@ -3305,6 +3309,27 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           <div><div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div><div style={{ fontSize: 12, color: "#9CA3AF" }}>{match?.owner}</div></div>
         </button>
       </div>
+
+      {/* Confirmation d'envoi de cadeau — même animation que dans Découvrir */}
+      {sentGiftToast && (
+        <>
+          <style>{`
+            @keyframes chatGiftBoxShake { 0%,100% { transform: scale(1) rotate(0deg); } 25% { transform: scale(0.94) rotate(-4deg); } 75% { transform: scale(0.94) rotate(4deg); } }
+            @keyframes chatGiftItemPop { 0% { transform: translate(-50%, 6px) scale(0); opacity: 0; } 55% { transform: translate(-50%, -20px) scale(1.3); opacity: 1; } 100% { transform: translate(-50%, -16px) scale(1); opacity: 1; } }
+            @keyframes chatToastTextIn { 0% { opacity: 0; transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
+          `}</style>
+          <div style={{ position: "fixed", top: 90, left: "50%", transform: "translateX(-50%)", zIndex: 250, display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
+            <div style={{ position: "relative", width: 46, height: 46, marginBottom: 6 }}>
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, animation: "chatGiftBoxShake .5s ease-out" }}>🎁</div>
+              <div style={{ position: "absolute", left: "50%", top: 0, fontSize: 26, animation: "chatGiftItemPop .6s cubic-bezier(.34,1.56,.64,1) .15s both" }}>{sentGiftToast.emoji}</div>
+            </div>
+            <div style={{ background: "rgba(0,0,0,.75)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 20, whiteSpace: "nowrap", animation: "chatToastTextIn .3s ease-out .3s both" }}>
+              {sentGiftToast.label} envoyé à {match?.name} !
+            </div>
+          </div>
+        </>
+      )}
+
       <div style={{ margin: "10px 14px 0", padding: "10px 14px", background: "#FAF0EB", borderRadius: 12, display: "flex", alignItems: "center", gap: 10 }}>
         <span>📍</span>
         <div style={{ flex: 1 }}>
