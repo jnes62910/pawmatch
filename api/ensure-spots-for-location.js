@@ -32,6 +32,25 @@ const CATEGORIES = [
   // Cette catégorie reste donc réservée aux ajouts par la communauté, plus fiables.
 ];
 
+// Enseignes de jardinerie/grande distribution que Google classe parfois par
+// erreur comme animalerie ("pet_store"), alors qu'il ne s'agit pas de
+// commerces spécialisés animaux — on les exclut par précaution.
+const EXCLUDED_NAME_PATTERNS = [/gamm\s*vert/i, /jardiland/i, /truffaut/i, /botanic/i];
+
+// Devine l'espèce visée par le nom de l'établissement lui-même (Google ne
+// fournit aucune info structurée là-dessus). Reste "both" par défaut si le
+// nom ne mentionne clairement ni l'un ni l'autre — mieux vaut sous-filtrer
+// que d'exclure à tort un établissement généraliste.
+function guessSpeciesFromName(name) {
+  const catPattern = /\b(chat|chats|féline?|feline?|miaou)\b/i;
+  const dogPattern = /\b(chien|chiens|canin|canine)\b/i;
+  const isCat = catPattern.test(name);
+  const isDog = dogPattern.test(name);
+  if (isCat && !isDog) return 'cat';
+  if (isDog && !isCat) return 'dog';
+  return 'both';
+}
+
 function cellIdFor(lat, lng) {
   return `${Math.round(lat / CELL_SIZE)}_${Math.round(lng / CELL_SIZE)}`;
 }
@@ -92,15 +111,19 @@ module.exports = async (req, res) => {
       // Filtre strict : Google renvoie parfois des résultats approchants
       // (ex. des pharmacies mélangées aux vétérinaires) même avec
       // includedTypes — on ne garde que ceux dont le type exact est présent.
-      const places = (data.places || []).filter(p => (p.types || []).includes(cat.includedType));
+      // On exclut aussi les grandes surfaces connues pour être mal classées.
+      const places = (data.places || [])
+        .filter(p => (p.types || []).includes(cat.includedType))
+        .filter(p => !EXCLUDED_NAME_PATTERNS.some(pattern => pattern.test(p.displayName?.text || '')));
 
       for (const place of places) {
+        const name = place.displayName?.text || 'Sans nom';
         const row = {
           cell_id: cellId,
           city: city || null, // simple étiquette d'affichage, optionnelle
-          name: place.displayName?.text || 'Sans nom',
+          name,
           type: cat.type,
-          species: cat.species,
+          species: cat.species === 'both' ? guessSpeciesFromName(name) : cat.species,
           emoji: cat.emoji,
           lat: place.location?.latitude,
           lng: place.location?.longitude,
