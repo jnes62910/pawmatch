@@ -3,6 +3,18 @@
 // chien, et que le contenu est approprié. Utilise l'API Claude (vision).
 // Variable d'environnement requise sur Vercel : ANTHROPIC_API_KEY
 
+// Certains modèles habillent parfois leur réponse de balises ```json ... ```
+// ou d'un court commentaire malgré la consigne stricte — on nettoie avant
+// de tenter le JSON.parse, plutôt que d'échouer sur ce détail de mise en forme.
+function extractJson(rawText) {
+  const text = (rawText || '').trim();
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) return fenced[1].trim();
+  const braceMatch = text.match(/\{[\s\S]*\}/);
+  if (braceMatch) return braceMatch[0];
+  return text;
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -36,7 +48,7 @@ module.exports = async (req, res) => {
                 type: 'text',
                 text:
                   "Tu es un modérateur de contenu pour une application de rencontre entre animaux (Miloute). " +
-                  "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, au format exact : " +
+                  "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, sans balises markdown, au format exact : " +
                   '{"is_cat_or_dog": true|false, "is_appropriate": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
                   "is_cat_or_dog : l'image montre-t-elle clairement un chat ou un chien (le sujet principal) ? " +
                   "is_appropriate : l'image est-elle dépourvue de contenu choquant, violent, sexuel, ou non lié aux animaux (personnes, objets sans rapport, texte publicitaire, etc.) ?",
@@ -57,8 +69,11 @@ module.exports = async (req, res) => {
     const textBlock = (data.content || []).find((b) => b.type === 'text');
     let parsed;
     try {
-      parsed = JSON.parse((textBlock?.text || '{}').trim());
-    } catch {
+      parsed = JSON.parse(extractJson(textBlock?.text));
+    } catch (parseErr) {
+      // On journalise le texte brut reçu pour pouvoir diagnostiquer facilement
+      // si ce cas se reproduit, plutôt qu'un échec silencieux.
+      console.error('moderate-photo: réponse non-JSON reçue de Claude :', textBlock?.text);
       return res.status(200).json({ approved: false, reason: 'Vérification impossible, réessayez.' });
     }
 
