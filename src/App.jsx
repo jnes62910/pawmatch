@@ -2320,13 +2320,10 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {/* Info banner */}
-        <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#FAF0EB", borderRadius: 12, display: "flex", gap: 10, alignItems: "flex-start" }}>
-          <span style={{ fontSize: 30 }}>🔒</span>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>REPRODUCTION VÉRIFIÉE ET SÉCURISÉE</div>
-            <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>Tous les profils sont vérifiés. Documents sanitaires validés. La mise en relation est réservée aux membres Premium.</div>
-          </div>
+        {/* Texte d'intro */}
+        <div style={{ margin: "16px 16px 8px" }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Trouvez le partenaire idéal pour la reproduction de votre animal</div>
+          <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Tous les profils sont vérifiés (pedigree, bilan génétique, documents sanitaires) pour des rencontres sereines. Parcourez librement les profils — la mise en relation est réservée aux membres Premium, et le montant de la saillie se négocie directement entre propriétaires.</div>
         </div>
 
         {!isPremium && (
