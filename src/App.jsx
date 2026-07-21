@@ -941,10 +941,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         </div>
       </div>
 
-      <div style={{ textAlign: "center", fontSize: 11, color: "#E8B89F", padding: "2px 0 14px" }}>
-        ← Glisse à gauche pour refuser · à droite pour liker →
-      </div>
-
       {matchedWith && (
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#B25F46)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
