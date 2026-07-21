@@ -2191,6 +2191,41 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
   const [reproDeck, setReproDeck] = useState([]);
   const [loadingRepro, setLoadingRepro] = useState(true);
+  const [sendingRequest, setSendingRequest] = useState(false);
+  const [requestError, setRequestError] = useState(null);
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [respondingRequestId, setRespondingRequestId] = useState(null);
+
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    fetchReceivedReproRequests(userProfile).then(setReceivedRequests);
+  }, [userProfile?.id]);
+
+  async function handleSendRequest() {
+    setSendingRequest(true);
+    setRequestError(null);
+    try {
+      await sendReproRequest(userProfile, selected);
+      setRequested(selected);
+    } catch (err) {
+      setRequestError("La demande n'a pas pu être envoyée, réessayez.");
+    }
+    setSendingRequest(false);
+  }
+
+  async function handleRespondRequest(requestId, action) {
+    setRespondingRequestId(requestId);
+    try {
+      await respondReproRequest(requestId, action, userProfile);
+      setReceivedRequests(list => list.filter(r => r.id !== requestId));
+      setSelectedRequest(null);
+    } catch (err) {
+      console.error("respondReproRequest error:", err);
+    }
+    setRespondingRequestId(null);
+  }
 
   useEffect(() => {
     let active = true;
@@ -2273,6 +2308,13 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${advancedActive ? "#B25F46" : "#E5E7EB"}`, background: advancedActive ? "#FAF0EB" : "#fff", color: advancedActive ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
             {!isPremium && <span>👑</span>}
             🔎 Recherche {advancedActive && "•"}
+          </button>
+          <button onClick={() => setShowRequestsModal(true)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", position: "relative" }}>
+            📥 Demandes
+            {receivedRequests.length > 0 && (
+              <span style={{ background: "#B25F46", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>{receivedRequests.length}</span>
+            )}
           </button>
         </div>
       </div>
@@ -2493,7 +2535,12 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
             {!isPremium ? (
               <button onClick={() => setShowPremiumPrompt(true)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>👑 Passer Premium pour contacter</button>
             ) : (
-              <button onClick={() => setRequested(selected)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>🌱 Envoyer une demande</button>
+              <>
+                <button onClick={handleSendRequest} disabled={sendingRequest} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: sendingRequest ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: sendingRequest ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: sendingRequest ? "default" : "pointer" }}>
+                  {sendingRequest ? "..." : "🌱 Envoyer une demande"}
+                </button>
+                {requestError && <div style={{ fontSize: 12, color: "#DC2626", textAlign: "center", marginTop: 8 }}>{requestError}</div>}
+              </>
             )}
           </div>
         </div>
@@ -2504,8 +2551,75 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,#8B3D28,#1B5E3B)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{ fontSize: 72, marginBottom: 16 }}>🌱</div>
           <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", marginBottom: 8, textAlign: "center" }}>Demande envoyée !</div>
-          <div style={{ fontSize: 15, color: "rgba(255,255,255,.8)", textAlign: "center", marginBottom: 32, lineHeight: 1.6 }}>{selected.owner} recevra votre demande et pourra l'accepter. Vous serez notifié dès qu'une réponse sera disponible.</div>
+          <div style={{ fontSize: 15, color: "rgba(255,255,255,.8)", textAlign: "center", marginBottom: 32, lineHeight: 1.6 }}>{selected.owner} recevra votre demande dans son onglet Reproduction et pourra l'accepter ou la refuser.</div>
           <button onClick={() => { setRequested(null); setSelected(null); }} style={{ width: "100%", padding: "16px", borderRadius: 16, border: "none", background: "#fff", color: "#8B3D28", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Retour à la liste</button>
+        </div>
+      )}
+
+      {/* Demandes de reproduction reçues */}
+      {showRequestsModal && !selectedRequest && (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 65, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <button onClick={() => setShowRequestsModal(false)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>📥 Demandes de reproduction reçues</div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+            {receivedRequests.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📥</div>
+                <div style={{ fontSize: 14 }}>Aucune demande en attente pour l'instant</div>
+              </div>
+            ) : receivedRequests.map(r => (
+              <div key={r.id} onClick={() => setSelectedRequest(r)}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", cursor: "pointer" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: r.profile.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{r.profile.emoji}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{r.profile.name} souhaite une mise en relation</div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF" }}>{r.profile.breed} · {r.time}</div>
+                </div>
+                <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Détail d'une demande reçue — profil complet avant de répondre */}
+      {selectedRequest && (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 70, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <button onClick={() => setSelectedRequest(null)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>Profil de {selectedRequest.profile.name}</div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+            <div style={{ width: 100, height: 100, borderRadius: "50%", background: selectedRequest.profile.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, margin: "0 auto 16px" }}>{selectedRequest.profile.emoji}</div>
+            <div style={{ textAlign: "center", fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{selectedRequest.profile.name}, {selectedRequest.profile.age} {selectedRequest.profile.gender === "F" ? "♀" : "♂"}</div>
+            <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 6 }}>{selectedRequest.profile.breed} · {selectedRequest.profile.distance}</div>
+            <div style={{ textAlign: "center", fontSize: 12, color: "#9CA3AF", marginBottom: 16 }}>Propriétaire : {selectedRequest.profile.owner}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+              {selectedRequest.profile.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné ✓</Badge>}
+              {selectedRequest.profile.pedigree && <Badge color="#F3E5F5" text="#7B1FA2">Pedigree officiel ✓</Badge>}
+              {selectedRequest.profile.testedGenes && <Badge color="#E8F5E9" text="#2E7D32">Bilan génétique complet ✓</Badge>}
+            </div>
+            {selectedRequest.profile.temper.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginBottom: 16 }}>
+                {selectedRequest.profile.temper.map(t => <Badge key={t} color="#FAF0EB" text="#B25F46">{t}</Badge>)}
+              </div>
+            )}
+            {selectedRequest.profile.bio && <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 20 }}>{selectedRequest.profile.bio}</p>}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => handleRespondRequest(selectedRequest.id, "declined")} disabled={respondingRequestId === selectedRequest.id}
+                style={{ flex: 1, padding: "14px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                Refuser
+              </button>
+              <button onClick={() => handleRespondRequest(selectedRequest.id, "accepted")} disabled={respondingRequestId === selectedRequest.id}
+                style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: respondingRequestId === selectedRequest.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: respondingRequestId === selectedRequest.id ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+                {respondingRequestId === selectedRequest.id ? "..." : "🌱 Accepter"}
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 10 }}>Accepter crée un match : vous pourrez discuter dans Messages, comme avec un match classique.</div>
+          </div>
         </div>
       )}
     </div>
@@ -6442,6 +6556,70 @@ async function fetchReproProfiles(userProfile) {
     .neq("user_id", userProfile.userId);
   if (error || !data) { console.error("fetchReproProfiles error:", error); return []; }
   return data.filter(row => row.repro?.active).map(row => reproProfileFromRow(row, userProfile));
+}
+
+async function sendReproRequest(userProfile, targetProfile) {
+  const { error } = await supabase.from("repro_requests").insert({
+    requester_user_id: userProfile.userId,
+    requester_profile_id: userProfile.id,
+    recipient_user_id: targetProfile.userId,
+    recipient_profile_id: targetProfile.id,
+  });
+  if (error) {
+    // Une demande existe déjà envers ce profil (contrainte unique) : ce
+    // n'est pas une vraie erreur pour l'utilisateur, juste un doublon évité.
+    if (error.code === "23505") return { alreadySent: true };
+    throw new Error(error.message);
+  }
+  return { success: true };
+}
+
+// Demandes reçues, avec le profil complet de la personne qui a envoyé la
+// demande — pour pouvoir juger en connaissance de cause avant de répondre.
+async function fetchReceivedReproRequests(userProfile) {
+  if (!userProfile?.id) return [];
+  const { data: requests, error } = await supabase
+    .from("repro_requests")
+    .select("*")
+    .eq("recipient_profile_id", userProfile.id)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error || !requests || requests.length === 0) return [];
+
+  const requesterIds = requests.map(r => r.requester_profile_id);
+  const { data: requesterProfiles } = await supabase.from("profiles").select("*").in("id", requesterIds);
+  const byId = Object.fromEntries((requesterProfiles || []).map(p => [p.id, p]));
+
+  return requests.map(r => ({
+    id: r.id,
+    time: formatRelativeTime(r.created_at),
+    requesterUserId: r.requester_user_id,
+    requesterProfileId: r.requester_profile_id,
+    profile: byId[r.requester_profile_id] ? reproProfileFromRow(byId[r.requester_profile_id], userProfile) : null,
+  })).filter(r => r.profile);
+}
+
+async function respondReproRequest(requestId, action, userProfile) {
+  const { data: request, error: fetchError } = await supabase
+    .from("repro_requests").select("*").eq("id", requestId).single();
+  if (fetchError || !request) throw new Error(fetchError?.message || "Demande introuvable");
+
+  const { error: updateError } = await supabase
+    .from("repro_requests")
+    .update({ status: action, responded_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (updateError) throw new Error(updateError.message);
+
+  // En cas d'acceptation, on crée un vrai match — ainsi les deux
+  // propriétaires peuvent simplement se parler dans Messages, sans
+  // construire un système de discussion séparé pour la reproduction.
+  if (action === "accepted") {
+    await supabase.from("matches").insert({
+      user_a: request.requester_user_id, user_b: request.recipient_user_id,
+      profile_a: request.requester_profile_id, profile_b: request.recipient_profile_id,
+    });
+  }
+  return { success: true };
 }
 
 async function fetchCommunityPosts(userProfile) {
