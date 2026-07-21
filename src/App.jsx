@@ -2804,7 +2804,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
 
     const post = posts.find(p => p.id === postId);
     if (post?.isDemo) {
-      const newComment = { id: Date.now(), author: userProfile?.ownerName || "Vous", pet: userProfile?.name || "", emoji: userProfile?.species === "cat" ? "🐱" : "🐕", text, time: "À l'instant", likes: 0, parentCommentId: replyingTo?.commentId || null, parentPet: replyingTo?.authorName || null };
+      const newComment = { id: Date.now(), author: userProfile?.ownerName || "Vous", pet: userProfile?.name || "", emoji: userProfile?.species === "cat" ? "🐱" : "🐕", photo: userProfile?.photos?.[0]?.url || null, text, time: "À l'instant", likes: 0, parentCommentId: replyingTo?.commentId || null, parentPet: replyingTo?.authorName || null };
       const updatedList = [...(comments[postId] || []), newComment];
       setComments(c => ({ ...c, [postId]: updatedList }));
       setPosts(ps => ps.map(p => p.id === postId ? { ...p, commentCount: updatedList.length } : p));
@@ -3094,7 +3094,9 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
                 const isReply = !!c.parentCommentId;
                 return (
                   <div key={c.id} style={{ display: "flex", gap: 10, marginBottom: 16, marginLeft: isReply ? 30 : 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: c.emoji === "🩺" ? "#E3F2FD" : "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{c.emoji}</div>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: c.emoji === "🩺" ? "#E3F2FD" : "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                      {photoUrl(c.photo) ? <img src={photoUrl(c.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : c.emoji}
+                    </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: "#F9FAFB", borderRadius: "4px 14px 14px 14px", padding: "10px 12px" }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: "#8B3D28", marginBottom: 3 }}>{c.author} <span style={{ color: "#9CA3AF", fontWeight: 400 }}>· {c.pet}</span></div>
@@ -6671,6 +6673,7 @@ async function fetchCommentsForPost(postId) {
   return data.map(c => ({
     id: c.id, author: c.owner_name || "", pet: c.pet_name,
     emoji: c.species === "cat" ? "🐱" : "🐕",
+    photo: c.photo_url || null,
     text: c.text, time: formatRelativeTime(c.created_at), likes: 0,
     parentCommentId: c.parent_comment_id || null,
     parentPet: c.parent_comment_id ? (byId[c.parent_comment_id]?.pet_name || null) : null,
@@ -6698,6 +6701,7 @@ async function createCommunityComment(userProfile, postId, text, parentCommentId
     pet_name: userProfile.name,
     owner_name: userProfile.ownerName,
     species: userProfile.species,
+    photo_url: userProfile.photos?.[0]?.url || null,
     text,
     parent_comment_id: parentCommentId,
   });
