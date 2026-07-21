@@ -4114,7 +4114,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           try {
             const url = initialData?.userId ? await uploadPhotoToStorage(f, initialData.userId) : URL.createObjectURL(f);
             approved.push({ url, name: f.name });
-          } catch {
+          } catch (uploadErr) {
+            console.error("uploadPhotoToStorage error:", uploadErr);
             setMediaModerationError("Photo vérifiée, mais l'envoi a échoué. Réessayez.");
           }
         } else {
