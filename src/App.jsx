@@ -4607,7 +4607,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 ))}
               </div>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px" }}>
               {(() => {
                 const filtered = treatsFilterCategory === "all" ? treatsReceived : treatsReceived.filter(t => t.giftCategory === treatsFilterCategory);
                 if (filtered.length === 0) {
@@ -4618,27 +4618,42 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     </div>
                   );
                 }
-                return filtered.map(t => (
-                  <div key={t.id} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #F9FAFB", borderRadius: !t.seen ? 12 : 0, background: !t.seen ? "linear-gradient(135deg,#FFF3D6,#FFE8B8)" : "transparent", overflow: "visible" }}>
-                    {!t.seen && (
-                      <style>{`
-                        @keyframes boxRevealPop { 0% { transform: scale(0) rotate(-18deg); opacity: 0; } 55% { transform: scale(1.2) rotate(8deg); opacity: 1; } 75% { transform: scale(0.94) rotate(-3deg); } 100% { transform: scale(1) rotate(0deg); } }
-                        @keyframes boxSparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(160deg); opacity: 0; } }
-                      `}</style>
-                    )}
-                    {!t.seen && [["-30px","-18px"], ["32px","-16px"], ["-30px","18px"], ["30px","20px"]].map(([tx, ty], idx) => (
-                      <span key={idx} style={{ position: "absolute", left: 24, top: "45%", fontSize: 11, "--tx": tx, "--ty": ty, animation: `boxSparkleFly .8s ease-out ${0.1 + idx * 0.08}s both`, pointerEvents: "none" }}>✨</span>
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                    {filtered.map(t => (
+                      <div key={t.id} style={{ position: "relative", borderRadius: 18, overflow: "visible", boxShadow: "0 3px 12px rgba(0,0,0,.1)" }}>
+                        {!t.seen && (
+                          <style>{`
+                            @keyframes boxRevealPop { 0% { transform: scale(0) rotate(-18deg); opacity: 0; } 55% { transform: scale(1.15) rotate(6deg); opacity: 1; } 75% { transform: scale(0.95) rotate(-3deg); } 100% { transform: scale(1) rotate(0deg); } }
+                            @keyframes boxSparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(160deg); opacity: 0; } }
+                          `}</style>
+                        )}
+                        {!t.seen && [["-24px","-20px"], ["26px","-18px"], ["-22px","20px"]].map(([tx, ty], idx) => (
+                          <span key={idx} style={{ position: "absolute", left: "50%", top: "30%", fontSize: 13, zIndex: 3, "--tx": tx, "--ty": ty, animation: `boxSparkleFly .8s ease-out ${0.1 + idx * 0.08}s both`, pointerEvents: "none" }}>✨</span>
+                        ))}
+                        <div style={{ position: "relative", width: "100%", aspectRatio: "1", borderRadius: 18, overflow: "hidden", background: "#FAF0EB", animation: !t.seen ? "boxRevealPop .6s cubic-bezier(.34,1.56,.64,1)" : "none" }}>
+                          {t.photo ? (
+                            <img src={t.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>{t.emoji}</div>
+                          )}
+                          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.25) 45%, transparent 70%)" }} />
+                          <div style={{ position: "absolute", top: 8, left: 8, width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,.95)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, boxShadow: "0 2px 6px rgba(0,0,0,.2)" }}>
+                            {t.giftEmoji}
+                          </div>
+                          {!t.seen && (
+                            <div style={{ position: "absolute", top: 8, right: 8, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 10, letterSpacing: 0.5 }}>NOUVEAU</div>
+                          )}
+                          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 10px" }}>
+                            <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{t.giftLabel}</div>
+                            <div style={{ color: "rgba(255,255,255,.85)", fontSize: 10.5 }}>de {t.name}</div>
+                            <div style={{ color: "rgba(255,255,255,.65)", fontSize: 9.5 }}>{t.time}</div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, animation: !t.seen ? "boxRevealPop .6s cubic-bezier(.34,1.56,.64,1)" : "none" }}>
-                      {t.photo ? <img src={t.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : t.emoji}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{t.name} vous a envoyé {t.giftEmoji} {t.giftLabel}</div>
-                      <div style={{ fontSize: 12, color: "#9CA3AF" }}>{t.breed} · {t.time}</div>
-                    </div>
-                    {!t.seen && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#B25F46", flexShrink: 0 }} />}
                   </div>
-                ));
+                );
               })()}
             </div>
           </div>
@@ -4654,6 +4669,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 40px" }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Bienvenue dans votre Espace prestataire !</div>
+              <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Toiletteur, éducateur, pet-sitter, pension... proposez vos services aux propriétaires d'animaux près de chez vous. Ajoutez votre première prestation pour apparaître dans l'annuaire, et recevez vos paiements directement une fois la prestation confirmée par les deux parties !</div>
+            </div>
+
             {/* Statut des paiements */}
             <div style={{ background: connectOnboarded ? "#E8F5E9" : "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 20 }}>
               {checkingConnect ? (
