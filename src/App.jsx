@@ -556,7 +556,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     return isNaN(parsed) ? 0 : parsed;
   }
 
-  const availableBreeds = [...new Set(deck.map(p => p.breed).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const availableBreeds = userProfile?.species === "cat" ? CAT_BREEDS : DOG_BREEDS;
 
   const filtered = deck.filter(p =>
     (breedFilter === "all" || p.breed === breedFilter) &&
@@ -2730,6 +2730,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
   const [comments, setComments] = useState({}); // { [postId]: [...] }
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentInputs, setCommentInputs] = useState({});
+  const [replyingTo, setReplyingTo] = useState(null); // { postId, commentId, authorName }
   const commentsEndRef = useRef(null);
 
   const [posts, setPosts] = useState([]);
@@ -2758,7 +2759,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
     reloadPosts();
   }, [userProfile?.id, userProfile?.species]);
 
-  const availableBreeds = [...new Set(posts.map(p => p.breed).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const availableBreeds = userProfile?.species === "cat" ? CAT_BREEDS : DOG_BREEDS;
   const filtered = posts.filter(p => breedFilter === "all" || p.breed === breedFilter);
 
   const TAG_COLORS = {
@@ -2804,22 +2805,24 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
 
     const post = posts.find(p => p.id === postId);
     if (post?.isDemo) {
-      const newComment = { id: Date.now(), author: userProfile?.ownerName || "Vous", pet: userProfile?.name || "", emoji: userProfile?.species === "cat" ? "🐱" : "🐕", text, time: "À l'instant", likes: 0 };
+      const newComment = { id: Date.now(), author: userProfile?.ownerName || "Vous", pet: userProfile?.name || "", emoji: userProfile?.species === "cat" ? "🐱" : "🐕", text, time: "À l'instant", likes: 0, parentCommentId: replyingTo?.commentId || null, parentPet: replyingTo?.authorName || null };
       const updatedList = [...(comments[postId] || []), newComment];
       setComments(c => ({ ...c, [postId]: updatedList }));
       setPosts(ps => ps.map(p => p.id === postId ? { ...p, commentCount: updatedList.length } : p));
       setCommentInputs(i => ({ ...i, [postId]: "" }));
+      setReplyingTo(null);
       setModeratingComment(m => ({ ...m, [postId]: false }));
       setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
       return;
     }
 
     try {
-      await createCommunityComment(userProfile, postId, text);
+      await createCommunityComment(userProfile, postId, text, replyingTo?.commentId || null);
       const fresh = await fetchCommentsForPost(postId);
       setComments(c => ({ ...c, [postId]: fresh }));
       setPosts(ps => ps.map(p => p.id === postId ? { ...p, commentCount: fresh.length } : p));
       setCommentInputs(i => ({ ...i, [postId]: "" }));
+      setReplyingTo(null);
       setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     } catch {
       setCommentModerationError(e => ({ ...e, [postId]: "Le commentaire n'a pas pu être publié, réessayez." }));
@@ -3089,12 +3092,14 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
               {(comments[openComments] || []).map(c => {
                 const likeKey = `${openComments}-${c.id}`;
                 const isCommentLiked = commentLikes[likeKey];
+                const isReply = !!c.parentCommentId;
                 return (
-                  <div key={c.id} style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                  <div key={c.id} style={{ display: "flex", gap: 10, marginBottom: 16, marginLeft: isReply ? 30 : 0 }}>
                     <div style={{ width: 36, height: 36, borderRadius: "50%", background: c.emoji === "🩺" ? "#E3F2FD" : "linear-gradient(135deg,#B25F46,#C97A5E)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{c.emoji}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ background: "#F9FAFB", borderRadius: "4px 14px 14px 14px", padding: "10px 12px" }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: "#8B3D28", marginBottom: 3 }}>{c.author} <span style={{ color: "#9CA3AF", fontWeight: 400 }}>· {c.pet}</span></div>
+                        {isReply && c.parentPet && <div style={{ fontSize: 11, color: "#B25F46", marginBottom: 3 }}>↳ en réponse à {c.parentPet}</div>}
                         <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.5 }}>{c.text}</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 5, paddingLeft: 4 }}>
@@ -3103,7 +3108,8 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
                           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: isCommentLiked ? "#B25F46" : "#9CA3AF", fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 3 }}>
                           {isCommentLiked ? "🧡" : "🤍"} {c.likes + (isCommentLiked ? 1 : 0)}
                         </button>
-                        <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9CA3AF", padding: 0, fontWeight: 600 }}>Répondre</button>
+                        <button onClick={() => setReplyingTo({ postId: openComments, commentId: c.id, authorName: c.pet })}
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9CA3AF", padding: 0, fontWeight: 600 }}>Répondre</button>
                       </div>
                     </div>
                   </div>
@@ -3116,6 +3122,12 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
             {commentModerationError[openComments] && (
               <div style={{ margin: "0 16px", padding: "8px 12px", background: "#FEF2F2", borderRadius: 10, fontSize: 12, color: "#DC2626" }}>{commentModerationError[openComments]}</div>
             )}
+            {replyingTo?.postId === openComments && (
+              <div style={{ margin: "0 16px", padding: "6px 12px", background: "#FAF0EB", borderRadius: 10, fontSize: 12, color: "#B25F46", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>En réponse à {replyingTo.authorName}</span>
+                <button onClick={() => setReplyingTo(null)} style={{ background: "none", border: "none", color: "#B25F46", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>✕</button>
+              </div>
+            )}
             <div style={{ padding: "10px 16px 28px", borderTop: "1px solid #F3F4F6", display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
                 {photoUrl(userProfile?.photos?.[0]) ? <img src={photoUrl(userProfile.photos[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (userProfile?.species === "dog" ? "🐕" : "🐱")}
@@ -3124,7 +3136,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
                 value={commentInputs[openComments] || ""}
                 onChange={e => setCommentInputs(i => ({ ...i, [openComments]: e.target.value }))}
                 onKeyDown={e => e.key === "Enter" && submitComment(openComments)}
-                placeholder={moderatingComment[openComments] ? "Vérification en cours..." : "Ajouter un commentaire..."}
+                placeholder={moderatingComment[openComments] ? "Vérification en cours..." : (replyingTo?.postId === openComments ? `Répondre à ${replyingTo.authorName}...` : "Ajouter un commentaire...")}
                 disabled={!!moderatingComment[openComments]}
                 style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB", fontFamily: "inherit" }}
               />
@@ -6656,10 +6668,13 @@ async function fetchCommunityPosts(userProfile) {
 async function fetchCommentsForPost(postId) {
   const { data, error } = await supabase.from("community_comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
   if (error || !data) return [];
+  const byId = Object.fromEntries(data.map(c => [c.id, c]));
   return data.map(c => ({
     id: c.id, author: c.owner_name || "", pet: c.pet_name,
     emoji: c.species === "cat" ? "🐱" : "🐕",
     text: c.text, time: formatRelativeTime(c.created_at), likes: 0,
+    parentCommentId: c.parent_comment_id || null,
+    parentPet: c.parent_comment_id ? (byId[c.parent_comment_id]?.pet_name || null) : null,
   }));
 }
 
@@ -6677,7 +6692,7 @@ async function createCommunityPost(userProfile, { text, photoUrl, tag }) {
   return data;
 }
 
-async function createCommunityComment(userProfile, postId, text) {
+async function createCommunityComment(userProfile, postId, text, parentCommentId = null) {
   const { error } = await supabase.from("community_comments").insert({
     post_id: postId,
     user_id: userProfile.userId,
@@ -6685,6 +6700,7 @@ async function createCommunityComment(userProfile, postId, text) {
     owner_name: userProfile.ownerName,
     species: userProfile.species,
     text,
+    parent_comment_id: parentCommentId,
   });
   if (error) throw new Error(error.message);
 }
