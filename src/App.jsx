@@ -2302,8 +2302,15 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
       <OnboardingHint hintKey="repro" icon="🌱" text="Tous les profils sont vérifiés (pedigree, documents sanitaires) pour des rencontres sereines" position="top" />
-      <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        {/* Texte d'intro */}
+        <div style={{ margin: "16px 16px 8px" }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Trouvez le partenaire idéal pour la reproduction de votre animal</div>
+          <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Tous les profils sont vérifiés (pedigree, bilan génétique, documents sanitaires) pour des rencontres sereines. Parcourez librement les profils — la mise en relation est réservée aux membres Premium, et le montant de la saillie se négocie directement entre propriétaires.</div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 16px 12px" }}>
           <button onClick={openAdvanced}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${advancedActive ? "#B25F46" : "#E5E7EB"}`, background: advancedActive ? "#FAF0EB" : "#fff", color: advancedActive ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
             {!isPremium && <span>👑</span>}
@@ -2316,14 +2323,6 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
               <span style={{ background: "#B25F46", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>{receivedRequests.length}</span>
             )}
           </button>
-        </div>
-      </div>
-
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {/* Texte d'intro */}
-        <div style={{ margin: "16px 16px 8px" }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Trouvez le partenaire idéal pour la reproduction de votre animal</div>
-          <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Tous les profils sont vérifiés (pedigree, bilan génétique, documents sanitaires) pour des rencontres sereines. Parcourez librement les profils — la mise en relation est réservée aux membres Premium, et le montant de la saillie se négocie directement entre propriétaires.</div>
         </div>
 
         {!isPremium && (
@@ -3681,12 +3680,12 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
       {moderationError && (
         <div style={{ margin: "0 16px 8px", padding: "8px 12px", background: "#FEF2F2", borderRadius: 10, fontSize: 12, color: "#DC2626" }}>{moderationError}</div>
       )}
-      <div style={{ display: "flex", gap: 10, padding: "12px 16px", borderTop: "1px solid #F3F4F6", background: "#fff" }}>
+      <div style={{ display: "flex", gap: 8, padding: "10px 14px", borderTop: "1px solid #F3F4F6", background: "#fff", boxSizing: "border-box" }}>
         <input ref={photoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={sendPhoto} />
-        <button onClick={() => photoInputRef.current?.click()} disabled={sendingPhoto} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: sendingPhoto ? "default" : "pointer", flexShrink: 0, opacity: sendingPhoto ? .5 : 1 }}>📷</button>
-        <button onClick={() => setShowGiftPicker(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: "pointer", flexShrink: 0 }}>🎁</button>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={moderating ? "Vérification en cours..." : sendingPhoto ? "Envoi de la photo..." : "Écrire un message..."} disabled={moderating || sendingPhoto} style={{ flex: 1, padding: "10px 16px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB" }} />
-        <button onClick={send} disabled={moderating || sendingPhoto} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 40, height: 40, fontSize: 18, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={20} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
+        <button onClick={() => photoInputRef.current?.click()} disabled={sendingPhoto} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: sendingPhoto ? "default" : "pointer", flexShrink: 0, opacity: sendingPhoto ? .5 : 1 }}>📷</button>
+        <button onClick={() => setShowGiftPicker(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 36, height: 36, fontSize: 16, cursor: "pointer", flexShrink: 0 }}>🎁</button>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={moderating ? "Vérification en cours..." : sendingPhoto ? "Envoi de la photo..." : "Écrire un message..."} disabled={moderating || sendingPhoto} style={{ flex: 1, minWidth: 0, padding: "9px 14px", borderRadius: 20, border: "1px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB", boxSizing: "border-box" }} />
+        <button onClick={send} disabled={moderating || sendingPhoto} style={{ background: input.trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", border: "none", borderRadius: "50%", width: 36, height: 36, cursor: input.trim() ? "pointer" : "default", flexShrink: 0, transition: "background .2s", display: "flex", alignItems: "center", justifyContent: "center" }}><PawLogo size={18} color={input.trim() ? "#fff" : "#9CA3AF"} /></button>
       </div>
 
       {/* Sélecteur de cadeau */}
