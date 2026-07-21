@@ -366,10 +366,11 @@ function extractVideoFrameBase64(file) {
   });
 }
 
-// Interrupteur global : passer à true une fois les endpoints /api/moderate-photo
-// et /api/moderate-text opérationnels sur Vercel. Tant que c'est false, tout
-// contenu est accepté sans appel réseau (aucun impact sur l'app en attendant).
-const MODERATION_ENABLED = false;
+// Interrupteur global de la modération automatique (photos + textes), via
+// l'API Claude. Repasser à false en cas de souci (clé Anthropic manquante,
+// quota dépassé...) pour ne jamais bloquer l'app — tout redevient accepté
+// sans appel réseau, le temps de résoudre le problème.
+const MODERATION_ENABLED = true;
 
 // Retourne { approved: boolean, reason: string|null }. En cas d'erreur réseau,
 // on refuse par prudence plutôt que de laisser passer un contenu non vérifié.
