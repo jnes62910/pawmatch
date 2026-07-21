@@ -1,12 +1,18 @@
 // api/confirm-booking.js
 //
-// Appelée quand le client OU le prestataire confirme que la prestation a bien
-// eu lieu. Dès que les DEUX ont confirmé, les fonds retenus sont transférés
-// au prestataire (moins la commission Miloute) via un virement Stripe Connect.
+// Gère deux actions du cycle de vie d'une réservation, dans un seul fichier
+// pour rester sous la limite de 12 fonctions serverless du plan Vercel Hobby :
 //
-// Important : la confirmation est sauvegardée d'abord, indépendamment du
-// virement — si le virement échoue (ex. solde Stripe insuffisant en mode
-// test), la confirmation de l'utilisateur n'est pas perdue pour autant.
+// - "confirm" (par défaut, comportement historique) : le client OU le
+//   prestataire confirme que la prestation a bien eu lieu. Dès que les DEUX
+//   ont confirmé, les fonds retenus sont transférés au prestataire (moins la
+//   commission Miloute) via un virement Stripe Connect.
+//
+// - "cancel" (nouveau) : annule une réservation et rembourse intégralement le
+//   client, tant que ni le client ni le prestataire n'ont encore confirmé que
+//   la prestation a eu lieu — passé ce stade, l'annulation en libre-service
+//   n'est plus proposée (il faudrait alors un vrai support humain, pas un
+//   bouton automatique).
 
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -23,20 +29,43 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { bookingId, userId } = req.body;
+    const { bookingId, userId, action = 'confirm' } = req.body;
     if (!bookingId || !userId) return res.status(400).json({ error: 'bookingId and userId are required' });
 
     const { data: booking, error: fetchError } = await supabase.from('bookings').select('*').eq('id', bookingId).single();
     if (fetchError || !booking) throw fetchError || new Error('Réservation introuvable');
 
-    if (booking.status !== 'paid_held') {
-      return res.status(400).json({ error: 'Cette réservation ne peut plus être confirmée à ce stade.' });
-    }
-
     const isClient = userId === booking.client_user_id;
     const isProvider = userId === booking.provider_user_id;
     if (!isClient && !isProvider) {
       return res.status(403).json({ error: 'Vous ne faites pas partie de cette réservation.' });
+    }
+
+    // ── Annulation ──────────────────────────────────────────────────────────
+    if (action === 'cancel') {
+      if (booking.status !== 'paid_held') {
+        return res.status(400).json({ error: 'Cette réservation ne peut plus être annulée à ce stade.' });
+      }
+      if (booking.client_confirmed_at || booking.provider_confirmed_at) {
+        return res.status(400).json({ error: "Impossible d'annuler : une confirmation a déjà eu lieu. Contactez le support pour ce cas précis." });
+      }
+
+      if (booking.stripe_payment_intent_id) {
+        await stripe.refunds.create({ payment_intent: booking.stripe_payment_intent_id });
+      }
+
+      const { data: cancelled, error: cancelError } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_by_user_id: userId })
+        .eq('id', bookingId).select().single();
+      if (cancelError) throw cancelError;
+
+      return res.status(200).json({ booking: cancelled });
+    }
+
+    // ── Confirmation (comportement historique, inchangé) ───────────────────
+    if (booking.status !== 'paid_held') {
+      return res.status(400).json({ error: 'Cette réservation ne peut plus être confirmée à ce stade.' });
     }
 
     // Étape 1 — on sauvegarde la confirmation tout de suite, quoi qu'il arrive ensuite.
