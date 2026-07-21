@@ -765,7 +765,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
 
       <div style={{ flex: 1, minHeight: 0, padding: "12px 16px", display: "flex", flexDirection: "column", userSelect: "none", position: "relative" }}>
-        <OnboardingHint hintKey="swipe" icon="👆" text="Glisse la carte pour liker, scroll vers le bas pour voir tous les détails" position="top" />
+        <OnboardingHint hintKey="swipe" icon="👆" text="Glisse la carte à gauche ou à droite pour liker/refuser, ou fais défiler vers le bas pour découvrir toutes les infos" position="top" />
         <div ref={cardRef}
           style={{ flex: 1, minHeight: 0, borderRadius: 24, position: "relative", display: "flex", flexDirection: "column",
             background: `linear-gradient(160deg, ${profile.color}55 0%, #fff 100%)`,
@@ -775,11 +775,14 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             boxShadow: "0 8px 32px rgba(178,95,70,.10)",
             overflow: "hidden" }}>
 
+          {/* Colonne unique déroulante : photo + infos ensemble */}
+          <div ref={infoScrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}>
+
           {/* Section photo — gère le swipe (gauche/droite). touchAction "none" = zéro ambiguïté, JS gère tout ici. */}
           <div
             onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
             onMouseDown={onMouseDown}
-            style={{ position: "relative", height: 480, flexShrink: 0, overflow: "hidden", background: profile.color,
+            style={{ position: "relative", height: 480, overflow: "hidden", background: profile.color,
               cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}>
 
             {/* LIKE stamp */}
@@ -909,8 +912,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             )}
           </div>
 
-          {/* Infos complètes — zone de scroll natif pur, AUCUN gestionnaire tactile JS ici */}
-          <div ref={infoScrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "16px 20px 28px" }}>
+          {/* Infos complètes — fait maintenant partie de la même colonne déroulante que la photo */}
+          <div style={{ padding: "16px 20px 28px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
@@ -937,6 +940,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
 
             <div style={{ fontSize: 12, color: "#9CA3AF" }}>Propriétaire : {profile.owner}</div>
+          </div>
           </div>
         </div>
       </div>
