@@ -3885,6 +3885,21 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   }, [initialData?.id, initialData?.userId, initialData?.species]);
   const [treatsReceived, setTreatsReceived] = useState([]);
   const [treatsFilterCategory, setTreatsFilterCategory] = useState("all");
+  const [confirmDeleteTreat, setConfirmDeleteTreat] = useState(null);
+  const [deletingTreat, setDeletingTreat] = useState(false);
+
+  async function handleDeleteTreat() {
+    if (!confirmDeleteTreat) return;
+    setDeletingTreat(true);
+    try {
+      await deleteTreatMemory(confirmDeleteTreat.id);
+      setTreatsReceived(list => list.filter(t => t.id !== confirmDeleteTreat.id));
+    } catch (err) {
+      console.error("deleteTreatMemory error:", err);
+    }
+    setDeletingTreat(false);
+    setConfirmDeleteTreat(null);
+  }
   const [unseenTreatsCount, setUnseenTreatsCount] = useState(0);
   const [showTreatsModal, setShowTreatsModal] = useState(false);
 
@@ -4596,7 +4611,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
               {treatsReceived.length > 0 && (
-                <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>{treatsReceived.length} cadeau{treatsReceived.length > 1 ? "x" : ""} reçu{treatsReceived.length > 1 ? "s" : ""} depuis ton inscription</div>
+                <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>{treatsReceived.length} souvenir{treatsReceived.length > 1 ? "s" : ""} reçu{treatsReceived.length > 1 ? "s" : ""} depuis ton inscription</div>
               )}
               <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
                 {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"]].map(([v, l]) => (
@@ -4642,8 +4657,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                             {t.giftEmoji}
                           </div>
                           {!t.seen && (
-                            <div style={{ position: "absolute", top: 8, right: 8, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 10, letterSpacing: 0.5 }}>NOUVEAU</div>
+                            <div style={{ position: "absolute", top: 44, left: 8, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 10, letterSpacing: 0.5 }}>NOUVEAU</div>
                           )}
+                          <button onClick={e => { e.stopPropagation(); setConfirmDeleteTreat(t); }}
+                            style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.4)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            ✕
+                          </button>
                           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 10px" }}>
                             <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{t.giftLabel}</div>
                             <div style={{ color: "rgba(255,255,255,.85)", fontSize: 10.5 }}>de {t.name}</div>
@@ -4655,6 +4674,28 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation de suppression d'un souvenir */}
+      {confirmDeleteTreat && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => !deletingTreat && setConfirmDeleteTreat(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>🗑️</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 6 }}>Supprimer ce souvenir ?</div>
+            <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 20, lineHeight: 1.5 }}>Le {confirmDeleteTreat.giftLabel} de {confirmDeleteTreat.name} sera définitivement retiré de votre Boîte à Souvenirs. Cette action est irréversible.</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDeleteTreat(null)} disabled={deletingTreat}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                Annuler
+              </button>
+              <button onClick={handleDeleteTreat} disabled={deletingTreat}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: deletingTreat ? "#E5E7EB" : "#DC2626", color: deletingTreat ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: deletingTreat ? "default" : "pointer" }}>
+                {deletingTreat ? "..." : "Oui, supprimer"}
+              </button>
             </div>
           </div>
         </div>
@@ -6434,6 +6475,11 @@ async function fetchReceivedTreats(userProfile) {
       giftCategory: giftInfo?.category || null,
     };
   });
+}
+
+async function deleteTreatMemory(treatId) {
+  const { error } = await supabase.from("treats").delete().eq("id", treatId);
+  if (error) throw new Error(error.message);
 }
 
 async function markTreatsSeen(userProfile) {
