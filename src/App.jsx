@@ -372,15 +372,49 @@ function extractVideoFrameBase64(file) {
 // sans appel réseau, le temps de résoudre le problème.
 const MODERATION_ENABLED = true;
 
+// Réduit la taille de l'image avant de l'envoyer à la vérification —
+// uniquement pour cet appel, la photo d'origine (upload, affichage) n'est
+// jamais touchée. Objectif : rester rapide même sur une connexion mobile
+// moyenne, où l'envoi d'une photo en pleine résolution peut expirer.
+function compressImageForModeration(base64, mimeType) {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 900;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        try {
+          resolve(canvas.toDataURL("image/jpeg", 0.6).split(",")[1]);
+        } catch {
+          resolve(base64); // échec de compression : on retombe sur l'original
+        }
+      };
+      img.onerror = () => resolve(base64);
+      img.src = `data:${mimeType};base64,${base64}`;
+    } catch {
+      resolve(base64);
+    }
+  });
+}
+
 // Retourne { approved: boolean, reason: string|null }. En cas d'erreur réseau,
 // on refuse par prudence plutôt que de laisser passer un contenu non vérifié.
 async function moderateImage(base64, mimeType = "image/jpeg") {
   if (!MODERATION_ENABLED) return { approved: true, reason: null };
   try {
+    const compressed = await compressImageForModeration(base64, mimeType);
     const res = await fetch("/api/moderate-photo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: base64, mimeType }),
+      body: JSON.stringify({ image: compressed, mimeType: "image/jpeg" }),
     });
     if (!res.ok) return { approved: false, reason: "Vérification indisponible, réessayez." };
     const data = await res.json();
