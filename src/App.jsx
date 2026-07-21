@@ -3910,6 +3910,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [myBookingsAsProvider, setMyBookingsAsProvider] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [confirmingBookingId, setConfirmingBookingId] = useState(null);
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
+  const [confirmCancelBooking, setConfirmCancelBooking] = useState(null);
   const [bookingConfirmError, setBookingConfirmError] = useState(null);
 
   async function reloadBookings() {
@@ -3932,6 +3934,19 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     }
     await reloadBookings();
     setConfirmingBookingId(null);
+  }
+
+  async function handleCancelBooking() {
+    if (!confirmCancelBooking) return;
+    setCancellingBookingId(confirmCancelBooking);
+    setBookingConfirmError(null);
+    const result = await cancelBooking(confirmCancelBooking, initialData.userId);
+    if (result.error) {
+      setBookingConfirmError(result.error);
+    }
+    await reloadBookings();
+    setCancellingBookingId(null);
+    setConfirmCancelBooking(null);
   }
 
   useEffect(() => {
@@ -4916,7 +4931,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 {myBookingsAsClient.length === 0 ? (
                   <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 24 }}>Aucune réservation pour l'instant.</div>
                 ) : myBookingsAsClient.map(b => (
-                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} />
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} />
                 ))}
 
                 <div style={{ height: 1, background: "#F3F4F6", margin: "20px 0" }} />
@@ -4925,10 +4940,32 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 {myBookingsAsProvider.length === 0 ? (
                   <div style={{ fontSize: 13, color: "#9CA3AF" }}>Aucune réservation reçue pour l'instant.</div>
                 ) : myBookingsAsProvider.map(b => (
-                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} isProvider />
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} isProvider />
                 ))}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation d'annulation de réservation */}
+      {confirmCancelBooking && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 95, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => !cancellingBookingId && setConfirmCancelBooking(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>↩️</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 6 }}>Annuler cette réservation ?</div>
+            <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 20, lineHeight: 1.5 }}>Le client sera intégralement remboursé. Cette action est irréversible et n'est possible que si personne n'a encore confirmé la prestation.</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmCancelBooking(null)} disabled={!!cancellingBookingId}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                Garder la réservation
+              </button>
+              <button onClick={handleCancelBooking} disabled={!!cancellingBookingId}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: cancellingBookingId ? "#E5E7EB" : "#DC2626", color: cancellingBookingId ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: cancellingBookingId ? "default" : "pointer" }}>
+                {cancellingBookingId ? "..." : "Oui, annuler et rembourser"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -5064,7 +5101,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   );
 }
 
-function BookingRow({ booking: b, onConfirm, confirming, isProvider = false }) {
+function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, isProvider = false }) {
+  const canCancel = b.status === "paid_held" && !b.clientConfirmed && !b.providerConfirmed;
   return (
     <div style={{ background: "#F9FAFB", borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
@@ -5081,14 +5119,22 @@ function BookingRow({ booking: b, onConfirm, confirming, isProvider = false }) {
       {b.status === "released" ? (
         <div style={{ fontSize: 12, fontWeight: 700, color: "#2E7D32" }}>✅ Terminée — fonds reversés</div>
       ) : b.status === "cancelled" ? (
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>Annulée</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>↩️ Annulée — remboursée</div>
       ) : b.myConfirmed ? (
         <div style={{ fontSize: 12, color: "#B25F46" }}>✓ Vous avez confirmé — en attente de {isProvider ? "l'avis du client" : "l'avis du prestataire"}</div>
       ) : (
-        <button onClick={() => onConfirm(b.id)} disabled={confirming}
-          style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: confirming ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: confirming ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 12, cursor: confirming ? "default" : "pointer" }}>
-          {confirming ? "..." : "✅ Confirmer la prestation terminée"}
-        </button>
+        <>
+          <button onClick={() => onConfirm(b.id)} disabled={confirming || cancelling}
+            style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: confirming ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: confirming ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 12, cursor: confirming ? "default" : "pointer", marginBottom: canCancel ? 8 : 0 }}>
+            {confirming ? "..." : "✅ Confirmer la prestation terminée"}
+          </button>
+          {canCancel && (
+            <button onClick={() => onCancel(b.id)} disabled={confirming || cancelling}
+              style={{ width: "100%", padding: "8px", borderRadius: 10, border: "1.5px solid #E5E7EB", background: "#fff", color: cancelling ? "#9CA3AF" : "#6B7280", fontWeight: 600, fontSize: 12, cursor: cancelling ? "default" : "pointer" }}>
+              {cancelling ? "..." : "Annuler et rembourser"}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -6095,6 +6141,15 @@ async function confirmBooking(bookingId, userId) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bookingId, userId }),
+  });
+  return res.json();
+}
+
+async function cancelBooking(bookingId, userId) {
+  const res = await fetch("/api/confirm-booking", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bookingId, userId, action: "cancel" }),
   });
   return res.json();
 }
