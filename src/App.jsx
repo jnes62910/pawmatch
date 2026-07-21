@@ -419,6 +419,41 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [treatsToday, setTreatsToday] = useState(loadTreatsToday);
   const [treatSentId, setTreatSentId] = useState(null);
   const [likeBurstId, setLikeBurstId] = useState(null);
+  const [showFullscreenPhoto, setShowFullscreenPhoto] = useState(false);
+  const [fsPhotoIndex, setFsPhotoIndex] = useState(0);
+  const [fsZoomScale, setFsZoomScale] = useState(1);
+  const [fsZoomOffset, setFsZoomOffset] = useState({ x: 0, y: 0 });
+  const fsPinchRef = useRef({ startDist: 0, startScale: 1 });
+  const fsPanRef = useRef({ startX: 0, startY: 0, startOffset: { x: 0, y: 0 } });
+
+  function fsTouchDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  function onFsTouchStart(e) {
+    if (e.touches.length === 2) {
+      fsPinchRef.current = { startDist: fsTouchDistance(e.touches), startScale: fsZoomScale };
+    } else if (e.touches.length === 1 && fsZoomScale > 1) {
+      fsPanRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, startOffset: fsZoomOffset };
+    }
+  }
+  function onFsTouchMove(e) {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = fsTouchDistance(e.touches);
+      const nextScale = Math.min(4, Math.max(1, fsPinchRef.current.startScale * (dist / fsPinchRef.current.startDist)));
+      setFsZoomScale(nextScale);
+    } else if (e.touches.length === 1 && fsZoomScale > 1) {
+      const dx = e.touches[0].clientX - fsPanRef.current.startX;
+      const dy = e.touches[0].clientY - fsPanRef.current.startY;
+      setFsZoomOffset({ x: fsPanRef.current.startOffset.x + dx, y: fsPanRef.current.startOffset.y + dy });
+    }
+  }
+  function onFsDoubleTap() {
+    if (fsZoomScale > 1) { setFsZoomScale(1); setFsZoomOffset({ x: 0, y: 0 }); }
+    else setFsZoomScale(2);
+  }
   const [showSwipeGiftPicker, setShowSwipeGiftPicker] = useState(false);
   const [sendingSwipeGift, setSendingSwipeGift] = useState(false);
   const [treatToast, setTreatToast] = useState(null); // nom de l'animal
@@ -744,7 +779,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           <div
             onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
             onMouseDown={onMouseDown}
-            style={{ position: "relative", height: 380, flexShrink: 0, overflow: "hidden", background: profile.color,
+            style={{ position: "relative", height: 480, flexShrink: 0, overflow: "hidden", background: profile.color,
               cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}>
 
             {/* LIKE stamp */}
@@ -865,6 +900,13 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 110 }}>{profile.species === "cat" ? "🐱" : "🐕"}</div>
               }
             </div>
+
+            {photoUrl(profile.photos?.[photo]) && (
+              <button onClick={e => { e.stopPropagation(); setFsPhotoIndex(photo); setFsZoomScale(1); setFsZoomOffset({ x: 0, y: 0 }); setShowFullscreenPhoto(true); }}
+                style={{ position: "absolute", top: 12, right: 12, zIndex: 5, width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,.45)", border: "none", color: "#fff", fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                🔍
+              </button>
+            )}
           </div>
 
           {/* Infos complètes — zone de scroll natif pur, AUCUN gestionnaire tactile JS ici */}
@@ -3526,6 +3568,43 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Visualiseur photo plein écran avec zoom */}
+      {showFullscreenPhoto && (
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 300, display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "absolute", top: 14, right: 14, zIndex: 5 }}>
+            <button onClick={() => setShowFullscreenPhoto(false)} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,.15)", border: "none", color: "#fff", fontSize: 16, cursor: "pointer" }}>✕</button>
+          </div>
+          <div style={{ position: "absolute", top: 14, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 6, zIndex: 5, pointerEvents: "none" }}>
+            {profile.photos.map((_, i) => (
+              <div key={i} style={{ width: i === fsPhotoIndex ? 22 : 14, height: 3, borderRadius: 2, background: i === fsPhotoIndex ? "#fff" : "rgba(255,255,255,.4)", transition: "width .2s" }} />
+            ))}
+          </div>
+          <div style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}
+            onTouchStart={onFsTouchStart} onTouchMove={onFsTouchMove}
+            onClick={e => {
+              const now = Date.now();
+              if (now - (fsPanRef.current.lastTap || 0) < 300) onFsDoubleTap();
+              fsPanRef.current.lastTap = now;
+            }}>
+            {photoUrl(profile.photos?.[fsPhotoIndex]) && (
+              <img src={photoUrl(profile.photos[fsPhotoIndex])} alt={profile.name}
+                style={{ width: "100%", height: "100%", objectFit: "contain", transform: `scale(${fsZoomScale}) translate(${fsZoomOffset.x / fsZoomScale}px, ${fsZoomOffset.y / fsZoomScale}px)`, transition: "transform .1s" }} />
+            )}
+            {fsZoomScale === 1 && (
+              <>
+                <div style={{ position: "absolute", top: 0, left: 0, width: "35%", height: "100%" }}
+                  onClick={e => { e.stopPropagation(); setFsPhotoIndex(i => Math.max(0, i - 1)); }} />
+                <div style={{ position: "absolute", top: 0, right: 0, width: "35%", height: "100%" }}
+                  onClick={e => { e.stopPropagation(); setFsPhotoIndex(i => Math.min(profile.photos.length - 1, i + 1)); }} />
+              </>
+            )}
+          </div>
+          <div style={{ textAlign: "center", padding: "10px 20px 24px", color: "rgba(255,255,255,.6)", fontSize: 11 }}>
+            Pincez pour zoomer · Double-tap pour agrandir/réduire
           </div>
         </div>
       )}
