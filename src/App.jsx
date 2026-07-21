@@ -969,6 +969,43 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           <button onClick={closeMatch} style={{ background: "transparent", border: "2px solid rgba(255,255,255,.5)", color: "#fff", padding: "14px", borderRadius: 16, width: "100%", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Continuer à swiper</button>
         </div>
       )}
+
+      {/* Visualiseur photo plein écran avec zoom */}
+      {showFullscreenPhoto && (
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 300, display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "absolute", top: 14, right: 14, zIndex: 5 }}>
+            <button onClick={() => setShowFullscreenPhoto(false)} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,.15)", border: "none", color: "#fff", fontSize: 16, cursor: "pointer" }}>✕</button>
+          </div>
+          <div style={{ position: "absolute", top: 14, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 6, zIndex: 5, pointerEvents: "none" }}>
+            {profile.photos.map((_, i) => (
+              <div key={i} style={{ width: i === fsPhotoIndex ? 22 : 14, height: 3, borderRadius: 2, background: i === fsPhotoIndex ? "#fff" : "rgba(255,255,255,.4)", transition: "width .2s" }} />
+            ))}
+          </div>
+          <div style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}
+            onTouchStart={onFsTouchStart} onTouchMove={onFsTouchMove}
+            onClick={e => {
+              const now = Date.now();
+              if (now - (fsPanRef.current.lastTap || 0) < 300) onFsDoubleTap();
+              fsPanRef.current.lastTap = now;
+            }}>
+            {photoUrl(profile.photos?.[fsPhotoIndex]) && (
+              <img src={photoUrl(profile.photos[fsPhotoIndex])} alt={profile.name}
+                style={{ width: "100%", height: "100%", objectFit: "contain", transform: `scale(${fsZoomScale}) translate(${fsZoomOffset.x / fsZoomScale}px, ${fsZoomOffset.y / fsZoomScale}px)`, transition: "transform .1s" }} />
+            )}
+            {fsZoomScale === 1 && (
+              <>
+                <div style={{ position: "absolute", top: 0, left: 0, width: "35%", height: "100%" }}
+                  onClick={e => { e.stopPropagation(); setFsPhotoIndex(i => Math.max(0, i - 1)); }} />
+                <div style={{ position: "absolute", top: 0, right: 0, width: "35%", height: "100%" }}
+                  onClick={e => { e.stopPropagation(); setFsPhotoIndex(i => Math.min(profile.photos.length - 1, i + 1)); }} />
+              </>
+            )}
+          </div>
+          <div style={{ textAlign: "center", padding: "10px 20px 24px", color: "rgba(255,255,255,.6)", fontSize: 11 }}>
+            Pincez pour zoomer · Double-tap pour agrandir/réduire
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3568,43 +3605,6 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
                 </div>
               </>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Visualiseur photo plein écran avec zoom */}
-      {showFullscreenPhoto && (
-        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 300, display: "flex", flexDirection: "column" }}>
-          <div style={{ position: "absolute", top: 14, right: 14, zIndex: 5 }}>
-            <button onClick={() => setShowFullscreenPhoto(false)} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,.15)", border: "none", color: "#fff", fontSize: 16, cursor: "pointer" }}>✕</button>
-          </div>
-          <div style={{ position: "absolute", top: 14, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 6, zIndex: 5, pointerEvents: "none" }}>
-            {profile.photos.map((_, i) => (
-              <div key={i} style={{ width: i === fsPhotoIndex ? 22 : 14, height: 3, borderRadius: 2, background: i === fsPhotoIndex ? "#fff" : "rgba(255,255,255,.4)", transition: "width .2s" }} />
-            ))}
-          </div>
-          <div style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}
-            onTouchStart={onFsTouchStart} onTouchMove={onFsTouchMove}
-            onClick={e => {
-              const now = Date.now();
-              if (now - (fsPanRef.current.lastTap || 0) < 300) onFsDoubleTap();
-              fsPanRef.current.lastTap = now;
-            }}>
-            {photoUrl(profile.photos?.[fsPhotoIndex]) && (
-              <img src={photoUrl(profile.photos[fsPhotoIndex])} alt={profile.name}
-                style={{ width: "100%", height: "100%", objectFit: "contain", transform: `scale(${fsZoomScale}) translate(${fsZoomOffset.x / fsZoomScale}px, ${fsZoomOffset.y / fsZoomScale}px)`, transition: "transform .1s" }} />
-            )}
-            {fsZoomScale === 1 && (
-              <>
-                <div style={{ position: "absolute", top: 0, left: 0, width: "35%", height: "100%" }}
-                  onClick={e => { e.stopPropagation(); setFsPhotoIndex(i => Math.max(0, i - 1)); }} />
-                <div style={{ position: "absolute", top: 0, right: 0, width: "35%", height: "100%" }}
-                  onClick={e => { e.stopPropagation(); setFsPhotoIndex(i => Math.min(profile.photos.length - 1, i + 1)); }} />
-              </>
-            )}
-          </div>
-          <div style={{ textAlign: "center", padding: "10px 20px 24px", color: "rgba(255,255,255,.6)", fontSize: 11 }}>
-            Pincez pour zoomer · Double-tap pour agrandir/réduire
           </div>
         </div>
       )}
