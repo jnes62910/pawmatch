@@ -1814,7 +1814,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
         <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.4, marginBottom: 10 }}>En plus de mettre en relation les propriétaires d'animaux, Miloute propose un annuaire de prestataires de confiance, recommandés par la communauté, près de chez vous 🐾</div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-          <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter</button>
+          <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter un prestataire</button>
         </div>
         <div style={{ textAlign: "right", marginBottom: 10 }}>
           <button onClick={onGoToProviderSetup} style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 11, cursor: "pointer", padding: 0 }}>
@@ -6244,13 +6244,13 @@ const GIFT_BUNDLES = [
 // quotidienne ni rappel. La récompense "profil complet" dépend de l'espèce
 // (résolue à l'affichage), les autres sont fixes.
 const QUEST_LIST = [
-  { id: "profile_complete", emoji: "📋", title: "Compléter son profil à 100%", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
+  { id: "profile_complete", emoji: "📋", title: "Compléter son profil à 100%", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson du Chef 🐟" : "Os du Chef 🦴"}` },
   { id: "first_match", emoji: "💕", title: "Obtenir son premier match", rewardLabel: () => "1 Bouquet des Amoureux 💐" },
   { id: "first_video", emoji: "🎬", title: "Ajouter une vidéo à son profil", rewardLabel: () => "1 Collier Élégance 📿" },
   { id: "first_review", emoji: "⭐", title: "Laisser son premier avis prestataire", rewardLabel: () => "1 Rose des Amoureux 🌹" },
   { id: "first_post", emoji: "📢", title: "Publier son premier post dans la Communauté", rewardLabel: () => "1 Doudou Câlin 🧸" },
   { id: "become_provider", emoji: "🏥", title: "Devenir prestataire (configuration terminée)", rewardLabel: () => "1 Médaille Miloute 🏅" },
-  { id: "first_booking", emoji: "📅", title: "Effectuer sa première réservation", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson Miloute 🐟" : "Os Miloute 🦴"}` },
+  { id: "first_booking", emoji: "📅", title: "Effectuer sa première réservation", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson du Chef 🐟" : "Os du Chef 🦴"}` },
   { id: "first_gift_sent", emoji: "🎁", title: "Envoyer son premier cadeau", rewardLabel: (species) => `1 ${species === "cat" ? "Cœur de Miaouw" : "Cœur de Toutou"} 💕` },
 ];
 
@@ -6783,6 +6783,7 @@ export default function Miloute() {
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
   const [showShopSuccess, setShowShopSuccess] = useState(false);
   const [shopSuccessCategory, setShopSuccessCategory] = useState(null);
+  const [shopSuccessBundleLabel, setShopSuccessBundleLabel] = useState(null);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
 
@@ -6931,8 +6932,10 @@ export default function Miloute() {
       verifyShopSession(sessionId)
         .then(data => {
           if (data.paid) {
-            const purchasedItem = GIFT_CATALOG.find(g => g.id === data.itemId) || GIFT_BUNDLES.find(b => b.id === data.itemId);
+            const bundle = GIFT_BUNDLES.find(b => b.id === data.itemId);
+            const purchasedItem = GIFT_CATALOG.find(g => g.id === data.itemId) || bundle;
             setShopSuccessCategory(purchasedItem?.category || null);
+            setShopSuccessBundleLabel(bundle?.label || null);
             setShowShopSuccess(true);
             if (userProfileRef.current) {
               const updates = {};
@@ -7197,7 +7200,9 @@ export default function Miloute() {
               <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Achat confirmé !</div>
               <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>
-                {shopSuccessCategory === "food" ? "Une friandise" : shopSuccessCategory === "gift" ? "Un cadeau" : shopSuccessCategory === "comfort" ? "Un accessoire" : "Votre achat"} a été ajouté{shopSuccessCategory === "food" ? "e" : ""} à votre compte. Vous pouvez le/la retrouver dans 🎁 Mon inventaire, dans la Boutique.
+                {shopSuccessBundleLabel
+                  ? `Un ${shopSuccessBundleLabel} a été ajouté à votre compte`
+                  : `${shopSuccessCategory === "food" ? "Une friandise" : shopSuccessCategory === "gift" ? "Un cadeau" : shopSuccessCategory === "comfort" ? "Un accessoire" : "Votre achat"} a été ajouté${shopSuccessCategory === "food" ? "e" : ""} à votre compte`}. Vous pouvez le/la retrouver dans 🎁 Mon inventaire, dans la Boutique.
               </div>
               <button onClick={() => setShowShopSuccess(false)}
                 style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
