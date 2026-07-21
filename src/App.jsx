@@ -1734,7 +1734,9 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       fetchAffiliatePartners(),
     ]);
     const demo = DEMO_PROVIDERS.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
-    const merged = [...partners, ...list, ...demo]; // partenaires toujours en tête
+    const realFiltered = list.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
+    const partnersFiltered = partners.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
+    const merged = [...partnersFiltered, ...realFiltered, ...demo]; // partenaires toujours en tête
     const reviews = await fetchReviewsForProviders(list.map(p => p.id));
     setProviders(merged);
     setReviewsBySpot(reviews);
