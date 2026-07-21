@@ -4809,6 +4809,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 40px" }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Suivez toutes vos réservations en un coup d'œil</div>
+              <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Que vous soyez client ou prestataire, retrouvez ici l'historique de vos prestations réservées et reçues, leur statut, et confirmez-les une fois la prestation terminée pour libérer le paiement.</div>
+            </div>
+
             {bookingConfirmError && (
               <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>{bookingConfirmError}</div>
             )}
