@@ -1164,15 +1164,15 @@ const PROVIDER_TYPE_INFO = {
 // éducateurs, pensions). Marqués isDemo : jamais de vraie réservation
 // possible, jamais écrits dans Supabase.
 const DEMO_PROVIDERS = [
-  { id: "demo-1", type: "groomer", name: "Zen Toilettage", emoji: "✂️", address: "Paris 11e", phone: "01 42 00 00 01", desc: "Toilettage doux pour chats et chiens, spécialiste poils longs. Sur rendez-vous du mardi au samedi.", demoRating: 4.8, demoReviewCount: 34 },
-  { id: "demo-2", type: "groomer", name: "Griffe & Ronron", emoji: "✂️", address: "Paris 15e", phone: "01 42 00 00 02", desc: "Toiletteuse féline exclusivement, approche sans stress pour chats craintifs.", demoRating: 4.9, demoReviewCount: 21 },
-  { id: "demo-3", type: "petsitter", name: "Léa, pet-sitter", emoji: "🐾", address: "Paris 12e", phone: "06 00 00 00 03", desc: "Garde à domicile ou chez moi, week-ends et vacances. 5 ans d'expérience.", demoRating: 5.0, demoReviewCount: 18 },
-  { id: "demo-4", type: "petsitter", name: "Nino Dog Sitting", emoji: "🐾", address: "Paris 18e", phone: "06 00 00 00 04", desc: "Promenades quotidiennes et garde ponctuelle, spécial grands chiens.", demoRating: 4.7, demoReviewCount: 12 },
-  { id: "demo-5", type: "trainer", name: "Canin Attitude", emoji: "🎓", address: "Paris 20e", phone: "01 42 00 00 05", desc: "Éducateur canin comportementaliste, cours particuliers et collectifs.", demoRating: 4.9, demoReviewCount: 27 },
-  { id: "demo-6", type: "trainer", name: "Patte Éducative", emoji: "🎓", address: "Boulogne-Billancourt", phone: "06 00 00 00 06", desc: "Rééducation chiots et chiens adultes, méthode positive.", demoRating: 4.6, demoReviewCount: 9 },
-  { id: "demo-7", type: "boarding", name: "Chez Mamie Chat", emoji: "🏠", address: "Vincennes", phone: "06 00 00 00 07", desc: "Pension féline à domicile, maison avec jardin, 2 chats maximum à la fois.", demoRating: 5.0, demoReviewCount: 15 },
-  { id: "demo-8", type: "boarding", name: "Le Chenil du Bois", emoji: "🏠", address: "Saint-Mandé", phone: "01 42 00 00 08", desc: "Pension canine avec grand parc clos, promenades incluses.", demoRating: 4.7, demoReviewCount: 22 },
-].map(p => ({ ...p, species: "both", open: true, isDemo: true, source: "demo" }));
+  { id: "demo-1", type: "groomer", name: "Zen Toilettage", emoji: "✂️", address: "Paris 11e", phone: "01 42 00 00 01", desc: "Toilettage doux pour chats et chiens, spécialiste poils longs. Sur rendez-vous du mardi au samedi.", demoRating: 4.8, demoReviewCount: 34, species: "both" },
+  { id: "demo-2", type: "groomer", name: "Griffe & Ronron", emoji: "✂️", address: "Paris 15e", phone: "01 42 00 00 02", desc: "Toiletteuse féline exclusivement, approche sans stress pour chats craintifs.", demoRating: 4.9, demoReviewCount: 21, species: "cat" },
+  { id: "demo-3", type: "petsitter", name: "Léa, pet-sitter", emoji: "🐾", address: "Paris 12e", phone: "06 00 00 00 03", desc: "Garde à domicile ou chez moi, week-ends et vacances. 5 ans d'expérience.", demoRating: 5.0, demoReviewCount: 18, species: "both" },
+  { id: "demo-4", type: "petsitter", name: "Nino Dog Sitting", emoji: "🐾", address: "Paris 18e", phone: "06 00 00 00 04", desc: "Promenades quotidiennes et garde ponctuelle, spécial grands chiens.", demoRating: 4.7, demoReviewCount: 12, species: "dog" },
+  { id: "demo-5", type: "trainer", name: "Canin Attitude", emoji: "🎓", address: "Paris 20e", phone: "01 42 00 00 05", desc: "Éducateur canin comportementaliste, cours particuliers et collectifs.", demoRating: 4.9, demoReviewCount: 27, species: "dog" },
+  { id: "demo-6", type: "trainer", name: "Patte Éducative", emoji: "🎓", address: "Boulogne-Billancourt", phone: "06 00 00 00 06", desc: "Rééducation chiots et chiens adultes, méthode positive.", demoRating: 4.6, demoReviewCount: 9, species: "dog" },
+  { id: "demo-7", type: "boarding", name: "Chez Mamie Chat", emoji: "🏠", address: "Vincennes", phone: "06 00 00 00 07", desc: "Pension féline à domicile, maison avec jardin, 2 chats maximum à la fois.", demoRating: 5.0, demoReviewCount: 15, species: "cat" },
+  { id: "demo-8", type: "boarding", name: "Le Chenil du Bois", emoji: "🏠", address: "Saint-Mandé", phone: "01 42 00 00 08", desc: "Pension canine avec grand parc clos, promenades incluses.", demoRating: 4.7, demoReviewCount: 22, species: "dog" },
+].map(p => ({ ...p, open: true, isDemo: true, source: "demo" }));
 
 function mapProviderRow(row) {
   const url = row.affiliate_url;
