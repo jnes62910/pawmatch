@@ -3751,6 +3751,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [selectedLike, setSelectedLike] = useState(null);
   const [likesReceived, setLikesReceived] = useState([]);
+  const [matchesCount, setMatchesCount] = useState(0);
+
+  useEffect(() => {
+    if (!initialData) return;
+    fetchMatchesForUser(initialData).then(list => setMatchesCount(list.length));
+  }, [initialData?.id]);
   const [decliningLikeId, setDecliningLikeId] = useState(null);
 
   async function handleDeclineLike(like) {
@@ -4375,12 +4381,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
         <div style={{ background: "#F9FAFB", borderRadius: 16, padding: "14px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 10, letterSpacing: 1 }}>STATISTIQUES</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-            {[[String(likesReceived.length || "0"),"Likes reçus",true],["3","Matchs",false],["5","Rencontres",false]].map(([n,l,clickable]) => (
-              <div key={l} onClick={() => clickable && setShowLikesModal(true)}
-                style={{ textAlign: "center", cursor: clickable ? "pointer" : "default", position: "relative" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+            {[
+              [String(likesReceived.length || "0"), "Likes reçus", () => setShowLikesModal(true)],
+              [String(matchesCount), "Matchs", () => onNav("messages")],
+            ].map(([n, l, onClickAction]) => (
+              <div key={l} onClick={onClickAction}
+                style={{ textAlign: "center", cursor: "pointer", position: "relative" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>{n}</div>
-                <div style={{ fontSize: 11, color: "#9CA3AF" }}>{l} {clickable && "👁️"}</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF" }}>{l} 👁️</div>
               </div>
             ))}
           </div>
