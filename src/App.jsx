@@ -2708,7 +2708,7 @@ function AgendaScreen() {
 // ── COMMUNITY SCREEN ──────────────────────────────────────────────────────────
 const INIT_COMMENTS = {
   1: [
-    { id: 1, author: "Marie L.", pet: "Caramel", emoji: "🐱", photo: "/photos/caramel-1.jfif", text: "Super ! Rocky est trop mignon, ça ferait une belle équipe", time: "Il y a 1h", likes: 5 },
+    { id: 1, author: "Marie L.", pet: "Caramel", emoji: "🐕", photo: "/photos/caramel-1.jpg", text: "Super ! Rocky est trop mignon, ça ferait une belle équipe", time: "Il y a 1h", likes: 5 },
     { id: 2, author: "Jean P.", pet: "Max", emoji: "🐕", photo: "/photos/max-1.jpg", text: "Vous trouvez des dog parks accessibles dans votre coin ?", time: "Il y a 45 min", likes: 2 },
   ],
   2: [
