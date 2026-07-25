@@ -6553,6 +6553,7 @@ function reproProfileFromRow(row, userProfile) {
     price: row.repro?.price || "À négocier",
     bio: row.repro?.reproDesc || row.bio || "",
     temper: row.temper || [],
+    photos: row.photos || [],
   };
 }
 // Un "profil reproduction" est simplement un profil de la table `profiles`
