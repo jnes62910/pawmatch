@@ -80,7 +80,7 @@ const QUESTS = {
   first_review:      { rewardItemId: 'rose', rewardLabel: '1 Rose des Amoureux' },
   first_post:        { rewardItemId: 'plush', rewardLabel: '1 Doudou Câlin' },
   become_provider:   { rewardItemId: 'medal', rewardLabel: '1 Médaille Miloute' },
-  first_booking:     { rewardLabel: '1 friandise' },
+  first_booking:     { rewardLabel: '1 Gâteau Fiesta' },
   first_gift_sent:   { rewardLabel: '1 Cœur (selon l\'espèce)' },
 };
 
@@ -265,7 +265,7 @@ module.exports = async (req, res) => {
       } else if (questId === 'first_booking') {
         const { count } = await supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('client_user_id', userId);
         eligible = (count || 0) >= 1;
-        rewardItemId = profile.species === 'cat' ? 'fish' : 'bone';
+        rewardItemId = 'cake';
       } else if (questId === 'first_gift_sent') {
         const { count: treatCount } = await supabase.from('treats').select('*', { count: 'exact', head: true }).eq('sender_user_id', userId);
         const { count: chatGiftCount } = await supabase.from('messages').select('*', { count: 'exact', head: true }).eq('sender_user_id', userId).not('gift_emoji', 'is', null);
