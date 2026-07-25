@@ -454,6 +454,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [treatsToday, setTreatsToday] = useState(loadTreatsToday);
   const [treatSentId, setTreatSentId] = useState(null);
   const [likeBurstId, setLikeBurstId] = useState(null);
+  const [swipeGiftMessage, setSwipeGiftMessage] = useState("");
   const [showFullscreenPhoto, setShowFullscreenPhoto] = useState(false);
   const [fsPhotoIndex, setFsPhotoIndex] = useState(0);
   const [fsZoomScale, setFsZoomScale] = useState(1);
@@ -650,12 +651,14 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
         label: giftInfo?.label || "Cadeau",
         article: giftInfo?.gender === "f" ? "Une" : "Un",
         pronoun: targetProfile.gender === "F" ? "elle" : "il",
+        message: swipeGiftMessage.trim() || null,
       });
       setTimeout(() => setTreatSentId(null), 900);
       setTimeout(() => setTreatToast(null), 2600);
       if (!targetProfile.isDemo) {
-        sendTreatToProfile(userProfile, targetProfile, giftId).catch(err => console.error("sendTreat error:", err));
+        sendTreatToProfile(userProfile, targetProfile, giftId, swipeGiftMessage.trim() || null).catch(err => console.error("sendTreat error:", err));
       }
+      setSwipeGiftMessage("");
       if (!userProfile?.questsCompleted?.first_gift_sent) {
         claimQuest(userProfile, "first_gift_sent").then(r => {
           if (r.claimed) onProfileUpdated({ ...userProfile, giftInventory: r.giftInventory, questsCompleted: r.questsCompleted });
@@ -905,7 +908,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(false); }}>
                 <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 28px", width: "100%", maxHeight: "70vh", overflowY: "auto", boxSizing: "border-box" }}>
                   <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>🎁 Envoyer à {profile.name}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 10 }}>🎁 Envoyer à {profile.name}</div>
+                  <input value={swipeGiftMessage} onChange={e => setSwipeGiftMessage(e.target.value.slice(0, 120))} onClick={e => e.stopPropagation()}
+                    placeholder="Ajouter un mot (optionnel)..."
+                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 13, outline: "none", background: "#F9FAFB", marginBottom: 14 }} />
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                     {GIFT_CATALOG.filter(g => g.species === "both" || g.species === profile.species).map(g => {
                       const owned = userProfile?.giftInventory?.[g.id] || 0;
@@ -3387,6 +3393,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
   }
   const [sendingGift, setSendingGift] = useState(false);
   const [sentGiftToast, setSentGiftToast] = useState(null);
+  const [chatGiftMessage, setChatGiftMessage] = useState("");
   const seenGiftIdsRef = useRef(loadSeenGiftIds());
   const [giftError, setGiftError] = useState(null);
   const [suggestedSpot, setSuggestedSpot] = useState(null);
@@ -3564,6 +3571,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
       match_id: matchId,
       sender_user_id: userProfile.userId,
       gift_emoji: emoji,
+      text: chatGiftMessage.trim() || null,
     });
     if (error) setGiftError("Le cadeau n'a pas pu être envoyé, réessayez.");
     else {
@@ -3577,8 +3585,10 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           target_user_id: match.otherUserId,
           target_profile_id: match.otherProfileId,
           gift_id: giftId,
+          message: chatGiftMessage.trim() || null,
         }).then(({ error: treatError }) => { if (treatError) console.error("treats insert error:", treatError); });
       }
+      setChatGiftMessage("");
       const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
       setSentGiftToast({ emoji: giftInfo?.emoji || emoji, label: giftInfo?.label || "Cadeau", article: giftInfo?.gender === "f" ? "une" : "un" });
       setTimeout(() => setSentGiftToast(null), 2200);
@@ -3670,6 +3680,11 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
                     return msg.from === "me" ? `Vous avez envoyé ${article} ${label}` : `${match?.name || "Il/Elle"} vous a envoyé ${article} ${label}`;
                   })()}
                 </div>
+                {msg.text && (
+                  <div style={{ position: "relative", fontSize: 12, color: "#5C3A00", marginTop: 6, padding: "6px 10px", background: "rgba(255,255,255,.5)", borderRadius: 10, fontStyle: "italic" }}>
+                    « {msg.text} »
+                  </div>
+                )}
                 <div style={{ position: "relative", fontSize: 10, opacity: .65, marginTop: 4, color: "#7A4A00" }}>{msg.time}</div>
               </div>
               );
@@ -3700,7 +3715,10 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 200, display: "flex", alignItems: "flex-end" }} onClick={() => setShowGiftPicker(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 32px", width: "100%", maxHeight: "70vh", overflowY: "auto", boxSizing: "border-box" }}>
             <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
-            <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 16 }}>🎁 Offrir un cadeau</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 12 }}>🎁 Offrir un cadeau</div>
+            <input value={chatGiftMessage} onChange={e => setChatGiftMessage(e.target.value.slice(0, 120))}
+              placeholder="Ajouter un mot (optionnel)..."
+              style={{ width: "100%", boxSizing: "border-box", padding: "9px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 13, outline: "none", background: "#F9FAFB", marginBottom: 16 }} />
             {giftError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{giftError}</div>}
             <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 14 }}>Adaptés à {match?.name || "votre match"} {match?.emoji}</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
@@ -4939,7 +4957,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 10px" }}>
                             <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{t.giftLabel}</div>
                             <div style={{ color: "rgba(255,255,255,.85)", fontSize: 10.5 }}>de {t.name}</div>
-                            <div style={{ color: "rgba(255,255,255,.65)", fontSize: 9.5 }}>{t.time}</div>
+                            {t.message && <div style={{ color: "rgba(255,255,255,.9)", fontSize: 10, fontStyle: "italic", marginTop: 2, lineHeight: 1.3 }}>« {t.message} »</div>}
+                            <div style={{ color: "rgba(255,255,255,.65)", fontSize: 9.5, marginTop: 2 }}>{t.time}</div>
                           </div>
                         </div>
                       </div>
@@ -5209,16 +5228,20 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CADEAUX</div>
             {GIFT_CATALOG.filter(g => g.category === "gift" && (g.species === "both" || g.species === initialData?.species)).sort((a, b) => parseGiftPrice(a.price) - parseGiftPrice(b.price)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
+              const locked = g.premiumOnly && !isPremium;
               return (
-                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, marginBottom: 10 }}>
-                  <span style={{ fontSize: 24 }}>{g.emoji}</span>
+                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none" }}>
+                  <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{g.label}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
+                      {g.label}
+                      {g.premiumOnly && <span style={{ fontSize: 9, fontWeight: 800, color: "#946800", background: "rgba(148,104,0,.12)", padding: "2px 6px", borderRadius: 8 }}>👑 PREMIUM</span>}
+                    </div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
-                  <button onClick={() => buyItem(g.id)} disabled={buyingItemId === g.id}
-                    style={{ background: buyingItemId === g.id ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
-                    {buyingItemId === g.id ? "..." : g.price}
+                  <button onClick={() => locked ? onPremium() : buyItem(g.id)} disabled={buyingItemId === g.id}
+                    style={{ background: buyingItemId === g.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
+                    {buyingItemId === g.id ? "..." : locked ? "🔒" : g.price}
                   </button>
                 </div>
               );
@@ -6438,6 +6461,9 @@ const GIFT_CATALOG = [
   { id: "doghouse", emoji: "🏠", label: "Niche Royale", price: "2,99 €", category: "comfort", species: "dog", gender: "f" },
   { id: "cattree", emoji: "🌳", label: "Arbre Royal", price: "2,99 €", category: "comfort", species: "cat", gender: "m" },
   { id: "collar", emoji: "📿", label: "Collier Élégance", price: "1,99 €", category: "comfort", species: "both", gender: "m" },
+  // Exclusifs Premium — achetables uniquement en étant abonné
+  { id: "trophy", emoji: "🏆", label: "Trophée Miloute", price: "2,99 €", category: "gift", species: "both", gender: "m", premiumOnly: true },
+  { id: "diamond", emoji: "💎", label: "Diamant Miloute", price: "3,99 €", category: "gift", species: "both", gender: "m", premiumOnly: true },
 ];
 
 // Packs groupés — quelques articles réunis à prix légèrement réduit, sans
@@ -6722,13 +6748,14 @@ async function toggleCommunityLike(userProfile, postId, currentlyLiked) {
   }
 }
 
-async function sendTreatToProfile(userProfile, targetProfile, giftId) {
+async function sendTreatToProfile(userProfile, targetProfile, giftId, message = null) {
   const { error } = await supabase.from("treats").insert({
     sender_user_id: userProfile.userId,
     sender_profile_id: userProfile.id,
     target_user_id: targetProfile.userId,
     target_profile_id: targetProfile.id,
     gift_id: giftId || null,
+    message: message || null,
   });
   if (error) throw new Error(error.message);
 }
@@ -6862,6 +6889,7 @@ async function fetchReceivedTreats(userProfile) {
       giftLabel: giftInfo?.label || "Cadeau",
       giftEmoji: giftInfo?.emoji || "🎁",
       giftCategory: giftInfo?.category || null,
+      message: t.message || null,
     };
   });
 }
