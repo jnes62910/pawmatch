@@ -372,6 +372,13 @@ function extractVideoFrameBase64(file) {
 // sans appel réseau, le temps de résoudre le problème.
 const MODERATION_ENABLED = true;
 
+// Interrupteur global des profils/contenus de démonstration (Découvrir,
+// Reproduction, Communauté, Prestataires, Qui craque pour vous). Servent à
+// éviter que l'app paraisse vide avant d'avoir assez d'utilisateurs réels.
+// Repasser à false quand il y aura une masse critique d'utilisateurs réels —
+// tout le contenu fictif disparaît alors d'un coup, partout dans l'app.
+const SHOW_DEMO_CONTENT = true;
+
 // Réduit la taille de l'image avant de l'envoyer à la vérification —
 // uniquement pour cet appel, la photo d'origine (upload, affichage) n'est
 // jamais touchée. Objectif : rester rapide même sur une connexion mobile
@@ -536,7 +543,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           .filter(p => !userProfile?.species || p.species === userProfile.species)
           .map(p => ({ ...p, isDemo: true }));
 
-        setDeck([...realOnes, ...demoOnes]);
+        setDeck([...realOnes, ...(SHOW_DEMO_CONTENT ? demoOnes : [])]);
       } catch (err) {
         if (active) setDeckError("Impossible de charger les profils. Réessayez.");
         console.error("loadDeck error:", err);
@@ -908,26 +915,34 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(false); }}>
                 <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 28px", width: "100%", maxHeight: "70vh", overflowY: "auto", boxSizing: "border-box" }}>
                   <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 10 }}>🎁 Envoyer à {profile.name}</div>
-                  <input value={swipeGiftMessage} onChange={e => setSwipeGiftMessage(e.target.value.slice(0, 120))} onClick={e => e.stopPropagation()}
-                    placeholder="Ajouter un mot (optionnel)..."
-                    style={{ width: "100%", boxSizing: "border-box", padding: "9px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 13, outline: "none", background: "#F9FAFB", marginBottom: 14 }} />
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                    {GIFT_CATALOG.filter(g => g.species === "both" || g.species === profile.species).map(g => {
-                      const owned = userProfile?.giftInventory?.[g.id] || 0;
-                      return (
-                        <button key={g.id} onClick={() => sendChosenGift(g.id, g.emoji)} disabled={sendingSwipeGift}
-                          style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "10px 4px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#F9FAFB", cursor: sendingSwipeGift ? "default" : "pointer", opacity: owned > 0 ? 1 : .65 }}>
-                          {owned > 0 && (
-                            <span style={{ position: "absolute", top: 2, right: 2, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{owned}</span>
-                          )}
-                          <span style={{ fontSize: 22 }}>{g.emoji}</span>
-                          <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", textAlign: "center" }}>{g.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 12 }}>Un article grisé n'est plus en stock — tapez dessus pour l'acheter dans la Boutique.</div>
+                  {profile.isDemo ? (
+                    <div style={{ textAlign: "center", padding: "20px 10px", color: "#9CA3AF", fontSize: 13 }}>
+                      🌱 Profil de démonstration — l'envoi de cadeaux n'est pas disponible pour ce profil.
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 10 }}>🎁 Envoyer à {profile.name}</div>
+                      <input value={swipeGiftMessage} onChange={e => setSwipeGiftMessage(e.target.value.slice(0, 120))} onClick={e => e.stopPropagation()}
+                        placeholder="Ajouter un mot (optionnel)..."
+                        style={{ width: "100%", boxSizing: "border-box", padding: "9px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 13, outline: "none", background: "#F9FAFB", marginBottom: 14 }} />
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                        {GIFT_CATALOG.filter(g => g.species === "both" || g.species === profile.species).map(g => {
+                          const owned = userProfile?.giftInventory?.[g.id] || 0;
+                          return (
+                            <button key={g.id} onClick={() => sendChosenGift(g.id, g.emoji)} disabled={sendingSwipeGift}
+                              style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "10px 4px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#F9FAFB", cursor: sendingSwipeGift ? "default" : "pointer", opacity: owned > 0 ? 1 : .65 }}>
+                              {owned > 0 && (
+                                <span style={{ position: "absolute", top: 2, right: 2, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{owned}</span>
+                              )}
+                              <span style={{ fontSize: 22 }}>{g.emoji}</span>
+                              <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", textAlign: "center" }}>{g.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 12 }}>Un article grisé n'est plus en stock — tapez dessus pour l'acheter dans la Boutique.</div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1742,7 +1757,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
     const demo = DEMO_PROVIDERS.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
     const realFiltered = list.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
     const partnersFiltered = partners.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
-    const merged = [...partnersFiltered, ...realFiltered, ...demo]; // partenaires toujours en tête
+    const merged = [...partnersFiltered, ...realFiltered, ...(SHOW_DEMO_CONTENT ? demo : [])]; // partenaires toujours en tête
     const reviews = await fetchReviewsForProviders(list.map(p => p.id));
     setProviders(merged);
     setReviewsBySpot(reviews);
@@ -2246,7 +2261,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
       const demo = REPRO_PROFILES
         .filter(p => !userProfile?.species || p.species === userProfile.species)
         .map(p => ({ ...p, isDemo: true }));
-      setReproDeck([...real, ...demo]);
+      setReproDeck([...real, ...(SHOW_DEMO_CONTENT ? demo : [])]);
       setLoadingRepro(false);
     }
     load();
@@ -2761,7 +2776,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
     const demo = COMMUNITY_POSTS
       .filter(p => !userProfile?.species || p.species === userProfile.species)
       .map(p => ({ ...p, likedByMe: false, commentCount: (INIT_COMMENTS[p.id] || []).length, isDemo: true }));
-    setPosts([...real, ...demo]);
+    setPosts([...real, ...(SHOW_DEMO_CONTENT ? demo : [])]);
     setLoadingPosts(false);
   }
 
@@ -4164,7 +4179,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       const demo = LIKES_RECEIVED
         .filter(l => !initialData?.species || l.species === initialData.species)
         .map(l => ({ ...l, isDemo: true }));
-      setLikesReceived([...real, ...demo]);
+      setLikesReceived([...real, ...(SHOW_DEMO_CONTENT ? demo : [])]);
       setLoadingLikes(false);
     }
     loadLikes();
