@@ -6472,7 +6472,7 @@ const QUEST_LIST = [
   { id: "first_review", emoji: "⭐", title: "Laisser son premier avis prestataire", rewardLabel: () => "1 Rose des Amoureux 🌹" },
   { id: "first_post", emoji: "📢", title: "Publier son premier post dans la Communauté", rewardLabel: () => "1 Doudou Câlin 🧸" },
   { id: "become_provider", emoji: "🏥", title: "Devenir prestataire (configuration terminée)", rewardLabel: () => "1 Médaille Miloute 🏅" },
-  { id: "first_booking", emoji: "📅", title: "Effectuer sa première réservation", rewardLabel: (species) => `1 ${species === "cat" ? "Poisson du Chef 🐟" : "Os du Chef 🦴"}` },
+  { id: "first_booking", emoji: "📅", title: "Effectuer sa première réservation", rewardLabel: () => "1 Gâteau Fiesta 🎂" },
   { id: "first_gift_sent", emoji: "🎁", title: "Envoyer son premier cadeau", rewardLabel: (species) => `1 ${species === "cat" ? "Cœur de Miaouw" : "Cœur de Toutou"} 💕` },
 ];
 
