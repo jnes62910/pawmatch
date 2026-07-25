@@ -2423,9 +2423,9 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
             {userProfile?.location && (
               <>
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DISTANCE MAXIMALE</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, margin: "6px 0 16px" }}>
+                <div style={{ display: "flex", gap: 6, margin: "6px 0 16px" }}>
                   {[[10,"10 km"],[25,"25 km"],[50,"50 km"],[100,"100 km"]].map(([v,l]) => (
-                    <button key={l} onClick={() => setAdvMaxDistance(v)} style={{ padding: "9px 4px", borderRadius: 10, border: `1.5px solid ${advMaxDistance === v ? "#B25F46" : "#E5E7EB"}`, background: advMaxDistance === v ? "#FAF0EB" : "#fff", color: advMaxDistance === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+                    <button key={l} onClick={() => setAdvMaxDistance(v)} style={{ flex: 1, padding: "7px 2px", borderRadius: 9, border: `1.5px solid ${advMaxDistance === v ? "#B25F46" : "#E5E7EB"}`, background: advMaxDistance === v ? "#FAF0EB" : "#fff", color: advMaxDistance === v ? "#B25F46" : "#6B7280", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>{l}</button>
                   ))}
                 </div>
               </>
