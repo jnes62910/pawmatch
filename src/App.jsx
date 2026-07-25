@@ -2204,6 +2204,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
   }, [userProfile?.id]);
 
   async function handleSendRequest() {
+    if (!selected?.userId) return; // profil de démonstration : pas de vrai destinataire
     setSendingRequest(true);
     setRequestError(null);
     try {
@@ -2530,6 +2531,10 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
 
             {!isPremium ? (
               <button onClick={() => setShowPremiumPrompt(true)} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>👑 Passer Premium pour contacter</button>
+            ) : !selected.userId ? (
+              <div style={{ textAlign: "center", padding: "14px", background: "#F9FAFB", borderRadius: 14, fontSize: 12, color: "#9CA3AF" }}>
+                🌱 Profil de démonstration — la mise en relation n'est pas disponible pour ce profil.
+              </div>
             ) : (
               <>
                 <button onClick={handleSendRequest} disabled={sendingRequest} style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: sendingRequest ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: sendingRequest ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: sendingRequest ? "default" : "pointer" }}>
