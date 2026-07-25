@@ -55,6 +55,8 @@ const GIFT_CATALOG = {
   doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299 },
   cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299 },
   collar:   { label: 'Collier Élégance',  emoji: '📿', amountCents: 199 },
+  trophy:   { label: 'Trophée Miloute',   emoji: '🏆', amountCents: 299, premiumOnly: true },
+  diamond:  { label: 'Diamant Miloute',   emoji: '💎', amountCents: 399, premiumOnly: true },
 };
 
 // Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
@@ -106,6 +108,12 @@ module.exports = async (req, res) => {
       } else {
         const item = GIFT_CATALOG[itemId];
         if (!item) return res.status(400).json({ error: 'Article inconnu' });
+        if (item.premiumOnly) {
+          const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', profileId).single();
+          if (!profile?.is_premium) {
+            return res.status(403).json({ error: 'Cet article est réservé aux membres Premium.' });
+          }
+        }
         label = item.label; amountCents = item.amountCents;
         metadata = { type: 'shop', itemId, profileId, userId };
       }
