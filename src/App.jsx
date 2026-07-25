@@ -2708,20 +2708,20 @@ function AgendaScreen() {
 // ── COMMUNITY SCREEN ──────────────────────────────────────────────────────────
 const INIT_COMMENTS = {
   1: [
-    { id: 1, author: "Marie L.", pet: "Caramel", emoji: "🐱", text: "Super ! Rocky est trop mignon, ça ferait une belle équipe", time: "Il y a 1h", likes: 5 },
-    { id: 2, author: "Jean P.", pet: "Max", emoji: "🐕", text: "Vous trouvez des dog parks accessibles dans votre coin ?", time: "Il y a 45 min", likes: 2 },
+    { id: 1, author: "Marie L.", pet: "Caramel", emoji: "🐱", photo: "/photos/caramel-1.jfif", text: "Super ! Rocky est trop mignon, ça ferait une belle équipe", time: "Il y a 1h", likes: 5 },
+    { id: 2, author: "Jean P.", pet: "Max", emoji: "🐕", photo: "/photos/max-1.jpg", text: "Vous trouvez des dog parks accessibles dans votre coin ?", time: "Il y a 45 min", likes: 2 },
   ],
   2: [
-    { id: 1, author: "Sophie M.", pet: "Luna", emoji: "🐱", text: "Ça peut être un signe de stress ou juste un caprice ! Essayez de changer de gamelle 😊", time: "Il y a 3h", likes: 8 },
-    { id: 2, author: "Paul D.", pet: "Tiger", emoji: "🐱", text: "Même chose chez nous, c'est passé au bout de 3 jours.", time: "Il y a 2h", likes: 3 },
+    { id: 1, author: "Sophie M.", pet: "Luna", emoji: "🐱", photo: "/photos/luna-community-1.jpg", text: "Ça peut être un signe de stress ou juste un caprice ! Essayez de changer de gamelle 😊", time: "Il y a 3h", likes: 8 },
+    { id: 2, author: "Paul D.", pet: "Tiger", emoji: "🐱", photo: "/photos/tiger-1.jpg", text: "Même chose chez nous, c'est passé au bout de 3 jours.", time: "Il y a 2h", likes: 3 },
     { id: 3, author: "Véto Conseil", pet: "🩺", emoji: "🩺", text: "Si ça dure plus de 48h, consultez un vétérinaire. Pensez à vérifier que l'eau est fraîche.", time: "Il y a 1h", likes: 12 },
   ],
   3: [
-    { id: 1, author: "Thomas D.", pet: "Rocky", emoji: "🐕", text: "Joyeux anniversaire Mochi ! 🎂🐱", time: "Hier", likes: 15 },
-    { id: 2, author: "Léa P.", pet: "Pixel", emoji: "🐱", text: "5 ans déjà ! Il est magnifique 😍", time: "Hier", likes: 9 },
+    { id: 1, author: "Thomas D.", pet: "Rocky", emoji: "🐕", photo: "/photos/rocky-1.jpg", text: "Joyeux anniversaire Mochi ! 🎂🐱", time: "Hier", likes: 15 },
+    { id: 2, author: "Léa P.", pet: "Pixel", emoji: "🐱", photo: "/photos/pixel-1.jpg", text: "5 ans déjà ! Il est magnifique 😍", time: "Hier", likes: 9 },
   ],
   4: [
-    { id: 1, author: "Clara B.", pet: "Mochi", emoji: "🐱", text: "Bella a l'air adorable ! Vous êtes en quelle région ?", time: "Hier", likes: 3 },
+    { id: 1, author: "Clara B.", pet: "Mochi", emoji: "🐱", photo: "/photos/mochi-1.jpg", text: "Bella a l'air adorable ! Vous êtes en quelle région ?", time: "Hier", likes: 3 },
   ],
 };
 
