@@ -2259,7 +2259,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
   const [advGender, setAdvGender] = useState("all"); // all | M | F
   const [advTemper, setAdvTemper] = useState("all");
   const [advDocs, setAdvDocs] = useState([]); // vaccinated | pedigree | testedGenes
-  const [advMaxDistance, setAdvMaxDistance] = useState("all"); // all | 5 | 10 | 25
+  const [advMaxDistance, setAdvMaxDistance] = useState(100); // 10 | 25 | 50 | 100
 
   function ageToRange(ageStr) {
     const n = parseInt(ageStr, 10);
@@ -2279,7 +2279,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
   }
 
   function resetAdvanced() {
-    setAdvBreed(""); setAdvAgeRange("all"); setAdvGender("all"); setAdvTemper("all"); setAdvDocs([]); setAdvMaxDistance("all");
+    setAdvBreed(""); setAdvAgeRange("all"); setAdvGender("all"); setAdvTemper("all"); setAdvDocs([]); setAdvMaxDistance(100);
   }
 
   function openAdvanced() {
@@ -2299,12 +2299,12 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
       if (advDocs.includes("vaccinated") && !p.vaccinated) return false;
       if (advDocs.includes("pedigree") && !p.pedigree) return false;
       if (advDocs.includes("testedGenes") && !p.testedGenes) return false;
-      if (advMaxDistance !== "all" && parseDistanceKm(p) > advMaxDistance) return false;
+      if (parseDistanceKm(p) > advMaxDistance) return false;
       return true;
     })
     .sort((a, b) => userProfile?.location ? parseDistanceKm(a) - parseDistanceKm(b) : 0);
 
-  const advancedActive = isPremium && (advBreed || advAgeRange !== "all" || advGender !== "all" || advTemper !== "all" || advDocs.length > 0 || advMaxDistance !== "all");
+  const advancedActive = isPremium && (advBreed || advAgeRange !== "all" || advGender !== "all" || advTemper !== "all" || advDocs.length > 0 || advMaxDistance !== 100);
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
@@ -2423,9 +2423,9 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
             {userProfile?.location && (
               <>
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DISTANCE MAXIMALE</label>
-                <div style={{ display: "flex", gap: 6, margin: "6px 0 16px" }}>
-                  {[["all","Toutes"],[5,"5 km"],[10,"10 km"],[25,"25 km"]].map(([v,l]) => (
-                    <button key={l} onClick={() => setAdvMaxDistance(v)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${advMaxDistance === v ? "#B25F46" : "#E5E7EB"}`, background: advMaxDistance === v ? "#FAF0EB" : "#fff", color: advMaxDistance === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, margin: "6px 0 16px" }}>
+                  {[[10,"10 km"],[25,"25 km"],[50,"50 km"],[100,"100 km"]].map(([v,l]) => (
+                    <button key={l} onClick={() => setAdvMaxDistance(v)} style={{ padding: "9px 4px", borderRadius: 10, border: `1.5px solid ${advMaxDistance === v ? "#B25F46" : "#E5E7EB"}`, background: advMaxDistance === v ? "#FAF0EB" : "#fff", color: advMaxDistance === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
                   ))}
                 </div>
               </>
@@ -5728,7 +5728,7 @@ const OB_SEEKING = [
   { id: "Reproduction",     icon: "🌱", label: "Reproduction",       desc: "Saillie sérieuse et vérifiée" },
 ];
 
-function Onboarding({ onComplete, initialOwner = null }) {
+function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1); // 1=forward -1=back
   const [submitting, setSubmitting] = useState(false);
@@ -5803,9 +5803,11 @@ function Onboarding({ onComplete, initialOwner = null }) {
       {/* Progress bar */}
       <div style={{ padding: "14px 20px 0", background: "#fff", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          {step > 0 && (
+          {step > 0 ? (
             <button onClick={back} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9CA3AF", padding: 0, flexShrink: 0 }}>←</button>
-          )}
+          ) : onBack ? (
+            <button onClick={onBack} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9CA3AF", padding: 0, flexShrink: 0 }}>←</button>
+          ) : null}
           <div style={{ flex: 1, height: 5, background: "#F3F4F6", borderRadius: 3, overflow: "hidden" }}>
             <div style={{ height: "100%", borderRadius: 3, background: "linear-gradient(90deg,#B25F46,#C97A5E)", width: `${progress * 100}%`, transition: "width .4s ease" }} />
           </div>
@@ -7404,7 +7406,7 @@ export default function Miloute() {
               ? (authSession
                   ? <Onboarding onComplete={completeOnboarding} initialOwner={{ name: authSession.user.user_metadata?.full_name || authSession.user.user_metadata?.name || "", email: authSession.user.email }} />
                   : authView === "email-onboarding"
-                    ? <Onboarding onComplete={completeOnboarding} />
+                    ? <Onboarding onComplete={completeOnboarding} onBack={() => setAuthView("welcome")} />
                     : <WelcomeScreen onStartEmailSignup={() => setAuthView("email-onboarding")} onLoggedIn={setAuthSession} />
                 )
               : <>
