@@ -85,14 +85,12 @@ async function handleBooking(session) {
 }
 
 const GIFT_BUNDLES_ITEMS = {
-  gourmet_dog_pack: ['bone', 'chicken', 'bacon'],
-  gourmet_cat_pack: ['fish', 'tunapate', 'milk'],
+  gourmet_dog_pack: ['chicken', 'meatbone', 'bone'],
+  gourmet_cat_pack: ['sushi', 'shrimp', 'fish'],
   player_dog_pack: ['tennisball', 'frisbee', 'chewrope'],
   player_cat_pack: ['yarn', 'mouse', 'feather'],
   romance_dog_pack: ['bouquet', 'rose', 'coeur_dog'],
   romance_cat_pack: ['bouquet', 'rose', 'coeur_cat'],
-  luxury_dog_pack: ['crown', 'steak', 'doghouse'],
-  luxury_cat_pack: ['crown', 'sushi', 'cattree'],
 };
 
 async function handleShop(session) {
