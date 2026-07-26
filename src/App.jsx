@@ -4034,6 +4034,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [editTab, setEditTab] = useState("profil"); // "profil" | "repro"
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [selectedLike, setSelectedLike] = useState(null);
+  const [selectedLikeProfile, setSelectedLikeProfile] = useState(null);
+  const [loadingSelectedLikeProfile, setLoadingSelectedLikeProfile] = useState(false);
   const [likesReceived, setLikesReceived] = useState([]);
   const [matchesCount, setMatchesCount] = useState(0);
 
@@ -4042,6 +4044,20 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     fetchMatchesForUser(initialData).then(list => setMatchesCount(list.length));
   }, [initialData?.id]);
   const [decliningLikeId, setDecliningLikeId] = useState(null);
+
+  useEffect(() => {
+    if (!selectedLike) { setSelectedLikeProfile(null); return; }
+    if (selectedLike.isDemo) {
+      setSelectedLikeProfile(PROFILES.find(p => p.name === selectedLike.name) || REPRO_PROFILES.find(p => p.name === selectedLike.name) || null);
+      return;
+    }
+    let active = true;
+    setLoadingSelectedLikeProfile(true);
+    fetchProfileForUser(selectedLike.userId).then(profile => {
+      if (active) { setSelectedLikeProfile(profile); setLoadingSelectedLikeProfile(false); }
+    });
+    return () => { active = false; };
+  }, [selectedLike]);
 
   async function handleDeclineLike(like) {
     setDecliningLikeId(like.profileId);
@@ -4842,67 +4858,71 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         </div>
       )}
 
-      {/* Détail d'un profil ayant liké — affiché immédiatement, sans redirection */}
+      {/* Détail d'un profil ayant liké — profil complet affiché directement */}
       {selectedLike && (() => {
-        const fullProfile = !selectedLike.isDemo
-          ? selectedLike
-          : (PROFILES.find(p => p.name === selectedLike.name) || REPRO_PROFILES.find(p => p.name === selectedLike.name));
+        const fullProfile = selectedLikeProfile;
         return (
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "flex-end" }} onClick={() => setSelectedLike(null)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
-              <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
-              <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>
-                <div style={{ width: 72, height: 72, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, flexShrink: 0 }}>
-                  {photoUrl(selectedLike.photo) ? <img src={photoUrl(selectedLike.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : selectedLike.emoji}
-                </div>
-                <div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>
-                    {selectedLike.name}{fullProfile?.age ? ` · ${fullProfile.age}` : ""}{fullProfile?.gender ? ` ${fullProfile.gender === "F" ? "♀" : "♂"}` : ""}
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", boxSizing: "border-box" }}>
+              <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "12px auto 0" }} />
+              {loadingSelectedLikeProfile ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 60 }}><PawLogo size={32} color="#E8B89F" /></div>
+              ) : !fullProfile ? (
+                <div style={{ textAlign: "center", padding: "60px 20px", color: "#9CA3AF" }}>Profil introuvable.</div>
+              ) : (
+                <>
+                  <div style={{ width: "100%", aspectRatio: "1", background: "#FAF0EB", position: "relative", marginTop: 12 }}>
+                    {photoUrl(fullProfile.photos?.[0]) ? (
+                      <img src={photoUrl(fullProfile.photos[0])} alt={selectedLike.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>{selectedLike.emoji}</div>
+                    )}
+                    <button onClick={() => setSelectedLike(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,.9)", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer" }}>✕</button>
                   </div>
-                  <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selectedLike.breed}</div>
-                  <div style={{ fontSize: 12, color: "#9CA3AF" }}>A liké {pet.name} · {selectedLike.time}</div>
-                </div>
-              </div>
+                  <div style={{ padding: "18px 20px 32px" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>
+                      {selectedLike.name}{fullProfile.age ? ` · ${fullProfile.age}` : ""}{fullProfile.gender ? ` ${fullProfile.gender === "F" ? "♀" : "♂"}` : ""}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selectedLike.breed}</div>
+                    <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 12 }}>A liké {pet.name} · {selectedLike.time}</div>
 
-              {(fullProfile?.vaccinated || fullProfile?.sterilized) && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                  {fullProfile.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné ✓</Badge>}
-                  {fullProfile.sterilized && <Badge color="#F3E5F5" text="#7B1FA2">Stérilisé ✓</Badge>}
-                </div>
-              )}
+                    {(fullProfile.vaccinated || fullProfile.sterilized) && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                        {fullProfile.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné ✓</Badge>}
+                        {fullProfile.sterilized && <Badge color="#F3E5F5" text="#7B1FA2">Stérilisé ✓</Badge>}
+                      </div>
+                    )}
 
-              {fullProfile?.temper?.length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                  {fullProfile.temper.map(t => <Badge key={t} color="#FAF0EB" text="#8B3D28">{t}</Badge>)}
-                </div>
-              )}
+                    {fullProfile.temper?.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                        {fullProfile.temper.map(t => <Badge key={t} color="#FAF0EB" text="#8B3D28">{t}</Badge>)}
+                      </div>
+                    )}
 
-              {typeof fullProfile?.energy === "number" && (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 4 }}>ÉNERGIE</div>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {[1,2,3,4,5].map(i => <div key={i} style={{ width: 20, height: 6, borderRadius: 3, background: i <= fullProfile.energy ? "#B25F46" : "#F3F4F6" }} />)}
+                    {typeof fullProfile.energy === "number" && (
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 4 }}>ÉNERGIE</div>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {[1,2,3,4,5].map(i => <div key={i} style={{ width: 20, height: 6, borderRadius: 3, background: i <= fullProfile.energy ? "#B25F46" : "#F3F4F6" }} />)}
+                        </div>
+                      </div>
+                    )}
+
+                    {fullProfile.bio && (
+                      <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{fullProfile.bio}</p>
+                    )}
+
+                    {fullProfile.seeking?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 6 }}>CHERCHE</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {fullProfile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#8B3D28">{s}</Badge>)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                </>
               )}
-
-              {fullProfile?.bio && (
-                <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{fullProfile.bio}</p>
-              )}
-
-              {fullProfile?.seeking?.length > 0 && (
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 6 }}>CHERCHE</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {fullProfile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#8B3D28">{s}</Badge>)}
-                  </div>
-                </div>
-              )}
-
-              <button onClick={() => setSelectedLike(null)}
-                style={{ width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
-                🔎 Découvrir le profil
-              </button>
             </div>
           </div>
         );
