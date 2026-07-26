@@ -5209,7 +5209,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             {GIFT_BUNDLES.filter(b => b.species === "both" || b.species === initialData?.species).map(b => {
               const locked = b.premiumOnly && !isPremium;
               return (
-              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F" }}>
+              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
                 <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{b.items.map(id => GIFT_CATALOG.find(g => g.id === id)?.emoji).join("")}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
@@ -5223,7 +5223,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     <span style={{ textDecoration: "line-through" }}>{b.originalPrice}</span> → <span style={{ color: "#B25F46", fontWeight: 700 }}>{b.price}</span>
                   </div>
                 </div>
-                <button onClick={() => locked ? onPremium() : buyItem(null, b.id)} disabled={buyingItemId === b.id}
+                <button disabled={buyingItemId === b.id}
                   style={{ background: buyingItemId === b.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === b.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
                   {buyingItemId === b.id ? "..." : locked ? "🔒" : b.price}
                 </button>
@@ -5236,7 +5236,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               const owned = initialData?.giftInventory?.[g.id] || 0;
               const locked = g.premiumOnly && !isPremium;
               return (
-                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none" }}>
+                <div key={g.id} onClick={() => { if (buyingItemId === g.id) return; locked ? onPremium() : buyItem(g.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                   <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
@@ -5245,7 +5245,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     </div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
-                  <button onClick={() => locked ? onPremium() : buyItem(g.id)} disabled={buyingItemId === g.id}
+                  <button disabled={buyingItemId === g.id}
                     style={{ background: buyingItemId === g.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                     {buyingItemId === g.id ? "..." : locked ? "🔒" : g.price}
                   </button>
@@ -5258,7 +5258,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               const owned = initialData?.giftInventory?.[g.id] || 0;
               const locked = g.premiumOnly && !isPremium;
               return (
-                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none" }}>
+                <div key={g.id} onClick={() => { if (buyingItemId === g.id) return; locked ? onPremium() : buyItem(g.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                   <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
@@ -5267,7 +5267,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     </div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
-                  <button onClick={() => locked ? onPremium() : buyItem(g.id)} disabled={buyingItemId === g.id}
+                  <button disabled={buyingItemId === g.id}
                     style={{ background: buyingItemId === g.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                     {buyingItemId === g.id ? "..." : locked ? "🔒" : g.price}
                   </button>
@@ -5280,7 +5280,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               const owned = initialData?.giftInventory?.[g.id] || 0;
               const locked = g.premiumOnly && !isPremium;
               return (
-                <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none" }}>
+                <div key={g.id} onClick={() => { if (buyingItemId === g.id) return; locked ? onPremium() : buyItem(g.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                   <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
@@ -5289,7 +5289,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     </div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
                   </div>
-                  <button onClick={() => locked ? onPremium() : buyItem(g.id)} disabled={buyingItemId === g.id}
+                  <button disabled={buyingItemId === g.id}
                     style={{ background: buyingItemId === g.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === g.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                     {buyingItemId === g.id ? "..." : locked ? "🔒" : g.price}
                   </button>
@@ -6463,7 +6463,7 @@ const GIFT_CATALOG = [
   { id: "chicken", emoji: "🍗", label: "Cuisse Dorée", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   { id: "steak", emoji: "🥩", label: "Steak Royal", price: "2,99 €", category: "food", species: "dog", gender: "m", premiumOnly: true },
   { id: "bacon", emoji: "🥓", label: "Bacon Croustillant", price: "0,99 €", category: "food", species: "dog", gender: "m" },
-  { id: "broccoli", emoji: "🥦", label: "Brocoli", price: "0,99 €", category: "food", species: "dog", gender: "m" },
+  { id: "broccoli", emoji: "🥦", label: "Veggie Bro", price: "0,99 €", category: "food", species: "dog", gender: "m" },
   { id: "meatbone", emoji: "🍖", label: "Viande Tendresse", price: "1,99 €", category: "food", species: "dog", gender: "f" },
   { id: "croc_dog", emoji: "🍪", label: "Croc'Miloute", price: "0,99 €", category: "food", species: "dog", gender: "f" },
   // Nourriture chat
