@@ -5069,7 +5069,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       {justMatchedWith && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(45,18,0,.92)", zIndex: 80, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
-          <div style={{ fontSize: 15, color: "rgba(255,255,255,.85)", marginBottom: 28, textAlign: "center" }}>Vous et {justMatchedWith.name} vous êtes plu 🎉</div>
+          <div style={{ fontSize: 15, color: "rgba(255,255,255,.85)", marginBottom: 28, textAlign: "center", lineHeight: 1.5, maxWidth: 320 }}>{generateMatchMessage(pet, justMatchedWith)}</div>
           <div style={{ width: 96, height: 96, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, marginBottom: 28, border: "3px solid #fff" }}>
             {photoUrl(justMatchedWith.photo) ? <img src={photoUrl(justMatchedWith.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : justMatchedWith.emoji}
           </div>
