@@ -4026,7 +4026,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
@@ -4192,18 +4192,30 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     let active = true;
     async function loadLikes() {
       setLoadingLikes(true);
-      const real = await fetchLikesReceived(initialData);
+      const [real, unseenCount] = await Promise.all([
+        fetchLikesReceived(initialData),
+        fetchUnseenLikesCount(initialData),
+      ]);
       if (!active) return;
       // Likes de démo en renfort — utiles tant que peu de vrais likes existent.
       const demo = LIKES_RECEIVED
         .filter(l => !initialData?.species || l.species === initialData.species)
         .map(l => ({ ...l, isDemo: true }));
       setLikesReceived([...real, ...(SHOW_DEMO_CONTENT ? demo : [])]);
+      setUnseenLikesCount(unseenCount);
       setLoadingLikes(false);
     }
     loadLikes();
     return () => { active = false; };
   }, [initialData?.id, initialData?.userId, initialData?.species]);
+  const [unseenLikesCount, setUnseenLikesCount] = useState(0);
+
+  function openLikesModal() {
+    setShowLikesModal(true);
+    if (unseenLikesCount > 0) {
+      markLikesSeen(initialData).then(() => { setUnseenLikesCount(0); onLikesSeen(); });
+    }
+  }
   const [treatsReceived, setTreatsReceived] = useState([]);
   const [treatsFilterCategory, setTreatsFilterCategory] = useState("all");
   const [confirmDeleteTreat, setConfirmDeleteTreat] = useState(null);
@@ -4699,11 +4711,14 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 10, letterSpacing: 1 }}>STATISTIQUES</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             {[
-              [String(likesReceived.length || "0"), "Likes reçus", () => setShowLikesModal(true)],
+              [String(likesReceived.length || "0"), "Likes reçus", openLikesModal],
               [String(matchesCount), "Matchs", () => onNav("messages")],
             ].map(([n, l, onClickAction]) => (
               <div key={l} onClick={onClickAction}
                 style={{ textAlign: "center", cursor: "pointer", position: "relative" }}>
+                {l === "Likes reçus" && unseenLikesCount > 0 && (
+                  <span style={{ position: "absolute", top: -4, right: "28%", background: "#B25F46", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #F9FAFB" }}>{unseenLikesCount}</span>
+                )}
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#8B3D28" }}>{n}</div>
                 <div style={{ fontSize: 11, color: "#9CA3AF" }}>{l} 👁️</div>
               </div>
@@ -6906,6 +6921,33 @@ async function declineLike(userProfile, targetProfile) {
   if (error) throw new Error(error.message);
 }
 
+// Badge de notification "likes non vus" — même logique de dédoublonnage
+// (par utilisateur, hors déjà matchés) que fetchLikesReceived, mais en
+// comptage simple pour ne pas re-télécharger les profils complets.
+async function fetchUnseenLikesCount(userProfile) {
+  if (!userProfile?.id || !userProfile?.userId) return 0;
+  const { data: likeRows } = await supabase
+    .from("swipes")
+    .select("swiper_user_id")
+    .eq("target_profile_id", userProfile.id)
+    .eq("direction", "like")
+    .eq("seen", false);
+  if (!likeRows || likeRows.length === 0) return 0;
+
+  const swiperIds = [...new Set(likeRows.map(l => l.swiper_user_id))];
+  const { data: matchRows } = await supabase
+    .from("matches")
+    .select("user_a, user_b")
+    .or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`);
+  const matchedUserIds = new Set((matchRows || []).flatMap(m => [m.user_a, m.user_b]));
+  return swiperIds.filter(id => !matchedUserIds.has(id)).length;
+}
+
+async function markLikesSeen(userProfile) {
+  if (!userProfile?.id) return;
+  await supabase.from("swipes").update({ seen: true }).eq("target_profile_id", userProfile.id).eq("direction", "like").eq("seen", false);
+}
+
 async function fetchUnseenTreatsCount(userProfile) {
   if (!userProfile?.userId) return 0;
   const { count, error } = await supabase
@@ -7141,6 +7183,7 @@ function WelcomeScreen({ onStartEmailSignup, onLoggedIn }) {
 export default function Miloute() {
   const [onboarded, setOnboarded] = useState(() => loadProfile() !== null);
   const [unseenTreats, setUnseenTreats] = useState(0);
+  const [unseenLikes, setUnseenLikes] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [userProfile, setUserProfile] = useState(() => loadProfile());
   const userProfileRef = useRef(userProfile);
@@ -7175,6 +7218,19 @@ export default function Miloute() {
     }
     refresh();
     const interval = setInterval(refresh, 30000); // rafraîchi toutes les 30s
+    return () => { active = false; clearInterval(interval); };
+  }, [userProfile?.userId]);
+
+  // Badge de notification sur l'icône Profil : likes reçus pas encore vus.
+  useEffect(() => {
+    if (!userProfile?.userId) { setUnseenLikes(0); return; }
+    let active = true;
+    async function refresh() {
+      const count = await fetchUnseenLikesCount(userProfile);
+      if (active) setUnseenLikes(count);
+    }
+    refresh();
+    const interval = setInterval(refresh, 30000);
     return () => { active = false; clearInterval(interval); };
   }, [userProfile?.userId]);
 
@@ -7472,7 +7528,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} onProfileUpdated={updateUserProfile} onGoToShop={goToShop} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} />}
               </>
           }
         </div>
@@ -7492,8 +7548,8 @@ export default function Miloute() {
                 <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 6px", flex: 1 }}>
                   <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", height: 24 }}>
                     {n.logo ? <PawLogo size={24} color="#B25F46" /> : <span style={{ fontSize: 20 }}>{n.icon}</span>}
-                    {n.id === "profile" && unseenTreats > 0 && (
-                      <span style={{ position: "absolute", top: -6, right: -8, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unseenTreats}</span>
+                    {n.id === "profile" && (unseenTreats + unseenLikes) > 0 && (
+                      <span style={{ position: "absolute", top: -6, right: -8, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unseenTreats + unseenLikes}</span>
                     )}
                     {n.id === "messages" && unreadMessages > 0 && (
                       <span style={{ position: "absolute", top: -6, right: -8, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unreadMessages}</span>
