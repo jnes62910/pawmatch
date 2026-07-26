@@ -5459,6 +5459,7 @@ const PLANS = [
 ];
 
 const FEATURES = [
+  ["🎁", "Articles exclusifs de la Boutique"],
   ["💝", "Boîte à Souvenirs de vos cadeaux"],
   ["🌱", "Accès reproduction complète"],
   ["🏆", "Publier dans la communauté"],
