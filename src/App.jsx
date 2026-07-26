@@ -1870,7 +1870,10 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
       <div style={{ padding: "12px 16px 8px", background: "#fff" }}>
-        <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.4, marginBottom: 10 }}>En plus de mettre en relation les propriétaires d'animaux, Miloute propose un annuaire de prestataires de confiance, recommandés par la communauté, près de chez vous 🐾</div>
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Un annuaire de prestataires de confiance près de chez vous 🐾</div>
+          <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Vétérinaires, toiletteurs, pensions, éducateurs canins... tous recommandés par la communauté Miloute et triés selon votre position. Parcourez librement l'annuaire et laissez un avis après chaque prestation pour aider les autres propriétaires.</div>
+        </div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
           <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter un prestataire</button>
         </div>
@@ -2328,7 +2331,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
       <div style={{ flex: 1, overflowY: "auto" }}>
         {/* Texte d'intro */}
         <div style={{ margin: "16px 16px 8px" }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Trouvez le partenaire idéal pour la reproduction de votre animal</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Trouvez le partenaire idéal pour la reproduction de votre animal 🐾</div>
           <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Tous les profils sont vérifiés (pedigree, bilan génétique, documents sanitaires) pour des rencontres sereines. Parcourez librement les profils — la mise en relation est réservée aux membres Premium, et le montant de la saillie se négocie directement entre propriétaires.</div>
         </div>
 
