@@ -4102,16 +4102,26 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   }, [initialData?.id]);
   const [decliningLikeId, setDecliningLikeId] = useState(null);
 
+  const [selectedLikeTreats, setSelectedLikeTreats] = useState([]);
+  const [selectedLikePhotoIdx, setSelectedLikePhotoIdx] = useState(0);
+  const [likingBackId, setLikingBackId] = useState(null);
+  const [justMatchedWith, setJustMatchedWith] = useState(null);
+
   useEffect(() => {
-    if (!selectedLike) { setSelectedLikeProfile(null); return; }
+    setSelectedLikePhotoIdx(0);
+    if (!selectedLike) { setSelectedLikeProfile(null); setSelectedLikeTreats([]); return; }
     if (selectedLike.isDemo) {
       setSelectedLikeProfile(PROFILES.find(p => p.name === selectedLike.name) || REPRO_PROFILES.find(p => p.name === selectedLike.name) || null);
+      setSelectedLikeTreats([]);
       return;
     }
     let active = true;
     setLoadingSelectedLikeProfile(true);
-    fetchProfileForUser(selectedLike.userId).then(profile => {
-      if (active) { setSelectedLikeProfile(profile); setLoadingSelectedLikeProfile(false); }
+    Promise.all([
+      fetchProfileForUser(selectedLike.userId),
+      fetchTreatsFromSender(initialData, selectedLike.profileId),
+    ]).then(([profile, treats]) => {
+      if (active) { setSelectedLikeProfile(profile); setSelectedLikeTreats(treats); setLoadingSelectedLikeProfile(false); }
     });
     return () => { active = false; };
   }, [selectedLike]);
@@ -4121,10 +4131,26 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     try {
       await declineLike(initialData, like);
       setLikesReceived(l => l.filter(x => x.profileId !== like.profileId));
+      if (selectedLike?.profileId === like.profileId) setSelectedLike(null);
     } catch (err) {
       console.error("declineLike error:", err);
     }
     setDecliningLikeId(null);
+  }
+
+  async function handleLikeBack(like) {
+    setLikingBackId(like.profileId);
+    try {
+      const questResult = await likeBackAndMatch(initialData, like);
+      if (questResult) onProfileUpdated({ ...initialData, giftInventory: questResult.giftInventory, questsCompleted: questResult.questsCompleted });
+      setLikesReceived(l => l.filter(x => x.profileId !== like.profileId));
+      setMatchesCount(c => c + 1);
+      setSelectedLike(null);
+      setJustMatchedWith(like);
+    } catch (err) {
+      console.error("likeBackAndMatch error:", err);
+    }
+    setLikingBackId(null);
   }
 
   const [loadingLikes, setLoadingLikes] = useState(true);
@@ -4944,12 +4970,25 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               ) : (
                 <>
                   <div style={{ width: "100%", aspectRatio: "1", background: "#FAF0EB", position: "relative", marginTop: 12 }}>
-                    {photoUrl(fullProfile.photos?.[0]) ? (
-                      <img src={photoUrl(fullProfile.photos[0])} alt={selectedLike.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    {photoUrl(fullProfile.photos?.[selectedLikePhotoIdx]) ? (
+                      <img src={photoUrl(fullProfile.photos[selectedLikePhotoIdx])} alt={selectedLike.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>{selectedLike.emoji}</div>
                     )}
-                    <button onClick={() => setSelectedLike(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,.9)", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer" }}>✕</button>
+                    {fullProfile.photos?.length > 1 && (
+                      <>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 6, position: "absolute", top: 12, left: 0, right: 0, zIndex: 2, pointerEvents: "none" }}>
+                          {fullProfile.photos.map((_, i) => (
+                            <div key={i} style={{ width: i === selectedLikePhotoIdx ? 24 : 16, height: 4, borderRadius: 2, background: i === selectedLikePhotoIdx ? "#B25F46" : "rgba(255,255,255,.6)", transition: "width .2s" }} />
+                          ))}
+                        </div>
+                        <div style={{ position: "absolute", inset: 0, display: "flex", zIndex: 1 }}>
+                          <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setSelectedLikePhotoIdx(i => Math.max(0, i - 1))} />
+                          <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setSelectedLikePhotoIdx(i => Math.min(fullProfile.photos.length - 1, i + 1))} />
+                        </div>
+                      </>
+                    )}
+                    <button onClick={() => setSelectedLike(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,.9)", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", zIndex: 3 }}>✕</button>
                   </div>
                   <div style={{ padding: "18px 20px 32px" }}>
                     <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>
@@ -4957,6 +4996,19 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     </div>
                     <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selectedLike.breed}</div>
                     <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 12 }}>A liké {pet.name} · {selectedLike.time}</div>
+
+                    {selectedLikeTreats.length > 0 && (
+                      <div style={{ background: "#FFF8E7", border: "1.5px solid #F3E0BE", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#946800", marginBottom: 4 }}>
+                          🎁 {selectedLike.name} vous {selectedLikeTreats.length > 1 ? "a envoyé ces cadeaux" : "a envoyé un cadeau"} :
+                        </div>
+                        {selectedLikeTreats.map((t, i) => (
+                          <div key={i} style={{ fontSize: 13, color: "#8B3D28" }}>
+                            {t.emoji} {t.label}{t.message && <span style={{ color: "#9CA3AF", fontStyle: "italic" }}> — « {t.message} »</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {(fullProfile.vaccinated || fullProfile.sterilized) && (
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
@@ -4985,11 +5037,24 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     )}
 
                     {fullProfile.seeking?.length > 0 && (
-                      <div>
+                      <div style={{ marginBottom: 20 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 6 }}>CHERCHE</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {fullProfile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#8B3D28">{s}</Badge>)}
                         </div>
+                      </div>
+                    )}
+
+                    {!selectedLike.isDemo && (
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <button onClick={() => handleDeclineLike(selectedLike)} disabled={decliningLikeId === selectedLike.profileId || likingBackId === selectedLike.profileId}
+                          style={{ flex: 1, padding: "15px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", color: "#9CA3AF", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                          {decliningLikeId === selectedLike.profileId ? "..." : "✕ Passer"}
+                        </button>
+                        <button onClick={() => handleLikeBack(selectedLike)} disabled={decliningLikeId === selectedLike.profileId || likingBackId === selectedLike.profileId}
+                          style={{ flex: 1, padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                          {likingBackId === selectedLike.profileId ? "..." : "💕 Matcher"}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -4999,6 +5064,25 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
         );
       })()}
+
+      {/* Célébration après un match déclenché depuis "Qui craque pour vous" */}
+      {justMatchedWith && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(45,18,0,.92)", zIndex: 80, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+          <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
+          <div style={{ fontSize: 15, color: "rgba(255,255,255,.85)", marginBottom: 28, textAlign: "center" }}>Vous et {justMatchedWith.name} vous êtes plu 🎉</div>
+          <div style={{ width: 96, height: 96, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, marginBottom: 28, border: "3px solid #fff" }}>
+            {photoUrl(justMatchedWith.photo) ? <img src={photoUrl(justMatchedWith.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : justMatchedWith.emoji}
+          </div>
+          <button onClick={() => { setJustMatchedWith(null); onNav("messages"); }}
+            style={{ width: "100%", maxWidth: 320, padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 12 }}>
+            💬 Voir la conversation
+          </button>
+          <button onClick={() => setJustMatchedWith(null)}
+            style={{ width: "100%", maxWidth: 320, padding: "14px", borderRadius: 14, border: "none", background: "none", color: "rgba(255,255,255,.7)", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+            Continuer
+          </button>
+        </div>
+      )}
 
       {/* Modale Friandises reçues */}
       {showTreatsModal && (
@@ -7003,6 +7087,44 @@ async function fetchUnseenLikesCount(userProfile) {
 async function markLikesSeen(userProfile) {
   if (!userProfile?.id) return;
   await supabase.from("swipes").update({ seen: true }).eq("target_profile_id", userProfile.id).eq("direction", "like").eq("seen", false);
+}
+
+// Cadeaux/friandises reçus d'une personne précise — utilisé pour les
+// mentionner dans la fiche détaillée d'un like reçu.
+async function fetchTreatsFromSender(userProfile, senderProfileId) {
+  if (!userProfile?.id || !senderProfileId) return [];
+  const { data, error } = await supabase
+    .from("treats")
+    .select("gift_id, message, created_at")
+    .eq("target_profile_id", userProfile.id)
+    .eq("sender_profile_id", senderProfileId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("fetchTreatsFromSender error:", error); return []; }
+  return (data || []).map(t => {
+    const giftInfo = GIFT_CATALOG.find(g => g.id === t.gift_id);
+    return { giftId: t.gift_id, label: giftInfo?.label || "Cadeau", emoji: giftInfo?.emoji || "🎁", message: t.message || null };
+  });
+}
+
+// "Matcher" en retour depuis "Qui craque pour vous" : la personne nous a
+// déjà liké, donc notre like crée forcément un match immédiat.
+async function likeBackAndMatch(userProfile, like) {
+  await supabase.from("swipes").insert({
+    swiper_user_id: userProfile.userId,
+    target_profile_id: like.profileId,
+    direction: "like",
+  });
+  await supabase.from("matches").insert({
+    user_a: userProfile.userId, user_b: like.userId,
+    profile_a: userProfile.id, profile_b: like.profileId,
+  });
+  if (!userProfile?.questsCompleted?.first_match) {
+    try {
+      const result = await claimQuest(userProfile, "first_match");
+      return result?.claimed ? result : null;
+    } catch { return null; }
+  }
+  return null;
 }
 
 async function fetchUnseenTreatsCount(userProfile) {
