@@ -724,13 +724,70 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     </div>
   );
 
-  if (!profile) return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
-      
-      <div style={{ fontSize: 18, fontWeight: 700, color: "#8B3D28", marginBottom: 8 }}>Plus de profils ici !</div>
-      <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF" }}>Élargis ta zone de recherche ou reviens plus tard.</div>
-    </div>
-  );
+  if (!profile) {
+    const effectiveMaxRadius = isPremium ? 100 : FREE_RADIUS_CAP;
+    const atMaxRadius = searchRadius >= effectiveMaxRadius;
+    return (
+      <>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+          {atMaxRadius ? (
+            <>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#8B3D28", marginBottom: 8 }}>Tu as fait le tour de ta zone !</div>
+              <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 20 }}>Reviens plus tard, de nouveaux membres arrivent régulièrement 🐾</div>
+              <button onClick={() => onNav("community")}
+                style={{ padding: "12px 22px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                → Découvrir la Communauté
+              </button>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#8B3D28", marginBottom: 8 }}>Plus de profils ici !</div>
+              <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 20 }}>Élargis ta zone de recherche ou reviens plus tard.</div>
+              <button onClick={() => setShowRadiusSheet(true)}
+                style={{ padding: "12px 22px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                📍 Élargir ma zone de recherche
+              </button>
+            </>
+          )}
+        </div>
+        {showRadiusSheet && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+            onClick={() => setShowRadiusSheet(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%" }}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>Rayon de recherche</div>
+              <div style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", marginBottom: 24 }}>Affichez les animaux dans cette distance</div>
+              <div style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#B25F46", marginBottom: 16 }}>{searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}</div>
+              <input type="range" min="1" max={isPremium ? 100 : FREE_RADIUS_CAP} value={Math.min(searchRadius, isPremium ? 100 : FREE_RADIUS_CAP)}
+                onChange={e => setSearchRadius(Number(e.target.value))}
+                style={{ width: "100%", marginBottom: 8, accentColor: "#B25F46" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginBottom: isPremium ? 24 : 12 }}>
+                <span>1 km</span><span>{isPremium ? "100 km +" : `${FREE_RADIUS_CAP} km max`}</span>
+              </div>
+              {!isPremium && (
+                <button onClick={() => { setShowRadiusSheet(false); onPremium(); }}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "#FAF0EB", borderRadius: 12, border: "none", cursor: "pointer", textAlign: "left", marginBottom: 16 }}>
+                  <span style={{ fontSize: 18 }}>👑</span>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46" }}>Rayon illimité avec Premium</div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>Gratuit limité à {FREE_RADIUS_CAP} km</div>
+                  </div>
+                </button>
+              )}
+              {!userProfile?.location && (
+                <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
+                  Activez votre position dans Profil pour des distances précises.
+                </div>
+              )}
+              <button onClick={() => { setIdx(0); setShowRadiusSheet(false); }}
+                style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                Appliquer
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
