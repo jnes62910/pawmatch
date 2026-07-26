@@ -28,7 +28,7 @@ const GIFT_CATALOG = {
   chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 199 },
   steak:    { label: 'Steak Royal',       emoji: '🥩', amountCents: 299, premiumOnly: true },
   bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 99 },
-  broccoli: { label: 'Brocoli',            emoji: '🥦', amountCents: 99 },
+  broccoli: { label: 'Veggie Bro',         emoji: '🥦', amountCents: 99 },
   meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 199 },
   fish:     { label: 'Poisson du Chef',   emoji: '🐟', amountCents: 199 },
   tunapate: { label: 'Dindo Carotte',    emoji: '🥫', amountCents: 99 },
