@@ -24,14 +24,15 @@ const supabase = createClient(
 // Vrai catalogue de cadeaux — chacun a son propre prix et sa propre identité,
 // stocké individuellement dans profiles.gift_inventory (ex: {"bone": 3}).
 const GIFT_CATALOG = {
-  bone:     { label: 'Os du Chef',        emoji: '🦴', amountCents: 99 },
+  bone:     { label: 'Os du Chef',        emoji: '🦴', amountCents: 199 },
   chicken:  { label: 'Cuisse Dorée',      emoji: '🍗', amountCents: 199 },
-  steak:    { label: 'Steak Royal',       emoji: '🥩', amountCents: 299 },
-  bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 199 },
+  steak:    { label: 'Steak Royal',       emoji: '🥩', amountCents: 299, premiumOnly: true },
+  bacon:    { label: 'Bacon Croustillant', emoji: '🥓', amountCents: 99 },
   meatbone: { label: 'Viande Tendresse',  emoji: '🍖', amountCents: 199 },
-  fish:     { label: 'Poisson du Chef',   emoji: '🐟', amountCents: 99 },
+  fish:     { label: 'Poisson du Chef',   emoji: '🐟', amountCents: 199 },
   tunapate: { label: 'Pâtée de Dinde',    emoji: '🥫', amountCents: 99 },
   sushi:    { label: "Sushi d'Amour",     emoji: '🍣', amountCents: 199 },
+  gourmetplatter: { label: 'Plateau Gourmet', emoji: '🍱', amountCents: 299, premiumOnly: true },
   shrimp:   { label: 'Crevette Coquine',  emoji: '🍤', amountCents: 199 },
   milk:     { label: 'Douceur Lactée',    emoji: '🥛', amountCents: 99 },
   croc_cat: { label: "Croc'Miloute",      emoji: '🍪', amountCents: 99 },
@@ -43,17 +44,17 @@ const GIFT_CATALOG = {
   mouse:      { label: 'Souris Fuyante',  emoji: '🐭', amountCents: 199 },
   feather:    { label: 'Plume Chatouille', emoji: '🪶', amountCents: 199 },
   bouquet: { label: 'Bouquet des Amoureux', emoji: '💐', amountCents: 199 },
-  crown:   { label: 'Couronne Miloute',   emoji: '👑', amountCents: 299 },
+  crown:   { label: 'Couronne Miloute',   emoji: '👑', amountCents: 299, premiumOnly: true },
   ribbon:  { label: 'Ruban Chic',         emoji: '🎀', amountCents: 199 },
   cake:    { label: 'Gâteau Fiesta',      emoji: '🎂', amountCents: 199 },
   rose:    { label: 'Rose des Amoureux',  emoji: '🌹', amountCents: 199 },
   coeur_dog: { label: 'Cœur de Toutou',   emoji: '💕', amountCents: 199 },
   coeur_cat: { label: 'Cœur de Miaouw',   emoji: '💕', amountCents: 199 },
-  medal:   { label: 'Médaille Miloute',   emoji: '🏅', amountCents: 299 },
+  medal:   { label: 'Médaille Miloute',   emoji: '🏅', amountCents: 299, premiumOnly: true },
   plush:   { label: 'Doudou Câlin',       emoji: '🧸', amountCents: 199 },
   bed:      { label: 'Panier Douillet',   emoji: '☁️', amountCents: 199 },
-  doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299 },
-  cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299 },
+  doghouse: { label: 'Niche Royale',      emoji: '🏠', amountCents: 299, premiumOnly: true },
+  cattree:  { label: 'Arbre Royal',       emoji: '🌳', amountCents: 299, premiumOnly: true },
   collar:   { label: 'Collier Élégance',  emoji: '📿', amountCents: 199 },
   trophy:   { label: 'Trophée Miloute',   emoji: '🏆', amountCents: 299, premiumOnly: true },
   diamond:  { label: 'Diamant Miloute',   emoji: '💎', amountCents: 399, premiumOnly: true },
@@ -62,14 +63,12 @@ const GIFT_CATALOG = {
 // Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
 // achat, mais crédite chaque article du pack individuellement dans l'inventaire.
 const GIFT_BUNDLES = {
-  gourmet_dog_pack: { label: 'Pack Gourmand', items: ['bone', 'chicken', 'bacon'], amountCents: 399 },
-  gourmet_cat_pack: { label: 'Pack Gourmand', items: ['fish', 'tunapate', 'milk'], amountCents: 199 },
+  gourmet_dog_pack: { label: 'Pack Gourmand', items: ['chicken', 'meatbone', 'bone'], amountCents: 499 },
+  gourmet_cat_pack: { label: 'Pack Gourmand', items: ['sushi', 'shrimp', 'fish'], amountCents: 499 },
   player_dog_pack:  { label: 'Pack Joueur', items: ['tennisball', 'frisbee', 'chewrope'], amountCents: 499 },
   player_cat_pack:  { label: 'Pack Joueur', items: ['yarn', 'mouse', 'feather'], amountCents: 499 },
   romance_dog_pack: { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur_dog'], amountCents: 499 },
   romance_cat_pack: { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur_cat'], amountCents: 499 },
-  luxury_dog_pack:  { label: 'Pack Luxe', items: ['crown', 'steak', 'doghouse'], amountCents: 799 },
-  luxury_cat_pack:  { label: 'Pack Luxe', items: ['crown', 'sushi', 'cattree'], amountCents: 699 },
 };
 
 // Quêtes ponctuelles — chacune ne peut être récompensée qu'une seule fois par
@@ -103,6 +102,12 @@ module.exports = async (req, res) => {
       if (bundleId) {
         const bundle = GIFT_BUNDLES[bundleId];
         if (!bundle) return res.status(400).json({ error: 'Pack inconnu' });
+        if (bundle.premiumOnly) {
+          const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', profileId).single();
+          if (!profile?.is_premium) {
+            return res.status(403).json({ error: 'Ce pack est réservé aux membres Premium.' });
+          }
+        }
         label = bundle.label; amountCents = bundle.amountCents;
         metadata = { type: 'shop', bundleId, profileId, userId };
       } else {
