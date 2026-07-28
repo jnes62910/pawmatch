@@ -970,7 +970,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             {/* Boutons d'action — même taille, alignés en bas de la photo */}
             <div style={{ position: "absolute", bottom: 14, left: 0, right: 0, zIndex: 6, display: "flex", justifyContent: "center", alignItems: "center", gap: 22, pointerEvents: "none" }}>
               <button onClick={e => { e.stopPropagation(); swipe("nope"); }}
-                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 22, color: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
+                style={{ pointerEvents: "auto", width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", fontSize: 22, color: "#B25F46", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.18)" }}>
                 ✕
               </button>
               <button onClick={e => { e.stopPropagation(); setShowSwipeGiftPicker(true); }}
