@@ -4118,6 +4118,34 @@ function AboutScreen({ onBack }) {
 
 function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
+  const [sharingLocation, setSharingLocation] = useState(false);
+  const [locationErrorProfile, setLocationErrorProfile] = useState(null);
+
+  function shareLocationProfile() {
+    if (!navigator.geolocation) { setLocationErrorProfile("La géolocalisation n'est pas supportée par ce navigateur."); return; }
+    setSharingLocation(true);
+    setLocationErrorProfile(null);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude, lng = position.coords.longitude;
+        if (initialData?.id) await updateProfileLocation(initialData.id, lat, lng);
+        onProfileUpdated({ ...initialData, location: { lat, lng } });
+        setSharingLocation(false);
+      },
+      (error) => {
+        setLocationErrorProfile(error.code === error.PERMISSION_DENIED
+          ? "Position refusée — activez-la dans les paramètres de votre navigateur."
+          : "Impossible de récupérer votre position.");
+        setSharingLocation(false);
+      }
+    );
+  }
+
+  async function disableLocationProfile() {
+    setLocationErrorProfile(null);
+    if (initialData?.id) await clearProfileLocation(initialData.id);
+    onProfileUpdated({ ...initialData, location: null });
+  }
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(pet);
   const [saved, setSaved] = useState(false);
@@ -4915,6 +4943,17 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <span>Mes réservations</span>
         </button>
 
+
+        <button onClick={() => { if (initialData?.location) disableLocationProfile(); else shareLocationProfile(); }} disabled={sharingLocation}
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: sharingLocation ? "default" : "pointer", marginBottom: locationErrorProfile ? 4 : 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>📍</span>
+          <span>
+            {sharingLocation ? "Localisation en cours..." : initialData?.location ? "Position activée — désactiver" : "Activer ma position"}
+          </span>
+        </button>
+        {locationErrorProfile && (
+          <div style={{ fontSize: 11, color: "#DC2626", marginBottom: 12, textAlign: "center" }}>{locationErrorProfile}</div>
+        )}
 
         <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
           Se déconnecter
