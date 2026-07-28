@@ -226,6 +226,51 @@ function Badge({ children, color = "#FAF0EB", text = "#8B3D28" }) {
   );
 }
 
+// Glisser vers le bas pour actualiser — ne s'active que si le conteneur est
+// déjà tout en haut de son scroll, pour ne jamais gêner un scroll normal.
+function PullToRefresh({ onRefresh, children, style = {} }) {
+  const [pullDistance, setPullDistance] = useState(0);
+  const [pulling, setPulling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const startY = useRef(null);
+  const containerRef = useRef(null);
+  const THRESHOLD = 64;
+
+  function handleTouchStart(e) {
+    startY.current = (containerRef.current && containerRef.current.scrollTop <= 0) ? e.touches[0].clientY : null;
+  }
+  function handleTouchMove(e) {
+    if (startY.current === null || refreshing) return;
+    const delta = e.touches[0].clientY - startY.current;
+    if (delta > 0) { setPulling(true); setPullDistance(Math.min(delta * 0.6, 90)); }
+  }
+  async function handleTouchEnd() {
+    if (pulling && pullDistance > THRESHOLD && !refreshing) {
+      setRefreshing(true);
+      setPullDistance(56);
+      try { await onRefresh(); } finally { setRefreshing(false); setPullDistance(0); }
+    } else {
+      setPullDistance(0);
+    }
+    setPulling(false);
+    startY.current = null;
+  }
+
+  return (
+    <div ref={containerRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+      style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", ...style }}>
+      <div style={{ height: pullDistance, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", transition: pulling ? "none" : "height .2s" }}>
+        {(pulling || refreshing) && (
+          <div style={{ fontSize: 12, color: "#B25F46", fontWeight: 700 }}>
+            {refreshing ? "🔄 Actualisation..." : pullDistance > THRESHOLD ? "↑ Relâchez pour actualiser" : "↓ Tirez pour actualiser"}
+          </div>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ── SWIPE SCREEN ──────────────────────────────────────────────────────────────
 // ── DISTANCE HELPER ────────────────────────────────────────────────────────────
 // Accepte les deux formats : {url, name} (vrais profils Supabase) et une
@@ -515,44 +560,49 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     if (infoScrollRef.current) infoScrollRef.current.scrollTop = 0;
   }, [idx]);
 
+  const [refreshingDeck, setRefreshingDeck] = useState(false);
+
+  async function loadDeck() {
+    if (!userProfile?.id) { setLoadingDeck(false); return; }
+    setDeckError(null);
+    try {
+      const [{ data: candidates, error: candErr }, { data: mySwipes, error: swErr }] = await Promise.all([
+        supabase.from("profiles").select("*").eq("species", userProfile.species).neq("user_id", userProfile.userId),
+        supabase.from("swipes").select("target_profile_id").eq("swiper_user_id", userProfile.userId),
+      ]);
+      if (candErr) throw candErr;
+      if (swErr) throw swErr;
+      const alreadySwiped = new Set((mySwipes || []).map(s => s.target_profile_id));
+      const realOnes = (candidates || [])
+        .filter(row => !alreadySwiped.has(row.id))
+        .map(profileFromRow);
+
+      // Profils de démo en renfort — utile pour présenter l'app (captures
+      // d'écran, vidéos) même quand peu de vrais utilisateurs sont inscrits.
+      // Marqués isDemo pour ne jamais toucher à Supabase quand on les swipe.
+      const demoOnes = PROFILES
+        .filter(p => !userProfile?.species || p.species === userProfile.species)
+        .map(p => ({ ...p, isDemo: true }));
+
+      setDeck([...realOnes, ...(SHOW_DEMO_CONTENT ? demoOnes : [])]);
+    } catch (err) {
+      setDeckError("Impossible de charger les profils. Réessayez.");
+      console.error("loadDeck error:", err);
+    }
+  }
+
+  async function refreshDeck() {
+    setRefreshingDeck(true);
+    setIdx(0);
+    await loadDeck();
+    setRefreshingDeck(false);
+  }
+
   // Charge la pile de profils à swiper depuis Supabase : même espèce, pas soi-même,
   // pas déjà swipé. Se recharge si le profil (donc l'id/espèce) de l'utilisateur change.
   useEffect(() => {
-    let active = true;
-    async function loadDeck() {
-      if (!userProfile?.id) { setLoadingDeck(false); return; }
-      setLoadingDeck(true);
-      setDeckError(null);
-      try {
-        const [{ data: candidates, error: candErr }, { data: mySwipes, error: swErr }] = await Promise.all([
-          supabase.from("profiles").select("*").eq("species", userProfile.species).neq("user_id", userProfile.userId),
-          supabase.from("swipes").select("target_profile_id").eq("swiper_user_id", userProfile.userId),
-        ]);
-        if (candErr) throw candErr;
-        if (swErr) throw swErr;
-        if (!active) return;
-        const alreadySwiped = new Set((mySwipes || []).map(s => s.target_profile_id));
-        const realOnes = (candidates || [])
-          .filter(row => !alreadySwiped.has(row.id))
-          .map(profileFromRow);
-
-        // Profils de démo en renfort — utile pour présenter l'app (captures
-        // d'écran, vidéos) même quand peu de vrais utilisateurs sont inscrits.
-        // Marqués isDemo pour ne jamais toucher à Supabase quand on les swipe.
-        const demoOnes = PROFILES
-          .filter(p => !userProfile?.species || p.species === userProfile.species)
-          .map(p => ({ ...p, isDemo: true }));
-
-        setDeck([...realOnes, ...(SHOW_DEMO_CONTENT ? demoOnes : [])]);
-      } catch (err) {
-        if (active) setDeckError("Impossible de charger les profils. Réessayez.");
-        console.error("loadDeck error:", err);
-      } finally {
-        if (active) setLoadingDeck(false);
-      }
-    }
-    loadDeck();
-    return () => { active = false; };
+    setLoadingDeck(true);
+    loadDeck().finally(() => setLoadingDeck(false));
   }, [userProfile?.id, userProfile?.species, userProfile?.userId]);
 
   function getProfileDistance(p) {
@@ -803,6 +853,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           <span style={{ fontSize: 10, color: "#9CA3AF", transform: showBreedMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
         </button>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={refreshDeck} disabled={refreshingDeck}
+            style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: refreshingDeck ? "default" : "pointer", fontSize: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ display: "inline-block", transition: "transform .5s", transform: refreshingDeck ? "rotate(360deg)" : "none" }}>🔄</span>
+          </button>
           <button onClick={() => setShowRadiusSheet(true)}
             style={{ padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
             📍 {searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}
@@ -2002,7 +2056,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
         )}
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 16px 20px" }}>
+      <PullToRefresh onRefresh={reload} style={{ padding: "8px 16px 20px" }}>
         {loading ? (
           <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={32} color="#E8B89F" /></div>
         ) : filtered.length === 0 ? (
@@ -2048,7 +2102,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
             Voir les {hiddenVetsCount + MAX_VETS_IN_ALL_VIEW} vétérinaires →
           </button>
         )}
-      </div>
+      </PullToRefresh>
 
       {/* Détail d'un prestataire */}
       {selected && (
@@ -3046,7 +3100,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
         )}
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <PullToRefresh onRefresh={reloadPosts}>
         {/* New post */}
         <div style={{ margin: "12px 16px", padding: "12px 14px", background: "#F9FAFB", borderRadius: 14, display: "flex", gap: 10, alignItems: "center", border: "1px solid #E5E7EB" }}>
           <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
@@ -3115,7 +3169,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
             </div>
           );
         })}
-      </div>
+      </PullToRefresh>
 
       {/* Composeur de publication */}
       {showComposer && (
