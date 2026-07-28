@@ -4896,7 +4896,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <span style={{ fontSize: 26 }}>👑</span>
             <div style={{ flex: 1 }}>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>Miloute Premium</div>
-              <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Qui t'a liké · Boost · Stats avancées</div>
+              <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Qui a craqué · Articles exclusifs · Stats avancées</div>
             </div>
             <div style={{ background: "#fff", borderRadius: 10, color: "#8B3D28", fontWeight: 800, fontSize: 12, padding: "7px 12px", whiteSpace: "nowrap" }}>4,99 €/mois</div>
           </button>
