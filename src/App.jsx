@@ -1089,7 +1089,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
-              <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
             </div>
             <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{profile.breed} · {profile.distance}</div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
