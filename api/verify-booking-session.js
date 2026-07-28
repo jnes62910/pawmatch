@@ -37,9 +37,13 @@ module.exports = async (req, res) => {
     }
 
     const meta = session.metadata;
-    const { data: settingRow } = await supabase
-      .from('platform_settings').select('value').eq('key', 'commission_rate_percent').maybeSingle();
-    const commissionRate = settingRow ? parseFloat(settingRow.value) : 15;
+    const { data: settingRows } = await supabase
+      .from('platform_settings').select('key, value').in('key', ['commission_rate_percent', 'commission_promo_until']);
+    const rateRow = (settingRows || []).find(r => r.key === 'commission_rate_percent');
+    const promoRow = (settingRows || []).find(r => r.key === 'commission_promo_until');
+    const baseRate = rateRow ? parseFloat(rateRow.value) : 15;
+    const promoActive = promoRow?.value ? new Date() < new Date(promoRow.value) : false;
+    const commissionRate = promoActive ? 0 : baseRate;
 
     const { data: service } = await supabase.from('provider_services').select('title').eq('id', meta.serviceId).maybeSingle();
 
