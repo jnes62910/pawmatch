@@ -1084,6 +1084,9 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
           {/* Infos complètes — fait maintenant partie de la même colonne déroulante que la photo */}
           <div style={{ padding: "16px 20px 28px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: "#9CA3AF", fontSize: 11, marginBottom: 12 }}>
+              <span>↓</span><span>Glissez vers le bas pour lire le profil complet</span>
+            </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               <span style={{ fontSize: 20 }}>{profile.vaccinated ? "✅" : "⚠️"}</span>
@@ -7917,7 +7920,7 @@ export default function Miloute() {
         {/* Bottom nav — uniquement après onboarding */}
         {onboarded && screen !== "chat" && (
           <div style={{ borderTop: "1px solid #F3F4F6", background: "#fff", flexShrink: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-evenly", padding: "6px 0 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-evenly", padding: "10px 0 14px" }}>
               {NAV.map(n => (
                 <button key={n.id} onClick={() => setScreen(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 6px", flex: 1 }}>
                   <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", height: 24 }}>
