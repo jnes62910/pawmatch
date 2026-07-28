@@ -1258,6 +1258,7 @@ function mapProviderRow(row) {
     id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
     lat: row.lat, lng: row.lng, address: row.address, phone: row.phone, desc: row.description,
     open: row.open, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
+    isFounder: !!row.is_founder,
   };
 }
 
@@ -1768,6 +1769,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
   const [loadingServices, setLoadingServices] = useState(false);
   const [bookingServiceId, setBookingServiceId] = useState(null);
   const [bookingError, setBookingError] = useState(null);
+  const [showBecomeProviderPrompt, setShowBecomeProviderPrompt] = useState(false);
 
   const refLat = userProfile?.location?.lat ?? 48.8566;
   const refLng = userProfile?.location?.lng ?? 2.3522;
@@ -1839,6 +1841,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       if (!!a.affiliateUrl !== !!b.affiliateUrl) return a.affiliateUrl ? -1 : 1;
       const typeDiff = PROVIDER_TYPES.indexOf(a.type) - PROVIDER_TYPES.indexOf(b.type);
       if (typeDiff !== 0) return typeDiff;
+      if (!!a.isFounder !== !!b.isFounder) return a.isFounder ? -1 : 1;
       const ratingA = ratingFor(a)?.avg || 0, ratingB = ratingFor(b)?.avg || 0;
       return ratingB - ratingA;
     });
@@ -1917,6 +1920,12 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
         claimQuest(userProfile, "first_review").then(result => {
           if (result.claimed) onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
         }).catch(() => {});
+      }
+      // Un avis positif suggère souvent une bonne connaissance du secteur —
+      // moment naturel pour proposer de devenir prestataire soi-même.
+      if (reviewRating >= 4 && userProfile?.userId) {
+        const ownSpot = await fetchSelfProviderSpot(userProfile.userId);
+        if (!ownSpot) setShowBecomeProviderPrompt(true);
       }
     } catch (err) {
       setReviewError("L'avis n'a pas pu être publié, réessayez.");
@@ -2008,6 +2017,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.name}</div>
                   {p.affiliateUrl && <span style={{ fontSize: 10, fontWeight: 700, color: "#8B3D28", background: "#FAF0EB", padding: "1px 7px", borderRadius: 8 }}>Partenaire</span>}
+                  {p.isFounder && <span style={{ fontSize: 10, fontWeight: 700, color: "#946800", background: "#FFF3CD", padding: "1px 7px", borderRadius: 8 }}>🏅 Fondateur</span>}
                 </div>
                 <div style={{ fontSize: 12, color: "#9CA3AF" }}>
                   {PROVIDER_TYPE_INFO[p.type]?.label}{p.address ? ` · ${p.address}` : ""}
@@ -2046,6 +2056,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{selected.emoji} {selected.name}</div>
+                  {selected.isFounder && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#946800", background: "#FFF3CD", padding: "2px 8px", borderRadius: 8, marginTop: 4 }}>🏅 Membre fondateur</span>}
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.address ? ` · ${selected.address}` : ""}</div>
                   {selected.phone && <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 4, fontWeight: 600 }}>📞 {selected.phone}</div>}
                   {selected.type === "groomer" && selected.source === "google_places" && (
@@ -2156,6 +2167,25 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
           onClose={() => setShowAddForm(false)}
           onAdded={() => { setShowAddForm(false); reload(); }}
         />
+      )}
+
+      {/* Suggestion de devenir prestataire, après un avis positif */}
+      {showBecomeProviderPrompt && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 75, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowBecomeProviderPrompt(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🐾</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 6 }}>Vous vous y connaissez !</div>
+            <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.5, marginBottom: 20 }}>Vous êtes vous-même prestataire ? Rejoignez l'annuaire Miloute et faites-vous connaître auprès des propriétaires près de chez vous.</div>
+            <button onClick={() => { setShowBecomeProviderPrompt(false); onGoToProviderSetup(); }}
+              style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", marginBottom: 10 }}>
+              Devenir prestataire
+            </button>
+            <button onClick={() => setShowBecomeProviderPrompt(false)}
+              style={{ width: "100%", padding: "12px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+              Non merci
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -4188,6 +4218,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   }, [pet.photos.length, pet.video, pet.bio, pet.temper.length, pet.vaccinated, pet.repro.active, pet.repro.price]);
   const [providerServices, setProviderServices] = useState([]);
   const [commissionRate, setCommissionRate] = useState(15);
+  const [commissionPromoUntil, setCommissionPromoUntil] = useState(null);
   const [connectOnboarded, setConnectOnboarded] = useState(false);
   const [checkingConnect, setCheckingConnect] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
@@ -4253,7 +4284,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   useEffect(() => {
     if (!initialData?.id) return;
     fetchProviderServices(initialData.id).then(setProviderServices);
-    fetchCommissionRate().then(setCommissionRate);
+    fetchCommissionRate().then(({ rate, promoUntil }) => { setCommissionRate(rate); setCommissionPromoUntil(promoUntil); });
     setConnectOnboarded(!!initialData.stripeConnectOnboarded);
   }, [initialData?.id, initialData?.stripeConnectOnboarded]);
 
@@ -5230,10 +5261,16 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             </div>
 
             {/* Transparence commission */}
-            <div style={{ display: "flex", gap: 10, background: "#F9FAFB", borderRadius: 12, padding: "12px 14px", marginBottom: 20, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 18 }}>ℹ️</span>
+            <div style={{ display: "flex", gap: 10, background: commissionPromoUntil ? "#FFF8E7" : "#F9FAFB", border: commissionPromoUntil ? "1.5px solid #E8C468" : "none", borderRadius: 12, padding: "12px 14px", marginBottom: 20, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 18 }}>{commissionPromoUntil ? "🎉" : "ℹ️"}</span>
               <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.6 }}>
-                Miloute prélève une commission de <strong>{commissionRate}%</strong> sur chaque prestation payée via l'app. Le client paie à la réservation ; les fonds sont retenus par Stripe et vous sont reversés (moins la commission) une fois la prestation validée par vous et le client.
+                {commissionPromoUntil ? (
+                  <>
+                    <strong style={{ color: "#946800" }}>Offre de lancement : 0% de commission</strong> jusqu'au {new Date(commissionPromoUntil).toLocaleDateString("fr-FR")} ! Le client paie à la réservation ; les fonds sont retenus par Stripe et vous sont intégralement reversés une fois la prestation validée par vous et le client.
+                  </>
+                ) : (
+                  <>Miloute prélève une commission de <strong>{commissionRate}%</strong> sur chaque prestation payée via l'app. Le client paie à la réservation ; les fonds sont retenus par Stripe et vous sont reversés (moins la commission) une fois la prestation validée par vous et le client.</>
+                )}
               </div>
             </div>
 
@@ -6458,9 +6495,14 @@ function profileFromRow(row) {
 }
 // ── MARKETPLACE PRESTATAIRES ──────────────────────────────────────────────────
 async function fetchCommissionRate() {
-  const { data, error } = await supabase.from("platform_settings").select("value").eq("key", "commission_rate_percent").maybeSingle();
-  if (error || !data) return 15; // repli raisonnable si la ligne n'existe pas encore
-  return parseFloat(data.value);
+  const { data, error } = await supabase.from("platform_settings").select("key, value").in("key", ["commission_rate_percent", "commission_promo_until"]);
+  if (error || !data) return { rate: 15, promoUntil: null };
+  const rateRow = data.find(r => r.key === "commission_rate_percent");
+  const promoRow = data.find(r => r.key === "commission_promo_until");
+  const baseRate = rateRow ? parseFloat(rateRow.value) : 15;
+  const promoUntil = promoRow?.value || null;
+  const promoActive = promoUntil ? new Date() < new Date(promoUntil) : false;
+  return { rate: promoActive ? 0 : baseRate, promoUntil: promoActive ? promoUntil : null };
 }
 
 async function fetchProviderServices(profileId) {
