@@ -556,7 +556,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   }, [userProfile?.id, userProfile?.species, userProfile?.userId]);
 
   function getProfileDistance(p) {
-    if (userProfile?.location && p.lat && p.lng) {
+    // Les profils de démo gardent toujours leur fausse distance, même avec une
+    // vraie position activée : leurs coordonnées sont fixes (Paris), donc un
+    // vrai calcul GPS viderait Découvrir pour n'importe qui hors de cette zone.
+    if (!p.isDemo && userProfile?.location && p.lat && p.lng) {
       return distanceKm(userProfile.location.lat, userProfile.location.lng, p.lat, p.lng);
     }
     // Repli : on parse la distance fictive ("1,2 km" → 1.2)
@@ -4311,11 +4314,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         fetchUnseenLikesCount(initialData),
       ]);
       if (!active) return;
-      // Likes de démo en renfort — utiles tant que peu de vrais likes existent.
-      const demo = LIKES_RECEIVED
-        .filter(l => !initialData?.species || l.species === initialData.species)
-        .map(l => ({ ...l, isDemo: true }));
-      setLikesReceived([...real, ...(SHOW_DEMO_CONTENT ? demo : [])]);
+      setLikesReceived(real);
       setUnseenLikesCount(unseenCount);
       setLoadingLikes(false);
     }
@@ -5991,8 +5990,29 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
     temper: [], seeking: [],
     bio: "", photos: [],
     providerInterest: null, // "provider" | "interested" | "no" | null
-    location: null, // { lat, lng } — toujours dans le form pour compat, mais plus demandé en onboarding (voir bulle dans l'onglet Carte)
+    location: null, // { lat, lng } — optionnellement rempli à l'étape "location" de l'onboarding
   });
+
+  const [sharingLocation, setSharingLocation] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+
+  function shareLocationOnboarding() {
+    if (!navigator.geolocation) { setLocationError("La géolocalisation n'est pas supportée par ce navigateur."); return; }
+    setSharingLocation(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        set("location", { lat: position.coords.latitude, lng: position.coords.longitude });
+        setSharingLocation(false);
+      },
+      (error) => {
+        setLocationError(error.code === error.PERMISSION_DENIED
+          ? "Position refusée — vous pourrez l'activer plus tard dans votre profil."
+          : "Impossible de récupérer votre position.");
+        setSharingLocation(false);
+      }
+    );
+  }
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -6038,7 +6058,7 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
 
   const STEPS = [
     "owner", "species", "identity", "health",
-    "character", "seeking", "photos", "bio", "provider", "recap"
+    "character", "seeking", "photos", "bio", "provider", "location", "recap"
   ];
   const current = STEPS[step];
   const progress = step / (STEPS.length - 1);
@@ -6360,6 +6380,44 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
                 Continuer →
               </button>
               {!form.providerInterest && (
+                <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── LOCALISATION (optionnelle) ── */}
+        {current === "location" && (
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: "#2D1200", marginBottom: 6, marginTop: 8 }}>Trouvez ce qui est près de vous 📍</div>
+            <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 24, lineHeight: 1.6 }}>
+              Activez votre position pour des distances précises dès le départ : profils à swiper, prestataires et reproduction près de chez vous. Vous pourrez la désactiver à tout moment dans votre profil.
+            </div>
+
+            {form.location ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#FAF0EB", borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>✅</span>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#8B3D28" }}>Position activée</div>
+              </div>
+            ) : (
+              <button onClick={shareLocationOnboarding} disabled={sharingLocation}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", cursor: sharingLocation ? "default" : "pointer", marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>📍</span>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>{sharingLocation ? "Localisation en cours..." : "Activer ma position"}</div>
+              </button>
+            )}
+
+            {locationError && (
+              <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 8 }}>{locationError}</div>
+            )}
+
+            <div style={{ marginTop: 24 }}>
+              <button onClick={next}
+                style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff" }}>
+                Continuer →
+              </button>
+              {!form.location && (
                 <button onClick={next} style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>Passer cette étape</button>
               )}
             </div>
@@ -7668,6 +7726,8 @@ export default function Miloute() {
       bio: form.bio,
       photos: uploadedPhotos,
       provider_interest: form.providerInterest,
+      lat: form.location?.lat ?? null,
+      lng: form.location?.lng ?? null,
       // Bonus de bienvenue : un aperçu gratuit de la boutique dès l'inscription.
       gift_inventory: { [form.species === "cat" ? "fish" : "bone"]: 1, bouquet: 1 },
     }).select().single();
