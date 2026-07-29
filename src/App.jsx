@@ -669,8 +669,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     if (infoScrollRef.current) infoScrollRef.current.scrollTop = 0;
   }, [idx]);
 
-  const [refreshingDeck, setRefreshingDeck] = useState(false);
-
   async function loadDeck() {
     if (!userProfile?.id) { setLoadingDeck(false); return; }
     setDeckError(null);
@@ -698,13 +696,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       setDeckError("Impossible de charger les profils. Réessayez.");
       console.error("loadDeck error:", err);
     }
-  }
-
-  async function refreshDeck() {
-    setRefreshingDeck(true);
-    setIdx(0);
-    await loadDeck();
-    setRefreshingDeck(false);
   }
 
   // Charge la pile de profils à swiper depuis Supabase : même espèce, pas soi-même,
@@ -968,10 +959,6 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           {SOUND_MODE_INFO[soundMode].icon}
         </button>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={refreshDeck} disabled={refreshingDeck}
-            style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: refreshingDeck ? "default" : "pointer", fontSize: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span style={{ display: "inline-block", transition: "transform .5s", transform: refreshingDeck ? "rotate(360deg)" : "none" }}>🔄</span>
-          </button>
           <button onClick={() => setShowRadiusSheet(true)}
             style={{ padding: "6px 12px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 12, fontWeight: 600, background: "#fff", color: "#8B3D28", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
             📍 {searchRadius >= 100 ? "Illimité" : `${searchRadius} km`}
@@ -1222,11 +1209,13 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{profile.bio}</p>
 
             {profile.photos?.length > 1 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
                 {profile.photos.slice(1).map((p, i) => (
-                  <div key={i} onClick={() => { setPhoto(i + 1); setShowFullscreenPhoto(true); }} style={{ aspectRatio: "1", borderRadius: 10, overflow: "hidden", background: "#FAF0EB", cursor: "pointer" }}>
-                    {photoUrl(p) && <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                  </div>
+                  photoUrl(p) && (
+                    <div key={i} onClick={() => { setPhoto(i + 1); setShowFullscreenPhoto(true); }} style={{ width: "100%", aspectRatio: "1", borderRadius: 14, overflow: "hidden", background: "#FAF0EB", cursor: "pointer" }}>
+                      <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  )
                 ))}
               </div>
             )}
@@ -4297,7 +4286,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {}, darkMode = false, onToggleDarkMode = () => {} }) {
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [sharingLocation, setSharingLocation] = useState(false);
   const [locationErrorProfile, setLocationErrorProfile] = useState(null);
@@ -5135,6 +5124,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         {locationErrorProfile && (
           <div style={{ fontSize: 11, color: "#DC2626", marginBottom: 12, textAlign: "center" }}>{locationErrorProfile}</div>
         )}
+
+        <button onClick={onToggleDarkMode}
+          style={{ width: "100%", padding: "14px", borderRadius: 14, border: "2px solid #E5E7EB", background: "#F9FAFB", color: "#8B3D28", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>{darkMode ? "☀️" : "🌙"}</span>
+          <span>{darkMode ? "Mode sombre activé — désactiver" : "Activer le mode sombre"}</span>
+        </button>
 
         <button onClick={onLogout} style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "none", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer", marginTop: 20 }}>
           Se déconnecter
@@ -7568,6 +7563,16 @@ function savePremiumStatus(value) {
   try { localStorage.setItem("miloute_is_premium", value ? "true" : "false"); } catch {}
 }
 
+// Mode sombre — solution rapide par inversion CSS (pas un vrai système de
+// thème couleur par couleur, mais fonctionnel et bien plus simple à maintenir
+// vu que l'app entière utilise des couleurs codées en dur un peu partout).
+function loadDarkMode() {
+  try { return localStorage.getItem("miloute_dark_mode") === "true"; } catch { return false; }
+}
+function saveDarkMode(value) {
+  try { localStorage.setItem("miloute_dark_mode", value ? "true" : "false"); } catch {}
+}
+
 // ── FRIANDISES ("super like" à thème) ────────────────────────────────────────
 // Quota gratuit boosté au lancement pour maximiser l'engagement pendant la
 // phase critique, puis réduit une fois la base d'utilisateurs stabilisée.
@@ -7693,6 +7698,10 @@ export default function Miloute() {
   const [screen, setScreen] = useState("swipe");
   const [chatId, setChatId] = useState(null);
   const [isPremium, setIsPremium] = useState(loadPremiumStatus);
+  const [darkMode, setDarkMode] = useState(loadDarkMode);
+  function toggleDarkMode() {
+    setDarkMode(v => { saveDarkMode(!v); return !v; });
+  }
   const [showPremiumTunnel, setShowPremiumTunnel] = useState(false);
   const [premiumInitialPlan, setPremiumInitialPlan] = useState("yearly");
   const [showAbout, setShowAbout] = useState(false);
@@ -7994,8 +8003,13 @@ export default function Miloute() {
   const showHeader = onboarded && !["chat","profile"].includes(screen);
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100dvh", background: "#fff", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
-      <div style={{ width: "100%", maxWidth: 430, height: "100%", background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative" }}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100dvh", background: darkMode ? "#1a1a1a" : "#fff", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
+      {darkMode && (
+        <style>{`
+          .miloute-app-root img, .miloute-app-root video { filter: invert(1) hue-rotate(180deg); }
+        `}</style>
+      )}
+      <div className={darkMode ? "miloute-app-root" : ""} style={{ width: "100%", maxWidth: 430, height: "100%", background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column", position: "relative", filter: darkMode ? "invert(0.92) hue-rotate(180deg)" : "none" }}>
 
         {/* Header */}
         {showHeader && (
@@ -8029,7 +8043,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} onProfileUpdated={updateUserProfile} onGoToShop={goToShop} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} darkMode={darkMode} onToggleDarkMode={toggleDarkMode} />}
               </>
           }
         </div>
