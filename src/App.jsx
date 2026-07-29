@@ -626,6 +626,7 @@ const SOUND_PALETTES = {
     nope: () => playTone(0, 340, 0.25, { peakGain: 0.22, freqEnd: 120 }),
     like: () => playSequence([[0, 520, 0.19], [0.12, 780, 0.19]]),
     gift: () => playSequence([[0, 520, 0.21], [0.1, 660, 0.21], [0.2, 880, 0.21]]),
+    match: () => playSequence([[0, 392, 0.16], [0.11, 523, 0.16], [0.22, 659, 0.16], [0.33, 784, 0.32]]),
   },
   doux: {
     label: "Doux",
@@ -633,6 +634,7 @@ const SOUND_PALETTES = {
     nope: () => playTone(0, 260, 0.3, { peakGain: 0.16, freqEnd: 160 }),
     like: () => playTone(0, 640, 0.4, { peakGain: 0.08 }),
     gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.08 }], [0.16, 760, 0.32, { peakGain: 0.08 }]]),
+    match: () => playSequence([[0, 523, 0.3, { peakGain: 0.1 }], [0.2, 659, 0.3, { peakGain: 0.1 }], [0.4, 784, 0.45, { peakGain: 0.1 }]]),
   },
   retro: {
     label: "Rétro",
@@ -640,6 +642,7 @@ const SOUND_PALETTES = {
     nope: () => playTone(0, 300, 0.12, { type: "square", peakGain: 0.08, freqEnd: 140 }),
     like: () => playSequence([[0, 440, 0.09, { type: "square", peakGain: 0.09 }], [0.09, 660, 0.09, { type: "square", peakGain: 0.09 }]]),
     gift: () => playSequence([[0, 440, 0.08, { type: "square", peakGain: 0.09 }], [0.08, 550, 0.08, { type: "square", peakGain: 0.09 }], [0.16, 660, 0.08, { type: "square", peakGain: 0.09 }], [0.24, 880, 0.12, { type: "square", peakGain: 0.09 }]]),
+    match: () => playSequence([[0, 392, 0.08, { type: "square", peakGain: 0.1 }], [0.08, 523, 0.08, { type: "square", peakGain: 0.1 }], [0.16, 659, 0.08, { type: "square", peakGain: 0.1 }], [0.24, 784, 0.08, { type: "square", peakGain: 0.1 }], [0.32, 1047, 0.22, { type: "square", peakGain: 0.11 }]]),
   },
   festif: {
     label: "Festif",
@@ -647,6 +650,7 @@ const SOUND_PALETTES = {
     nope: () => playTone(0, 300, 0.22, { type: "triangle", peakGain: 0.1, freqEnd: 90 }),
     like: () => playSequence([[0, 523, 0.16, { type: "triangle", peakGain: 0.11 }], [0.09, 659, 0.16, { type: "triangle", peakGain: 0.11 }], [0.18, 784, 0.2, { type: "triangle", peakGain: 0.11 }]]),
     gift: () => playSequence([[0, 523, 0.14, { type: "triangle", peakGain: 0.11 }], [0.08, 659, 0.14, { type: "triangle", peakGain: 0.11 }], [0.16, 784, 0.14, { type: "triangle", peakGain: 0.11 }], [0.24, 1047, 0.22, { type: "triangle", peakGain: 0.11 }]]),
+    match: () => playSequence([[0, 523, 0.13, { type: "triangle", peakGain: 0.13 }], [0.08, 659, 0.13, { type: "triangle", peakGain: 0.13 }], [0.16, 784, 0.13, { type: "triangle", peakGain: 0.13 }], [0.24, 1047, 0.13, { type: "triangle", peakGain: 0.13 }], [0.32, 1319, 0.4, { type: "triangle", peakGain: 0.14 }]]),
   },
   nature: {
     label: "Nature",
@@ -654,6 +658,7 @@ const SOUND_PALETTES = {
     nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.2, freqStart: 700, freqEnd: 250, q: 1.4 }),
     like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }]]),
     gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.2, 1000, 0.06, { freqEnd: 1500 }], [0.26, 1300, 0.06, { freqEnd: 900 }]]),
+    match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.16, 1000, 0.06, { freqEnd: 1600 }], [0.22, 1300, 0.06, { freqEnd: 900 }], [0.34, 1100, 0.06, { freqEnd: 1700 }], [0.4, 1400, 0.1, { freqEnd: 1000 }]]),
   },
   especes: {
     label: "Miaou / Wouf",
@@ -667,6 +672,16 @@ const SOUND_PALETTES = {
     gift: (species) => playAudioFile(SOUND_FILE_URLS.cadeau, () => {
       species === "cat" ? (playMeow(0), playMeow(0.34, { duration: 0.3 })) : (playWoof(0), playWoof(0.15), playWoof(0.32));
     }),
+    // Pas de son dédié fourni pour le match — on réutilise le "like" en double,
+    // avec repli synthétisé plus festif si le fichier ne joue pas.
+    match: (species) => {
+      const url = species === "cat" ? SOUND_FILE_URLS.likeChat : SOUND_FILE_URLS.likeChien;
+      const fallback = () => species === "cat"
+        ? (playMeow(0), playMeow(0.32, { duration: 0.32 }))
+        : (playWoof(0), playWoof(0.15), playWoof(0.32));
+      playAudioFile(url, fallback);
+      setTimeout(() => playAudioFile(url, fallback), 260);
+    },
   },
 };
 
@@ -712,6 +727,15 @@ function playGiftFeedback(mode, palette, species) {
   if (mode === "off") return;
   if (mode === "fun") (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).gift(species);
   if (navigator.vibrate) navigator.vibrate([14, 40, 14, 40, 20]);
+}
+
+// Son de victoire pour la célébration de match — le moment fort de l'app,
+// vibration la plus marquée de toutes (même en mode Discret, pour ne pas
+// manquer ce moment-là même sans le son).
+function playMatchFeedback(mode, palette, species) {
+  if (mode === "off") return;
+  if (mode === "fun") (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).match(species);
+  if (navigator.vibrate) navigator.vibrate([16, 50, 16, 50, 16, 90, 30]);
 }
 
 const FREE_RADIUS_CAP = 20; // km
@@ -914,7 +938,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
       const demoMatched = dir === "like" && Math.random() > 0.4;
       setTimeout(() => {
         setDragX(0); setDragging(false); setPhoto(0); setSwiping(false);
-        if (demoMatched) setMatchedWith(swipedProfile);
+        if (demoMatched) { setMatchedWith(swipedProfile); playMatchFeedback(soundMode, soundPalette, userProfile?.species); }
         else setIdx(i => Math.min(i + 1, filtered.length - 1));
       }, 380);
       return;
@@ -955,7 +979,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
     setTimeout(() => {
       setDragX(0); setDragging(false); setPhoto(0); setSwiping(false);
-      if (matched) setMatchedWith(swipedProfile);
+      if (matched) { setMatchedWith(swipedProfile); playMatchFeedback(soundMode, soundPalette, userProfile?.species); }
       else setIdx(i => Math.min(i + 1, filtered.length - 1));
     }, 380);
   }
@@ -4604,6 +4628,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       setMatchesCount(c => c + 1);
       setSelectedLike(null);
       setJustMatchedWith(like);
+      playMatchFeedback(loadSoundMode(), loadSoundPalette(), initialData?.species);
     } catch (err) {
       console.error("likeBackAndMatch error:", err);
     }
