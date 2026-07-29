@@ -507,56 +507,113 @@ function getAudioCtx() {
   return _sharedAudioCtx;
 }
 
-function playNopeSound() {
+// Petit helper commun : une note = une fréquence (ou une rampe vers une 2e
+// fréquence), un délai de départ, une durée et un type d'onde. Réduit la
+// duplication entre les différentes palettes ci-dessous.
+function playTone(delay, freqStart, duration, { type = "sine", peakGain = 0.12, freqEnd = null } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(340, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.25);
-  gain.gain.setValueAtTime(0.12, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freqStart, ctx.currentTime + delay);
+  if (freqEnd !== null) osc.frequency.exponentialRampToValueAtTime(freqEnd, ctx.currentTime + delay + duration);
+  gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
+  gain.gain.exponentialRampToValueAtTime(peakGain, ctx.currentTime + delay + Math.min(0.02, duration / 3));
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
   osc.connect(gain).connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.26);
+  osc.start(ctx.currentTime + delay);
+  osc.stop(ctx.currentTime + delay + duration + 0.03);
+}
+function playSequence(notes) {
+  notes.forEach(([delay, freqStart, duration, opts]) => playTone(delay, freqStart, duration, opts));
 }
 
-function playLikeSound() {
+// Miaulement et aboiement synthétisés — approximatifs mais reconnaissables :
+// le miaou monte puis redescend en douceur (onde en dents de scie, glissando),
+// l'aboiement est un coup bref et grave qui chute vite (percussif).
+function playMeow(delay = 0, { peakGain = 0.11, duration = 0.38 } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
-  [[520, 0], [780, 0.12]].forEach(([freq, delay]) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-    gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + delay + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.18);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(ctx.currentTime + delay);
-    osc.stop(ctx.currentTime + delay + 0.19);
-  });
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const t0 = ctx.currentTime + delay;
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(560, t0);
+  osc.frequency.linearRampToValueAtTime(880, t0 + duration * 0.3);
+  osc.frequency.linearRampToValueAtTime(480, t0 + duration);
+  gain.gain.setValueAtTime(0.001, t0);
+  gain.gain.exponentialRampToValueAtTime(peakGain, t0 + 0.06);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.03);
+}
+function playWoof(delay = 0, { peakGain = 0.16, duration = 0.11 } = {}) {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const t0 = ctx.currentTime + delay;
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(190, t0);
+  osc.frequency.exponentialRampToValueAtTime(85, t0 + duration);
+  gain.gain.setValueAtTime(0.001, t0);
+  gain.gain.exponentialRampToValueAtTime(peakGain, t0 + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.03);
 }
 
-// Envoi d'un cadeau depuis Découvrir — un geste plus fort qu'un simple like,
-// donc un petit arpège ascendant à 3 notes (~0,4s), plus riche que le "ding" du like.
-function playGiftSound() {
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  [[520, 0], [660, 0.1], [880, 0.2]].forEach(([freq, delay]) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-    gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.13, ctx.currentTime + delay + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.2);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(ctx.currentTime + delay);
-    osc.stop(ctx.currentTime + delay + 0.21);
-  });
-}
+// ── PALETTES DE SONS ──────────────────────────────────────────────────────
+// Chacune définit un son pour nope (refus), like et gift (envoi de cadeau,
+// un cran au-dessus du like). Tout est synthétisé, rien à héberger.
+const SOUND_PALETTES = {
+  classique: {
+    label: "Classique",
+    icon: "🔔",
+    nope: () => playTone(0, 340, 0.25, { freqEnd: 120 }),
+    like: () => playSequence([[0, 520, 0.19], [0.12, 780, 0.19]]),
+    gift: () => playSequence([[0, 520, 0.21], [0.1, 660, 0.21], [0.2, 880, 0.21]]),
+  },
+  doux: {
+    label: "Doux",
+    icon: "🌸",
+    nope: () => playTone(0, 260, 0.3, { peakGain: 0.07, freqEnd: 160 }),
+    like: () => playTone(0, 640, 0.4, { peakGain: 0.08 }),
+    gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.08 }], [0.16, 760, 0.32, { peakGain: 0.08 }]]),
+  },
+  retro: {
+    label: "Rétro",
+    icon: "🕹️",
+    nope: () => playTone(0, 300, 0.12, { type: "square", peakGain: 0.08, freqEnd: 140 }),
+    like: () => playSequence([[0, 440, 0.09, { type: "square", peakGain: 0.09 }], [0.09, 660, 0.09, { type: "square", peakGain: 0.09 }]]),
+    gift: () => playSequence([[0, 440, 0.08, { type: "square", peakGain: 0.09 }], [0.08, 550, 0.08, { type: "square", peakGain: 0.09 }], [0.16, 660, 0.08, { type: "square", peakGain: 0.09 }], [0.24, 880, 0.12, { type: "square", peakGain: 0.09 }]]),
+  },
+  festif: {
+    label: "Festif",
+    icon: "🎉",
+    nope: () => playTone(0, 300, 0.22, { type: "triangle", peakGain: 0.1, freqEnd: 90 }),
+    like: () => playSequence([[0, 523, 0.16, { type: "triangle", peakGain: 0.11 }], [0.09, 659, 0.16, { type: "triangle", peakGain: 0.11 }], [0.18, 784, 0.2, { type: "triangle", peakGain: 0.11 }]]),
+    gift: () => playSequence([[0, 523, 0.14, { type: "triangle", peakGain: 0.11 }], [0.08, 659, 0.14, { type: "triangle", peakGain: 0.11 }], [0.16, 784, 0.14, { type: "triangle", peakGain: 0.11 }], [0.24, 1047, 0.22, { type: "triangle", peakGain: 0.11 }]]),
+  },
+  nature: {
+    label: "Nature",
+    icon: "🐾",
+    nope: () => playTone(0, 180, 0.14, { type: "sine", peakGain: 0.11 }),
+    like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }]]),
+    gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.2, 1000, 0.06, { freqEnd: 1500 }], [0.26, 1300, 0.06, { freqEnd: 900 }]]),
+  },
+  especes: {
+    label: "Miaou / Wouf",
+    icon: "🐱🐶",
+    // Adapté à l'espèce du profil affiché — miaulement pour un chat, aboiement pour un chien.
+    nope: (species) => species === "cat" ? playMeow(0, { peakGain: 0.08, duration: 0.22 }) : playWoof(0, { peakGain: 0.12 }),
+    like: (species) => species === "cat" ? playMeow() : (playWoof(0), playWoof(0.16)),
+    gift: (species) => species === "cat" ? (playMeow(0), playMeow(0.34, { duration: 0.3 })) : (playWoof(0), playWoof(0.15), playWoof(0.32)),
+  },
+};
 
 const SOUND_MODES = ["fun", "discreet", "off"];
 const SOUND_MODE_INFO = {
@@ -571,24 +628,34 @@ function loadSoundMode() {
     return SOUND_MODES.includes(v) ? v : "fun";
   } catch { return "fun"; }
 }
-
 function saveSoundMode(mode) {
   try { localStorage.setItem("miloute_sound_mode", mode); } catch {}
 }
 
-// Joue le son + déclenche la vibration adaptés au mode choisi, pour un swipe donné.
-function playSwipeFeedback(mode, dir) {
+function loadSoundPalette() {
+  try {
+    const v = localStorage.getItem("miloute_sound_palette");
+    return SOUND_PALETTES[v] ? v : "classique";
+  } catch { return "classique"; }
+}
+function saveSoundPalette(palette) {
+  try { localStorage.setItem("miloute_sound_palette", palette); } catch {}
+}
+
+// Joue le son + déclenche la vibration adaptés au mode et à la palette choisis, pour un swipe donné.
+function playSwipeFeedback(mode, palette, dir, species) {
   if (mode === "off") return;
   if (mode === "fun") {
-    if (dir === "like") playLikeSound(); else playNopeSound();
+    const p = SOUND_PALETTES[palette] || SOUND_PALETTES.classique;
+    if (dir === "like") p.like(species); else p.nope(species);
   }
   if (navigator.vibrate) navigator.vibrate(dir === "like" ? [12, 30, 12] : 15);
 }
 
 // Idem pour l'envoi d'un cadeau — vibration un peu plus marquée, geste plus fort qu'un like.
-function playGiftFeedback(mode) {
+function playGiftFeedback(mode, palette, species) {
   if (mode === "off") return;
-  if (mode === "fun") playGiftSound();
+  if (mode === "fun") (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).gift(species);
   if (navigator.vibrate) navigator.vibrate([14, 40, 14, 40, 20]);
 }
 
@@ -646,13 +713,19 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [showRadiusSheet, setShowRadiusSheet] = useState(false);
   const [treatsToday, setTreatsToday] = useState(loadTreatsToday);
   const [soundMode, setSoundMode] = useState(loadSoundMode);
+  const [soundPalette, setSoundPalette] = useState(loadSoundPalette);
+  const [showSoundSheet, setShowSoundSheet] = useState(false);
 
-  function cycleSoundMode() {
-    setSoundMode(m => {
-      const next = SOUND_MODES[(SOUND_MODES.indexOf(m) + 1) % SOUND_MODES.length];
-      saveSoundMode(next);
-      return next;
-    });
+  function chooseSoundMode(mode) {
+    setSoundMode(mode);
+    saveSoundMode(mode);
+    if (mode === "fun") SOUND_PALETTES[soundPalette].like(profile?.species);
+  }
+
+  function choosePalette(key) {
+    setSoundPalette(key);
+    saveSoundPalette(key);
+    if (soundMode === "fun") SOUND_PALETTES[key].like(profile?.species); // petit aperçu immédiat au choix
   }
   const [treatSentId, setTreatSentId] = useState(null);
   const [likeBurstId, setLikeBurstId] = useState(null);
@@ -773,7 +846,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
   async function swipe(dir) {
     if (swiping) return;
-    playSwipeFeedback(soundMode, dir);
+    playSwipeFeedback(soundMode, soundPalette, dir, profile?.species);
     const swipedProfile = profile;
     const targetX = dir === "like" ? 440 : -440;
     setDragX(targetX);
@@ -843,7 +916,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     setSendingSwipeGift(true);
     const result = await spendGift(userProfile, giftId);
     if (result.success) {
-      playGiftFeedback(soundMode);
+      playGiftFeedback(soundMode, soundPalette, profile?.species);
       onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
       const targetProfile = profile;
       const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
@@ -995,7 +1068,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           🐾 {breedFilter === "all" ? "Toutes les races" : breedFilter}
           <span style={{ fontSize: 10, color: "#9CA3AF", transform: showBreedMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
         </button>
-        <button onClick={cycleSoundMode} title={`Son : ${SOUND_MODE_INFO[soundMode].label}`}
+        <button onClick={() => setShowSoundSheet(true)} title="Réglages de son"
           style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {SOUND_MODE_INFO[soundMode].icon}
         </button>
@@ -1061,6 +1134,45 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
               Appliquer
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Réglages de son : mode d'abord, puis style si activé */}
+      {showSoundSheet && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "flex-end" }} onClick={() => setShowSoundSheet(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>🔊 Sons de Découvrir</div>
+            <div style={{ fontSize: 12.5, color: "#9CA3AF", textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>
+              Un petit retour sonore et une vibration à chaque like, refus ou cadeau envoyé. Choisissez comment vous le vivez, et — si le son est activé — avec quel style.
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>MODE</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
+              {SOUND_MODES.map(m => (
+                <button key={m} onClick={() => chooseSoundMode(m)}
+                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px 8px", borderRadius: 14, border: soundMode === m ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: soundMode === m ? "#FAF0EB" : "#fff", cursor: "pointer" }}>
+                  <span style={{ fontSize: 20 }}>{SOUND_MODE_INFO[m].icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: soundMode === m ? "#8B3D28" : "#9CA3AF" }}>{SOUND_MODE_INFO[m].label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>STYLE DE SON</div>
+            {soundMode !== "fun" && (
+              <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>Choisissez le mode "Fun" ci-dessus pour activer le son.</div>
+            )}
+            <div style={{ opacity: soundMode === "fun" ? 1 : 0.4, pointerEvents: soundMode === "fun" ? "auto" : "none" }}>
+              {Object.entries(SOUND_PALETTES).map(([key, p]) => (
+                <button key={key} onClick={() => choosePalette(key)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 14, border: soundPalette === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: soundPalette === key ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                  <span style={{ fontSize: 22 }}>{p.icon}</span>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{p.label}</span>
+                  {soundPalette === key && <span style={{ color: "#B25F46", fontSize: 16 }}>✓</span>}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
