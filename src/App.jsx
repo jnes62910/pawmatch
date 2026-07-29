@@ -594,6 +594,36 @@ function playGiftFeedback(mode) {
 
 const FREE_RADIUS_CAP = 20; // km
 
+// ── PHRASES D'ACCROCHE PHOTO (façon Hinge) ───────────────────────────────────
+const PHOTO_CAPTION_PROMPTS = [
+  "Mon plus grand talent est…",
+  "Je deviens fou/folle quand…",
+  "Mon rêve est de…",
+  "On me reconnaît à…",
+  "Je cherche…",
+];
+const PHOTO_CAPTION_MAX_LENGTH = 100;
+const PHOTO_CAPTION_MAX_EMOJIS = 2;
+
+function countEmojis(str) {
+  return (str.match(/\p{Extended_Pictographic}/gu) || []).length;
+}
+
+async function generatePhotoCaption(species, breed, temper, name) {
+  try {
+    const res = await fetch("/api/moderate-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "generate-caption", species, breed, temper, name }),
+    });
+    const data = await res.json();
+    return data.caption || null;
+  } catch (err) {
+    console.error("generatePhotoCaption error:", err);
+    return null;
+  }
+}
+
 function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => {}, onGoToShop = () => {}, onProfileUpdated = () => {} }) {
   const [idx, setIdx] = useState(0);
   const [matchedWith, setMatchedWith] = useState(null);
@@ -1182,6 +1212,12 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 🔍
               </button>
             )}
+
+            {profile.showMainCaption !== false && profile.photoCaptions?.[photo] && (
+              <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "36px 18px 16px", background: "linear-gradient(to top, rgba(0,0,0,.65), transparent)", pointerEvents: "none" }}>
+                <div style={{ color: "#fff", fontSize: 15, fontWeight: 700, lineHeight: 1.4, textShadow: "0 1px 4px rgba(0,0,0,.4)" }}>{profile.photoCaptions[photo]}</div>
+              </div>
+            )}
           </div>
 
           {/* Infos complètes — fait maintenant partie de la même colonne déroulante que la photo */}
@@ -1212,8 +1248,14 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
                 {profile.photos.slice(1).map((p, i) => (
                   photoUrl(p) && (
-                    <div key={i} onClick={() => { setPhoto(i + 1); setShowFullscreenPhoto(true); }} style={{ width: "100%", aspectRatio: "1", borderRadius: 14, overflow: "hidden", background: "#FAF0EB", cursor: "pointer" }}>
-                      <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div key={i}>
+                      <div onClick={() => { setPhoto(i + 1); setFsPhotoIndex(i + 1); setFsZoomScale(1); setFsZoomOffset({ x: 0, y: 0 }); setShowFullscreenPhoto(true); }}
+                        style={{ width: "100%", aspectRatio: "1", borderRadius: 14, overflow: "hidden", background: "#FAF0EB", cursor: "pointer" }}>
+                        <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </div>
+                      {profile.photoCaptions?.[i + 1] && (
+                        <div style={{ fontSize: 13.5, color: "#4B5563", fontStyle: "italic", marginTop: 6, paddingLeft: 2 }}>{profile.photoCaptions[i + 1]}</div>
+                      )}
                     </div>
                   )
                 ))}
@@ -6206,10 +6248,58 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
     bio: "", photos: [],
     providerInterest: null, // "provider" | "interested" | "no" | null
     location: null, // { lat, lng } — optionnellement rempli à l'étape "location" de l'onboarding
+    photoCaptions: [], // phrases d'accroche, un index par photo (chaîne vide = aucune)
+    showMainCaption: true, // affichage de la phrase sur la photo principale (optionnel, activé par défaut)
   });
 
   const [sharingLocation, setSharingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [captionEditorIndex, setCaptionEditorIndex] = useState(null); // index de la photo en cours d'édition, ou null
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [generatingCaption, setGeneratingCaption] = useState(false);
+
+  const [savingCaption, setSavingCaption] = useState(false);
+  const [captionError, setCaptionError] = useState(null);
+
+  function openCaptionEditor(i) {
+    setCaptionDraft(form.photoCaptions[i] || "");
+    setCaptionError(null);
+    setCaptionEditorIndex(i);
+  }
+
+  async function saveCaptionDraft() {
+    const trimmed = captionDraft.trim().slice(0, PHOTO_CAPTION_MAX_LENGTH);
+    if (!trimmed) {
+      setForm(f => {
+        const next = [...f.photoCaptions];
+        next[captionEditorIndex] = "";
+        return { ...f, photoCaptions: next };
+      });
+      setCaptionEditorIndex(null);
+      return;
+    }
+    setSavingCaption(true);
+    setCaptionError(null);
+    const { approved, reason } = await moderateText(trimmed);
+    setSavingCaption(false);
+    if (!approved) {
+      setCaptionError(reason || "Cette phrase n'est pas autorisée, essayez une autre formulation.");
+      return;
+    }
+    setForm(f => {
+      const next = [...f.photoCaptions];
+      next[captionEditorIndex] = trimmed;
+      return { ...f, photoCaptions: next };
+    });
+    setCaptionEditorIndex(null);
+  }
+
+  async function generateCaptionForDraft() {
+    setGeneratingCaption(true);
+    const caption = await generatePhotoCaption(form.species, form.breed, form.temper, form.petName);
+    if (caption) setCaptionDraft(caption);
+    setGeneratingCaption(false);
+  }
 
   function shareLocationOnboarding() {
     if (!navigator.geolocation) { setLocationError("La géolocalisation n'est pas supportée par ce navigateur."); return; }
@@ -6282,7 +6372,7 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
   const labelStyle = { fontSize: 12, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8, display: "block" };
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
 
       {/* Progress bar */}
       <div style={{ padding: "14px 20px 0", background: "#fff", flexShrink: 0 }}>
@@ -6532,6 +6622,32 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
               </button>
             )}
             <div style={{ fontSize: 12, color: "#9CA3AF", textAlign: "center", marginTop: 6 }}>Vous pouvez continuer sans photo et en ajouter plus tard.</div>
+
+            {form.photos.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200", marginBottom: 4 }}>🏷️ Phrases d'accroche (optionnel)</div>
+                <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Une petite phrase sous une photo donne tout de suite du caractère — comme sur Hinge.</div>
+                {form.photos.map((p, i) => (
+                  <button key={i} onClick={() => openCaptionEditor(i)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                      <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 700 }}>Photo {i + 1}{i === 0 ? " (principale)" : ""}</div>
+                      <div style={{ fontSize: 12.5, color: form.photoCaptions[i] ? "#2D1200" : "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {form.photoCaptions[i] || "+ Ajouter une phrase"}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#4B5563", marginTop: 4, cursor: "pointer" }}>
+                  <input type="checkbox" checked={form.showMainCaption} onChange={e => set("showMainCaption", e.target.checked)} />
+                  Afficher la phrase sur la photo principale dans Découvrir
+                </label>
+              </div>
+            )}
+
             <div style={{ marginTop: 24 }}>
               <button onClick={next}
                 style={{ width: "100%", padding: "18px", borderRadius: 18, border: "none", fontSize: 16, fontWeight: 800, cursor: "pointer",
@@ -6730,6 +6846,55 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
           </button>
         )}
       </div>
+
+      {/* Éditeur de phrase d'accroche pour une photo */}
+      {captionEditorIndex !== null && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "flex-end" }} onClick={() => setCaptionEditorIndex(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Phrase d'accroche — Photo {captionEditorIndex + 1}</div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              {PHOTO_CAPTION_PROMPTS.map(p => (
+                <button key={p} onClick={() => setCaptionDraft(p + " ")}
+                  style={{ padding: "7px 12px", borderRadius: 20, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <textarea value={captionDraft} onChange={e => { setCaptionDraft(e.target.value.slice(0, PHOTO_CAPTION_MAX_LENGTH)); setCaptionError(null); }}
+              placeholder="Écrivez votre propre phrase, ou complétez un des prompts ci-dessus…"
+              style={{ ...inputStyle, minHeight: 80, resize: "none", lineHeight: 1.6 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginTop: 6, marginBottom: 14 }}>
+              <span>{countEmojis(captionDraft) > PHOTO_CAPTION_MAX_EMOJIS ? `Max ${PHOTO_CAPTION_MAX_EMOJIS} emojis` : ""}</span>
+              <span>{captionDraft.length}/{PHOTO_CAPTION_MAX_LENGTH}</span>
+            </div>
+
+            {captionError && (
+              <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{captionError}</div>
+            )}
+
+            <button onClick={generateCaptionForDraft} disabled={generatingCaption}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: generatingCaption ? "default" : "pointer", marginBottom: 12 }}>
+              ✨ {generatingCaption ? "Génération..." : "Générer une phrase avec l'IA"}
+            </button>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              {form.photoCaptions[captionEditorIndex] && (
+                <button onClick={() => { setCaptionDraft(""); saveCaptionDraft(); }} disabled={savingCaption}
+                  style={{ padding: "14px 16px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", color: "#9CA3AF", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                  Retirer
+                </button>
+              )}
+              <button onClick={saveCaptionDraft} disabled={savingCaption}
+                style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: savingCaption ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: savingCaption ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 14, cursor: savingCaption ? "default" : "pointer" }}>
+                {savingCaption ? "Vérification..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -6755,6 +6920,7 @@ function profileFromRow(row) {
     energy: row.energy, vaccinated: row.vaccinated, sterilized: row.sterilized,
     temper: row.temper || [], seeking: row.seeking || [],
     bio: row.bio, photos: row.photos || [], video: row.video || null,
+    photoCaptions: row.photo_captions || [], showMainCaption: row.show_main_caption !== false,
     location: (row.lat && row.lng) ? { lat: row.lat, lng: row.lng } : null,
     repro: row.repro || { active: false, price: "", priceNegotiable: false, availableFrom: "", availableTo: "", pedigree: false, geneticTest: false, reproDesc: "", docs: [] },
     isPremium: row.is_premium || false,
@@ -7957,6 +8123,8 @@ export default function Miloute() {
       provider_interest: form.providerInterest,
       lat: form.location?.lat ?? null,
       lng: form.location?.lng ?? null,
+      photo_captions: form.photoCaptions,
+      show_main_caption: form.showMainCaption,
       // Bonus de bienvenue : un aperçu gratuit de la boutique dès l'inscription.
       gift_inventory: { [form.species === "cat" ? "fish" : "bone"]: 1, bouquet: 1 },
     }).select().single();
