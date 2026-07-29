@@ -685,10 +685,9 @@ const SOUND_PALETTES = {
   },
 };
 
-const SOUND_MODES = ["fun", "discreet", "off"];
+const SOUND_MODES = ["fun", "off"];
 const SOUND_MODE_INFO = {
   fun: { icon: "🔊", label: "Fun" },
-  discreet: { icon: "📳", label: "Discret" },
   off: { icon: "🔇", label: "Off" },
 };
 
@@ -715,27 +714,20 @@ function saveSoundPalette(palette) {
 // Joue le son + déclenche la vibration adaptés au mode et à la palette choisis, pour un swipe donné.
 function playSwipeFeedback(mode, palette, dir, species) {
   if (mode === "off") return;
-  if (mode === "fun") {
-    const p = SOUND_PALETTES[palette] || SOUND_PALETTES.classique;
-    if (dir === "like") p.like(species); else p.nope(species);
-  }
-  if (navigator.vibrate) navigator.vibrate(dir === "like" ? [12, 30, 12] : 15);
+  const p = SOUND_PALETTES[palette] || SOUND_PALETTES.classique;
+  if (dir === "like") p.like(species); else p.nope(species);
 }
 
 // Idem pour l'envoi d'un cadeau — vibration un peu plus marquée, geste plus fort qu'un like.
 function playGiftFeedback(mode, palette, species) {
   if (mode === "off") return;
-  if (mode === "fun") (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).gift(species);
-  if (navigator.vibrate) navigator.vibrate([14, 40, 14, 40, 20]);
+  (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).gift(species);
 }
 
-// Son de victoire pour la célébration de match — le moment fort de l'app,
-// vibration la plus marquée de toutes (même en mode Discret, pour ne pas
-// manquer ce moment-là même sans le son).
+// Son de victoire pour la célébration de match — le moment fort de l'app.
 function playMatchFeedback(mode, palette, species) {
   if (mode === "off") return;
-  if (mode === "fun") (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).match(species);
-  if (navigator.vibrate) navigator.vibrate([16, 50, 16, 50, 16, 90, 30]);
+  (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).match(species);
 }
 
 const FREE_RADIUS_CAP = 20; // km
@@ -1224,7 +1216,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
             <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>🔊 Sons de Découvrir</div>
             <div style={{ fontSize: 12.5, color: "#9CA3AF", textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>
-              Un petit retour sonore et une vibration à chaque like, refus ou cadeau envoyé. Choisissez comment vous le vivez, et — si le son est activé — avec quel style.
+              Un petit retour sonore à chaque like, refus, cadeau envoyé ou match. Choisissez d'activer ou non le son, et — si activé — avec quel style.
             </div>
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>MODE</div>
