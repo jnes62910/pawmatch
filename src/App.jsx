@@ -1164,14 +1164,19 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>Choisissez le mode "Fun" ci-dessus pour activer le son.</div>
             )}
             <div style={{ opacity: soundMode === "fun" ? 1 : 0.4, pointerEvents: soundMode === "fun" ? "auto" : "none" }}>
-              {Object.entries(SOUND_PALETTES).map(([key, p]) => (
-                <button key={key} onClick={() => choosePalette(key)}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 14, border: soundPalette === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: soundPalette === key ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
-                  <span style={{ fontSize: 22 }}>{p.icon}</span>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{p.label}</span>
-                  {soundPalette === key && <span style={{ color: "#B25F46", fontSize: 16 }}>✓</span>}
-                </button>
-              ))}
+              {Object.entries(SOUND_PALETTES).map(([key, p]) => {
+                const isEspeces = key === "especes";
+                const label = isEspeces ? (userProfile?.species === "cat" ? "Miaou" : userProfile?.species === "dog" ? "Wouf" : p.label) : p.label;
+                const icon = isEspeces ? (userProfile?.species === "cat" ? "🐱" : userProfile?.species === "dog" ? "🐶" : p.icon) : p.icon;
+                return (
+                  <button key={key} onClick={() => choosePalette(key)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 14, border: soundPalette === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: soundPalette === key ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                    <span style={{ fontSize: 22 }}>{icon}</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{label}</span>
+                    {soundPalette === key && <span style={{ color: "#B25F46", fontSize: 16 }}>✓</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
