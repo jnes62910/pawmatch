@@ -492,6 +492,106 @@ async function moderateText(text) {
   }
 }
 
+// ── SONS DE SWIPE (synthétisés, aucun fichier à héberger) ────────────────────
+// Un seul AudioContext partagé, créé à la volée au premier son (les navigateurs
+// bloquent l'audio tant qu'il n'y a pas eu d'interaction utilisateur — le swipe
+// lui-même sert de déclencheur, donc pas de souci ici).
+let _sharedAudioCtx = null;
+function getAudioCtx() {
+  if (!_sharedAudioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    _sharedAudioCtx = new Ctx();
+  }
+  if (_sharedAudioCtx.state === "suspended") _sharedAudioCtx.resume();
+  return _sharedAudioCtx;
+}
+
+function playNopeSound() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(340, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.25);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.26);
+}
+
+function playLikeSound() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  [[520, 0], [780, 0.12]].forEach(([freq, delay]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.18);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + 0.19);
+  });
+}
+
+// Envoi d'un cadeau depuis Découvrir — un geste plus fort qu'un simple like,
+// donc un petit arpège ascendant à 3 notes (~0,4s), plus riche que le "ding" du like.
+function playGiftSound() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  [[520, 0], [660, 0.1], [880, 0.2]].forEach(([freq, delay]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.13, ctx.currentTime + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.2);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + 0.21);
+  });
+}
+
+const SOUND_MODES = ["fun", "discreet", "off"];
+const SOUND_MODE_INFO = {
+  fun: { icon: "🔊", label: "Fun" },
+  discreet: { icon: "📳", label: "Discret" },
+  off: { icon: "🔇", label: "Off" },
+};
+
+function loadSoundMode() {
+  try {
+    const v = localStorage.getItem("miloute_sound_mode");
+    return SOUND_MODES.includes(v) ? v : "fun";
+  } catch { return "fun"; }
+}
+
+function saveSoundMode(mode) {
+  try { localStorage.setItem("miloute_sound_mode", mode); } catch {}
+}
+
+// Joue le son + déclenche la vibration adaptés au mode choisi, pour un swipe donné.
+function playSwipeFeedback(mode, dir) {
+  if (mode === "off") return;
+  if (mode === "fun") {
+    if (dir === "like") playLikeSound(); else playNopeSound();
+  }
+  if (navigator.vibrate) navigator.vibrate(dir === "like" ? [12, 30, 12] : 15);
+}
+
+// Idem pour l'envoi d'un cadeau — vibration un peu plus marquée, geste plus fort qu'un like.
+function playGiftFeedback(mode) {
+  if (mode === "off") return;
+  if (mode === "fun") playGiftSound();
+  if (navigator.vibrate) navigator.vibrate([14, 40, 14, 40, 20]);
+}
+
 const FREE_RADIUS_CAP = 20; // km
 
 function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => {}, onGoToShop = () => {}, onProfileUpdated = () => {} }) {
@@ -504,6 +604,15 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   const [searchRadius, setSearchRadius] = useState(isPremium ? 100 : FREE_RADIUS_CAP);
   const [showRadiusSheet, setShowRadiusSheet] = useState(false);
   const [treatsToday, setTreatsToday] = useState(loadTreatsToday);
+  const [soundMode, setSoundMode] = useState(loadSoundMode);
+
+  function cycleSoundMode() {
+    setSoundMode(m => {
+      const next = SOUND_MODES[(SOUND_MODES.indexOf(m) + 1) % SOUND_MODES.length];
+      saveSoundMode(next);
+      return next;
+    });
+  }
   const [treatSentId, setTreatSentId] = useState(null);
   const [likeBurstId, setLikeBurstId] = useState(null);
   const [swipeGiftMessage, setSwipeGiftMessage] = useState("");
@@ -632,6 +741,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
   async function swipe(dir) {
     if (swiping) return;
+    playSwipeFeedback(soundMode, dir);
     const swipedProfile = profile;
     const targetX = dir === "like" ? 440 : -440;
     setDragX(targetX);
@@ -701,6 +811,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     setSendingSwipeGift(true);
     const result = await spendGift(userProfile, giftId);
     if (result.success) {
+      playGiftFeedback(soundMode);
       onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
       const targetProfile = profile;
       const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
@@ -851,6 +962,10 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${breedFilter !== "all" ? "#8B3D28" : "#E5E7EB"}`, cursor: "pointer", fontSize: 12, fontWeight: 600, background: breedFilter !== "all" ? "#FAF0EB" : "#fff", color: "#8B3D28", whiteSpace: "nowrap" }}>
           🐾 {breedFilter === "all" ? "Toutes les races" : breedFilter}
           <span style={{ fontSize: 10, color: "#9CA3AF", transform: showBreedMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+        </button>
+        <button onClick={cycleSoundMode} title={`Son : ${SOUND_MODE_INFO[soundMode].label}`}
+          style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", cursor: "pointer", fontSize: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {SOUND_MODE_INFO[soundMode].icon}
         </button>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={refreshDeck} disabled={refreshingDeck}
@@ -1105,6 +1220,16 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
             <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>À PROPOS</div>
             <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{profile.bio}</p>
+
+            {profile.photos?.length > 1 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 14 }}>
+                {profile.photos.slice(1).map((p, i) => (
+                  <div key={i} onClick={() => { setPhoto(i + 1); setShowFullscreenPhoto(true); }} style={{ aspectRatio: "1", borderRadius: 10, overflow: "hidden", background: "#FAF0EB", cursor: "pointer" }}>
+                    {photoUrl(p) && <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>RECHERCHE</div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 14 }}>
