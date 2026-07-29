@@ -529,6 +529,32 @@ function playSequence(notes) {
   notes.forEach(([delay, freqStart, duration, opts]) => playTone(delay, freqStart, duration, opts));
 }
 
+// Bruit blanc filtré passe-bande — donne le grain "raspy" nécessaire à un
+// aboiement crédible ; un simple oscillateur sonne trop musical/propre pour ça.
+function playNoiseBurst(delay, duration, { peakGain = 0.18, freqStart = 400, freqEnd = 200, q = 1.2 } = {}) {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + delay;
+  const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const bandpass = ctx.createBiquadFilter();
+  bandpass.type = "bandpass";
+  bandpass.frequency.setValueAtTime(freqStart, t0);
+  bandpass.frequency.exponentialRampToValueAtTime(freqEnd, t0 + duration);
+  bandpass.Q.value = q;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.001, t0);
+  gain.gain.exponentialRampToValueAtTime(peakGain, t0 + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  source.connect(bandpass).connect(gain).connect(ctx.destination);
+  source.start(t0);
+  source.stop(t0 + duration + 0.02);
+}
+
 // Miaulement et aboiement synthétisés — approximatifs mais reconnaissables :
 // le miaou monte puis redescend en douceur (onde en dents de scie, glissando),
 // l'aboiement est un coup bref et grave qui chute vite (percussif).
@@ -549,17 +575,21 @@ function playMeow(delay = 0, { peakGain = 0.11, duration = 0.38 } = {}) {
   osc.start(t0);
   osc.stop(t0 + duration + 0.03);
 }
-function playWoof(delay = 0, { peakGain = 0.16, duration = 0.11 } = {}) {
+function playWoof(delay = 0, { peakGain = 0.2, duration = 0.14 } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
+  // Le bruit filtré donne le grain "raspy" de l'aboiement, l'oscillateur grave
+  // en renfort donne le corps/la poitrine du son — un oscillateur seul sonne
+  // trop pur et musical pour évoquer un vrai aboiement.
+  playNoiseBurst(delay, duration, { peakGain, freqStart: 500, freqEnd: 220, q: 1 });
+  const t0 = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  const t0 = ctx.currentTime + delay;
   osc.type = "sawtooth";
-  osc.frequency.setValueAtTime(190, t0);
-  osc.frequency.exponentialRampToValueAtTime(85, t0 + duration);
+  osc.frequency.setValueAtTime(160, t0);
+  osc.frequency.exponentialRampToValueAtTime(80, t0 + duration);
   gain.gain.setValueAtTime(0.001, t0);
-  gain.gain.exponentialRampToValueAtTime(peakGain, t0 + 0.015);
+  gain.gain.exponentialRampToValueAtTime(peakGain * 0.65, t0 + 0.012);
   gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
   osc.connect(gain).connect(ctx.destination);
   osc.start(t0);
@@ -573,14 +603,14 @@ const SOUND_PALETTES = {
   classique: {
     label: "Classique",
     icon: "🔔",
-    nope: () => playTone(0, 340, 0.25, { freqEnd: 120 }),
+    nope: () => playTone(0, 340, 0.25, { peakGain: 0.22, freqEnd: 120 }),
     like: () => playSequence([[0, 520, 0.19], [0.12, 780, 0.19]]),
     gift: () => playSequence([[0, 520, 0.21], [0.1, 660, 0.21], [0.2, 880, 0.21]]),
   },
   doux: {
     label: "Doux",
     icon: "🌸",
-    nope: () => playTone(0, 260, 0.3, { peakGain: 0.07, freqEnd: 160 }),
+    nope: () => playTone(0, 260, 0.3, { peakGain: 0.16, freqEnd: 160 }),
     like: () => playTone(0, 640, 0.4, { peakGain: 0.08 }),
     gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.08 }], [0.16, 760, 0.32, { peakGain: 0.08 }]]),
   },
@@ -601,7 +631,7 @@ const SOUND_PALETTES = {
   nature: {
     label: "Nature",
     icon: "🐾",
-    nope: () => playTone(0, 180, 0.14, { type: "sine", peakGain: 0.11 }),
+    nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.2, freqStart: 700, freqEnd: 250, q: 1.4 }),
     like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }]]),
     gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.2, 1000, 0.06, { freqEnd: 1500 }], [0.26, 1300, 0.06, { freqEnd: 900 }]]),
   },
@@ -609,7 +639,7 @@ const SOUND_PALETTES = {
     label: "Miaou / Wouf",
     icon: "🐱🐶",
     // Adapté à l'espèce du profil affiché — miaulement pour un chat, aboiement pour un chien.
-    nope: (species) => species === "cat" ? playMeow(0, { peakGain: 0.08, duration: 0.22 }) : playWoof(0, { peakGain: 0.12 }),
+    nope: (species) => species === "cat" ? playMeow(0, { peakGain: 0.14, duration: 0.22 }) : playWoof(0, { peakGain: 0.2 }),
     like: (species) => species === "cat" ? playMeow() : (playWoof(0), playWoof(0.16)),
     gift: (species) => species === "cat" ? (playMeow(0), playMeow(0.34, { duration: 0.3 })) : (playWoof(0), playWoof(0.15), playWoof(0.32)),
   },
