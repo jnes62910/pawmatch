@@ -4789,6 +4789,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   function openTreatsModal() {
     setShowTreatsModal(true);
     if (unseenTreatsCount > 0) {
+      playGiftFeedback(loadSoundMode(), loadSoundPalette(), initialData?.species);
       markTreatsSeen(initialData).then(() => { setUnseenTreatsCount(0); onTreatsSeen(); });
     }
   }
@@ -8350,6 +8351,7 @@ export default function Miloute() {
             setShopSuccessCategory(purchasedItem?.category || null);
             setShopSuccessBundleLabel(bundle?.label || null);
             setShowShopSuccess(true);
+            playGiftFeedback(loadSoundMode(), loadSoundPalette(), userProfileRef.current?.species);
             if (userProfileRef.current) {
               const updates = {};
               if (data.giftInventory !== undefined) updates.giftInventory = data.giftInventory;
