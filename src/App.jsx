@@ -719,13 +719,13 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
   function chooseSoundMode(mode) {
     setSoundMode(mode);
     saveSoundMode(mode);
-    if (mode === "fun") SOUND_PALETTES[soundPalette].like(profile?.species);
+    if (mode === "fun") SOUND_PALETTES[soundPalette].like(userProfile?.species);
   }
 
   function choosePalette(key) {
     setSoundPalette(key);
     saveSoundPalette(key);
-    if (soundMode === "fun") SOUND_PALETTES[key].like(profile?.species); // petit aperçu immédiat au choix
+    if (soundMode === "fun") SOUND_PALETTES[key].like(userProfile?.species); // petit aperçu immédiat au choix
   }
   const [treatSentId, setTreatSentId] = useState(null);
   const [likeBurstId, setLikeBurstId] = useState(null);
@@ -846,7 +846,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
 
   async function swipe(dir) {
     if (swiping) return;
-    playSwipeFeedback(soundMode, soundPalette, dir, profile?.species);
+    playSwipeFeedback(soundMode, soundPalette, dir, userProfile?.species);
     const swipedProfile = profile;
     const targetX = dir === "like" ? 440 : -440;
     setDragX(targetX);
@@ -916,7 +916,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     setSendingSwipeGift(true);
     const result = await spendGift(userProfile, giftId);
     if (result.success) {
-      playGiftFeedback(soundMode, soundPalette, profile?.species);
+      playGiftFeedback(soundMode, soundPalette, userProfile?.species);
       onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
       const targetProfile = profile;
       const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
