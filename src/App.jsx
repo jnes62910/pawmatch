@@ -596,9 +596,29 @@ function playWoof(delay = 0, { peakGain = 0.2, duration = 0.14 } = {}) {
   osc.stop(t0 + duration + 0.03);
 }
 
+// Lecture d'un vrai fichier audio (hébergé dans public/sounds/), avec repli
+// automatique vers le son synthétisé si le fichier ne charge/joue pas.
+function playAudioFile(url, fallback) {
+  try {
+    const audio = new Audio(url);
+    audio.volume = 0.9;
+    const playPromise = audio.play();
+    if (playPromise?.catch) playPromise.catch(() => fallback && fallback());
+  } catch {
+    fallback && fallback();
+  }
+}
+const SOUND_FILE_URLS = {
+  likeChien: "/sounds/like-chien.mp3",
+  likeChat: "/sounds/like-chat.mp3",
+  cadeau: "/sounds/cadeau.mp3",
+};
+
 // ── PALETTES DE SONS ──────────────────────────────────────────────────────
 // Chacune définit un son pour nope (refus), like et gift (envoi de cadeau,
-// un cran au-dessus du like). Tout est synthétisé, rien à héberger.
+// un cran au-dessus du like). Tout est synthétisé, rien à héberger — sauf la
+// palette "especes" qui utilise de vrais enregistrements pour like/cadeau
+// (fournis par Julien), avec repli synthétisé si le fichier ne joue pas.
 const SOUND_PALETTES = {
   classique: {
     label: "Classique",
@@ -638,10 +658,15 @@ const SOUND_PALETTES = {
   especes: {
     label: "Miaou / Wouf",
     icon: "🐱🐶",
-    // Adapté à l'espèce du profil affiché — miaulement pour un chat, aboiement pour un chien.
+    // Le nope reste synthétisé (pas de son fourni pour le refus, volontairement — "trop triste").
+    // Like et cadeau utilisent les vrais enregistrements, avec repli synthétisé si le fichier ne joue pas.
     nope: (species) => species === "cat" ? playMeow(0, { peakGain: 0.14, duration: 0.22 }) : playWoof(0, { peakGain: 0.2 }),
-    like: (species) => species === "cat" ? playMeow() : (playWoof(0), playWoof(0.16)),
-    gift: (species) => species === "cat" ? (playMeow(0), playMeow(0.34, { duration: 0.3 })) : (playWoof(0), playWoof(0.15), playWoof(0.32)),
+    like: (species) => species === "cat"
+      ? playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow())
+      : playAudioFile(SOUND_FILE_URLS.likeChien, () => { playWoof(0); playWoof(0.16); }),
+    gift: (species) => playAudioFile(SOUND_FILE_URLS.cadeau, () => {
+      species === "cat" ? (playMeow(0), playMeow(0.34, { duration: 0.3 })) : (playWoof(0), playWoof(0.15), playWoof(0.32));
+    }),
   },
 };
 
