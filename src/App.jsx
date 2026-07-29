@@ -575,25 +575,48 @@ function playMeow(delay = 0, { peakGain = 0.11, duration = 0.38 } = {}) {
   osc.start(t0);
   osc.stop(t0 + duration + 0.03);
 }
-function playWoof(delay = 0, { peakGain = 0.2, duration = 0.14 } = {}) {
+function playWoof(delay = 0, { peakGain = 0.2, duration = 0.14, noiseFreqStart = 500, noiseFreqEnd = 220, oscFreqStart = 160, oscFreqEnd = 80 } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   // Le bruit filtré donne le grain "raspy" de l'aboiement, l'oscillateur grave
   // en renfort donne le corps/la poitrine du son — un oscillateur seul sonne
-  // trop pur et musical pour évoquer un vrai aboiement.
-  playNoiseBurst(delay, duration, { peakGain, freqStart: 500, freqEnd: 220, q: 1 });
+  // trop pur et musical pour évoquer un vrai aboiement. Les fréquences sont
+  // réglables pour distinguer un "waouh" grave (gros chien) d'un "yip" aigu
+  // (petit chien).
+  playNoiseBurst(delay, duration, { peakGain, freqStart: noiseFreqStart, freqEnd: noiseFreqEnd, q: 1 });
   const t0 = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = "sawtooth";
-  osc.frequency.setValueAtTime(160, t0);
-  osc.frequency.exponentialRampToValueAtTime(80, t0 + duration);
+  osc.frequency.setValueAtTime(oscFreqStart, t0);
+  osc.frequency.exponentialRampToValueAtTime(oscFreqEnd, t0 + duration);
   gain.gain.setValueAtTime(0.001, t0);
   gain.gain.exponentialRampToValueAtTime(peakGain * 0.65, t0 + 0.012);
   gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
   osc.connect(gain).connect(ctx.destination);
   osc.start(t0);
   osc.stop(t0 + duration + 0.03);
+}
+
+// Petit "couic" de jouet en caoutchouc — oscillateur carré avec un pitch qui
+// remonte/redescend façon jouet qu'on presse et relâche.
+function playSqueak(delay = 0, { peakGain = 0.16, duration = 0.22 } = {}) {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(900, t0);
+  osc.frequency.linearRampToValueAtTime(500, t0 + duration * 0.4);
+  osc.frequency.linearRampToValueAtTime(700, t0 + duration * 0.6);
+  osc.frequency.linearRampToValueAtTime(280, t0 + duration);
+  gain.gain.setValueAtTime(0.001, t0);
+  gain.gain.exponentialRampToValueAtTime(peakGain, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.02);
 }
 
 // Lecture d'un vrai fichier audio (hébergé dans public/sounds/), avec repli
@@ -609,8 +632,10 @@ function playAudioFile(url, fallback) {
   }
 }
 const SOUND_FILE_URLS = {
-  likeChien: "/sounds/like-chien.mp3",
+  likeChienGros: "/sounds/like-chien.mp3",
+  likeChienPetit: "/sounds/like-petit-chien.mp3",
   likeChat: "/sounds/like-chat.mp3",
+  jouet: "/sounds/jouet.wav",
   cadeau: "/sounds/cadeau.mp3",
 };
 
@@ -660,27 +685,54 @@ const SOUND_PALETTES = {
     gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.2, 1000, 0.06, { freqEnd: 1500 }], [0.26, 1300, 0.06, { freqEnd: 900 }]]),
     match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.16, 1000, 0.06, { freqEnd: 1600 }], [0.22, 1300, 0.06, { freqEnd: 900 }], [0.34, 1100, 0.06, { freqEnd: 1700 }], [0.4, 1400, 0.1, { freqEnd: 1000 }]]),
   },
-  especes: {
-    label: "Miaou / Wouf",
-    icon: "🐱🐶",
-    // Le nope reste synthétisé (pas de son fourni pour le refus, volontairement — "trop triste").
-    // Like et cadeau utilisent les vrais enregistrements, avec repli synthétisé si le fichier ne joue pas.
-    nope: (species) => species === "cat" ? playMeow(0, { peakGain: 0.14, duration: 0.22 }) : playWoof(0, { peakGain: 0.2 }),
-    like: (species) => species === "cat"
-      ? playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow())
-      : playAudioFile(SOUND_FILE_URLS.likeChien, () => { playWoof(0); playWoof(0.16); }),
-    gift: (species) => playAudioFile(SOUND_FILE_URLS.cadeau, () => {
-      species === "cat" ? (playMeow(0), playMeow(0.34, { duration: 0.3 })) : (playWoof(0), playWoof(0.15), playWoof(0.32));
+  miaou: {
+    label: "Miaou",
+    icon: "🐱",
+    // Vrai enregistrement pour le like, avec repli synthétisé si le fichier ne joue pas.
+    nope: () => playMeow(0, { peakGain: 0.14, duration: 0.22 }),
+    like: () => playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow()),
+    gift: () => (playMeow(0), playMeow(0.34, { duration: 0.3 })),
+    match: () => {
+      playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow());
+      setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow()), 260);
+    },
+  },
+  wouf_gros: {
+    label: "Waouh (gros chien)",
+    icon: "🐶",
+    nope: () => playWoof(0, { peakGain: 0.2 }),
+    like: () => playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); }),
+    gift: () => (playWoof(0), playWoof(0.15), playWoof(0.32)),
+    match: () => {
+      playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); });
+      setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); }), 260);
+    },
+  },
+  wouf_petit: {
+    label: "Waouh (petit chien)",
+    icon: "🐕",
+    // Fréquences plus hautes et durée plus courte pour un "yip" au lieu d'un "waouh" grave.
+    nope: () => playWoof(0, { peakGain: 0.2, duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 }),
+    like: () => playAudioFile(SOUND_FILE_URLS.likeChienPetit, () => {
+      playWoof(0, { duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 });
+      playWoof(0.12, { duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 });
     }),
-    // Pas de son dédié fourni pour le match — on réutilise le "like" en double,
-    // avec repli synthétisé plus festif si le fichier ne joue pas.
-    match: (species) => {
-      const url = species === "cat" ? SOUND_FILE_URLS.likeChat : SOUND_FILE_URLS.likeChien;
-      const fallback = () => species === "cat"
-        ? (playMeow(0), playMeow(0.32, { duration: 0.32 }))
-        : (playWoof(0), playWoof(0.15), playWoof(0.32));
-      playAudioFile(url, fallback);
-      setTimeout(() => playAudioFile(url, fallback), 260);
+    gift: () => [0, 0.12, 0.26].forEach(d => playWoof(d, { duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 })),
+    match: () => {
+      const fallback = () => { playWoof(0, { duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 }); playWoof(0.12, { duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 }); };
+      playAudioFile(SOUND_FILE_URLS.likeChienPetit, fallback);
+      setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChienPetit, fallback), 260);
+    },
+  },
+  jouet: {
+    label: "Jouet",
+    icon: "🧸",
+    nope: () => playSqueak(0, { peakGain: 0.14, duration: 0.16 }),
+    like: () => playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak()),
+    gift: () => (playSqueak(0), playSqueak(0.28, { duration: 0.26 })),
+    match: () => {
+      playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak());
+      setTimeout(() => playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak()), 280);
     },
   },
 };
@@ -721,7 +773,10 @@ function playSwipeFeedback(mode, palette, dir, species) {
 // Idem pour l'envoi d'un cadeau — vibration un peu plus marquée, geste plus fort qu'un like.
 function playGiftFeedback(mode, palette, species) {
   if (mode === "off") return;
-  (SOUND_PALETTES[palette] || SOUND_PALETTES.classique).gift(species);
+  // Le vrai fichier cadeau est utilisé pour tous les styles, avec repli sur
+  // le son synthétisé propre à la palette si le fichier ne joue pas.
+  const p = SOUND_PALETTES[palette] || SOUND_PALETTES.classique;
+  playAudioFile(SOUND_FILE_URLS.cadeau, () => p.gift(species));
 }
 
 // Son de victoire pour la célébration de match — le moment fort de l'app.
@@ -1235,19 +1290,14 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>Choisissez le mode "Fun" ci-dessus pour activer le son.</div>
             )}
             <div style={{ opacity: soundMode === "fun" ? 1 : 0.4, pointerEvents: soundMode === "fun" ? "auto" : "none" }}>
-              {Object.entries(SOUND_PALETTES).map(([key, p]) => {
-                const isEspeces = key === "especes";
-                const label = isEspeces ? (userProfile?.species === "cat" ? "Miaou" : userProfile?.species === "dog" ? "Wouf" : p.label) : p.label;
-                const icon = isEspeces ? (userProfile?.species === "cat" ? "🐱" : userProfile?.species === "dog" ? "🐶" : p.icon) : p.icon;
-                return (
-                  <button key={key} onClick={() => choosePalette(key)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 14, border: soundPalette === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: soundPalette === key ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
-                    <span style={{ fontSize: 22 }}>{icon}</span>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{label}</span>
-                    {soundPalette === key && <span style={{ color: "#B25F46", fontSize: 16 }}>✓</span>}
-                  </button>
-                );
-              })}
+              {Object.entries(SOUND_PALETTES).map(([key, p]) => (
+                <button key={key} onClick={() => choosePalette(key)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 14, border: soundPalette === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: soundPalette === key ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                  <span style={{ fontSize: 22 }}>{p.icon}</span>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{p.label}</span>
+                  {soundPalette === key && <span style={{ color: "#B25F46", fontSize: 16 }}>✓</span>}
+                </button>
+              ))}
             </div>
           </div>
         </div>
