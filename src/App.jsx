@@ -648,42 +648,42 @@ const SOUND_PALETTES = {
   classique: {
     label: "Classique",
     icon: "🔔",
-    nope: () => playTone(0, 340, 0.25, { peakGain: 0.22, freqEnd: 120 }),
-    like: () => playSequence([[0, 520, 0.19], [0.12, 780, 0.19]]),
-    gift: () => playSequence([[0, 520, 0.21], [0.1, 660, 0.21], [0.2, 880, 0.21]]),
-    match: () => playSequence([[0, 392, 0.16], [0.11, 523, 0.16], [0.22, 659, 0.16], [0.33, 784, 0.32]]),
+    nope: () => playTone(0, 340, 0.25, { peakGain: 0.35, freqEnd: 120 }),
+    like: () => playSequence([[0, 520, 0.19, { peakGain: 0.3 }], [0.12, 780, 0.19, { peakGain: 0.3 }]]),
+    gift: () => playSequence([[0, 520, 0.21, { peakGain: 0.32 }], [0.1, 660, 0.21, { peakGain: 0.32 }], [0.2, 880, 0.21, { peakGain: 0.32 }]]),
+    match: () => playSequence([[0, 392, 0.16, { peakGain: 0.35 }], [0.11, 523, 0.16, { peakGain: 0.35 }], [0.22, 659, 0.16, { peakGain: 0.35 }], [0.33, 784, 0.32, { peakGain: 0.38 }]]),
   },
   doux: {
     label: "Doux",
     icon: "🌸",
-    nope: () => playTone(0, 260, 0.3, { peakGain: 0.16, freqEnd: 160 }),
-    like: () => playTone(0, 640, 0.4, { peakGain: 0.08 }),
-    gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.08 }], [0.16, 760, 0.32, { peakGain: 0.08 }]]),
-    match: () => playSequence([[0, 523, 0.3, { peakGain: 0.1 }], [0.2, 659, 0.3, { peakGain: 0.1 }], [0.4, 784, 0.45, { peakGain: 0.1 }]]),
+    nope: () => playTone(0, 260, 0.3, { peakGain: 0.26, freqEnd: 160 }),
+    like: () => playTone(0, 640, 0.4, { peakGain: 0.2 }),
+    gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.2 }], [0.16, 760, 0.32, { peakGain: 0.2 }]]),
+    match: () => playSequence([[0, 523, 0.3, { peakGain: 0.22 }], [0.2, 659, 0.3, { peakGain: 0.22 }], [0.4, 784, 0.45, { peakGain: 0.24 }]]),
   },
   nature: {
     label: "Nature",
     icon: "🐾",
-    nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.2, freqStart: 700, freqEnd: 250, q: 1.4 }),
-    like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }]]),
-    gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.2, 1000, 0.06, { freqEnd: 1500 }], [0.26, 1300, 0.06, { freqEnd: 900 }]]),
-    match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.16, 1000, 0.06, { freqEnd: 1600 }], [0.22, 1300, 0.06, { freqEnd: 900 }], [0.34, 1100, 0.06, { freqEnd: 1700 }], [0.4, 1400, 0.1, { freqEnd: 1000 }]]),
+    nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.32, freqStart: 700, freqEnd: 250, q: 1.4 }),
+    like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.3 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.3 }]]),
+    gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.3 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.3 }], [0.2, 1000, 0.06, { freqEnd: 1500, peakGain: 0.3 }], [0.26, 1300, 0.06, { freqEnd: 900, peakGain: 0.3 }]]),
+    match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.32 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.32 }], [0.16, 1000, 0.06, { freqEnd: 1600, peakGain: 0.32 }], [0.22, 1300, 0.06, { freqEnd: 900, peakGain: 0.32 }], [0.34, 1100, 0.06, { freqEnd: 1700, peakGain: 0.32 }], [0.4, 1400, 0.1, { freqEnd: 1000, peakGain: 0.34 }]]),
   },
   retro: {
     label: "Rétro",
     icon: "🕹️",
-    nope: () => playTone(0, 300, 0.12, { type: "square", peakGain: 0.08, freqEnd: 140 }),
-    like: () => playSequence([[0, 440, 0.09, { type: "square", peakGain: 0.09 }], [0.09, 660, 0.09, { type: "square", peakGain: 0.09 }]]),
-    gift: () => playSequence([[0, 440, 0.08, { type: "square", peakGain: 0.09 }], [0.08, 550, 0.08, { type: "square", peakGain: 0.09 }], [0.16, 660, 0.08, { type: "square", peakGain: 0.09 }], [0.24, 880, 0.12, { type: "square", peakGain: 0.09 }]]),
-    match: () => playSequence([[0, 392, 0.08, { type: "square", peakGain: 0.1 }], [0.08, 523, 0.08, { type: "square", peakGain: 0.1 }], [0.16, 659, 0.08, { type: "square", peakGain: 0.1 }], [0.24, 784, 0.08, { type: "square", peakGain: 0.1 }], [0.32, 1047, 0.22, { type: "square", peakGain: 0.11 }]]),
+    nope: () => playTone(0, 300, 0.12, { type: "square", peakGain: 0.26, freqEnd: 140 }),
+    like: () => playSequence([[0, 440, 0.09, { type: "square", peakGain: 0.26 }], [0.09, 660, 0.09, { type: "square", peakGain: 0.26 }]]),
+    gift: () => playSequence([[0, 440, 0.08, { type: "square", peakGain: 0.26 }], [0.08, 550, 0.08, { type: "square", peakGain: 0.26 }], [0.16, 660, 0.08, { type: "square", peakGain: 0.26 }], [0.24, 880, 0.12, { type: "square", peakGain: 0.26 }]]),
+    match: () => playSequence([[0, 392, 0.08, { type: "square", peakGain: 0.28 }], [0.08, 523, 0.08, { type: "square", peakGain: 0.28 }], [0.16, 659, 0.08, { type: "square", peakGain: 0.28 }], [0.24, 784, 0.08, { type: "square", peakGain: 0.28 }], [0.32, 1047, 0.22, { type: "square", peakGain: 0.3 }]]),
   },
   festif: {
     label: "Festif",
     icon: "🎉",
-    nope: () => playTone(0, 300, 0.22, { type: "triangle", peakGain: 0.1, freqEnd: 90 }),
-    like: () => playSequence([[0, 523, 0.16, { type: "triangle", peakGain: 0.11 }], [0.09, 659, 0.16, { type: "triangle", peakGain: 0.11 }], [0.18, 784, 0.2, { type: "triangle", peakGain: 0.11 }]]),
-    gift: () => playSequence([[0, 523, 0.14, { type: "triangle", peakGain: 0.11 }], [0.08, 659, 0.14, { type: "triangle", peakGain: 0.11 }], [0.16, 784, 0.14, { type: "triangle", peakGain: 0.11 }], [0.24, 1047, 0.22, { type: "triangle", peakGain: 0.11 }]]),
-    match: () => playSequence([[0, 523, 0.13, { type: "triangle", peakGain: 0.13 }], [0.08, 659, 0.13, { type: "triangle", peakGain: 0.13 }], [0.16, 784, 0.13, { type: "triangle", peakGain: 0.13 }], [0.24, 1047, 0.13, { type: "triangle", peakGain: 0.13 }], [0.32, 1319, 0.4, { type: "triangle", peakGain: 0.14 }]]),
+    nope: () => playTone(0, 300, 0.22, { type: "triangle", peakGain: 0.28, freqEnd: 90 }),
+    like: () => playSequence([[0, 523, 0.16, { type: "triangle", peakGain: 0.3 }], [0.09, 659, 0.16, { type: "triangle", peakGain: 0.3 }], [0.18, 784, 0.2, { type: "triangle", peakGain: 0.3 }]]),
+    gift: () => playSequence([[0, 523, 0.14, { type: "triangle", peakGain: 0.3 }], [0.08, 659, 0.14, { type: "triangle", peakGain: 0.3 }], [0.16, 784, 0.14, { type: "triangle", peakGain: 0.3 }], [0.24, 1047, 0.22, { type: "triangle", peakGain: 0.3 }]]),
+    match: () => playSequence([[0, 523, 0.13, { type: "triangle", peakGain: 0.32 }], [0.08, 659, 0.13, { type: "triangle", peakGain: 0.32 }], [0.16, 784, 0.13, { type: "triangle", peakGain: 0.32 }], [0.24, 1047, 0.13, { type: "triangle", peakGain: 0.32 }], [0.32, 1319, 0.4, { type: "triangle", peakGain: 0.34 }]]),
   },
   jouet: {
     label: "Jouet",
@@ -7568,6 +7568,32 @@ const QUEST_LIST = [
   { id: "first_booking", emoji: "📅", title: "Effectuer sa première réservation", rewardLabel: () => "1 Gâteau Fiesta 🎂" },
   { id: "first_gift_sent", emoji: "🎁", title: "Envoyer son premier cadeau", rewardLabel: (species) => `1 ${species === "cat" ? "Cœur de Miaouw" : "Cœur de Toutou"} 💕` },
 ];
+
+// ── PRÉPARATION CONFORMITÉ GOOGLE PLAY (facturation alternative UE) ─────────
+// Détecte si l'app tourne dans le conteneur Android natif (Capacitor) plutôt
+// que dans un navigateur web classique. Aujourd'hui ça ne change rien au
+// comportement (Stripe reste utilisé dans les deux cas) — c'est le point
+// d'accroche unique où brancher soit le SDK Play Billing natif (Option B),
+// soit l'écran de consentement + le reporting Play Developer API (Option A),
+// une fois la décision prise et le code natif Android en place.
+function isNativeAndroid() {
+  try {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.getPlatform() === "android");
+  } catch {
+    return false;
+  }
+}
+
+// Texte de consentement EXIGÉ par Google si vous choisissez l'Option A
+// (facturation alternative). Ne suffit PAS à lui seul à être conforme : il
+// faut aussi faire remonter chaque transaction à Google via la Play
+// Developer API (reporting côté serveur, pas encore implémenté). Cette
+// chaîne est prête à être branchée dans une modale de consentement affichée
+// juste avant le paiement Stripe, uniquement sur Android natif.
+const GOOGLE_ALTERNATIVE_BILLING_DISCLOSURE =
+  "Ce paiement ne passe pas par le système de facturation de Google Play. Il est traité par Stripe. " +
+  "Google Play n'a pas connaissance de cet achat et ne peut pas vous assister en cas de litige : " +
+  "contactez Miloute directement pour toute question ou remboursement.";
 
 async function startShopCheckout({ itemId, bundleId }, userProfile) {
   const res = await fetch("/api/shop", {
