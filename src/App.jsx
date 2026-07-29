@@ -661,6 +661,14 @@ const SOUND_PALETTES = {
     gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.08 }], [0.16, 760, 0.32, { peakGain: 0.08 }]]),
     match: () => playSequence([[0, 523, 0.3, { peakGain: 0.1 }], [0.2, 659, 0.3, { peakGain: 0.1 }], [0.4, 784, 0.45, { peakGain: 0.1 }]]),
   },
+  nature: {
+    label: "Nature",
+    icon: "🐾",
+    nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.2, freqStart: 700, freqEnd: 250, q: 1.4 }),
+    like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }]]),
+    gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.2, 1000, 0.06, { freqEnd: 1500 }], [0.26, 1300, 0.06, { freqEnd: 900 }]]),
+    match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.16, 1000, 0.06, { freqEnd: 1600 }], [0.22, 1300, 0.06, { freqEnd: 900 }], [0.34, 1100, 0.06, { freqEnd: 1700 }], [0.4, 1400, 0.1, { freqEnd: 1000 }]]),
+  },
   retro: {
     label: "Rétro",
     icon: "🕹️",
@@ -677,35 +685,15 @@ const SOUND_PALETTES = {
     gift: () => playSequence([[0, 523, 0.14, { type: "triangle", peakGain: 0.11 }], [0.08, 659, 0.14, { type: "triangle", peakGain: 0.11 }], [0.16, 784, 0.14, { type: "triangle", peakGain: 0.11 }], [0.24, 1047, 0.22, { type: "triangle", peakGain: 0.11 }]]),
     match: () => playSequence([[0, 523, 0.13, { type: "triangle", peakGain: 0.13 }], [0.08, 659, 0.13, { type: "triangle", peakGain: 0.13 }], [0.16, 784, 0.13, { type: "triangle", peakGain: 0.13 }], [0.24, 1047, 0.13, { type: "triangle", peakGain: 0.13 }], [0.32, 1319, 0.4, { type: "triangle", peakGain: 0.14 }]]),
   },
-  nature: {
-    label: "Nature",
-    icon: "🐾",
-    nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.2, freqStart: 700, freqEnd: 250, q: 1.4 }),
-    like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }]]),
-    gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.2, 1000, 0.06, { freqEnd: 1500 }], [0.26, 1300, 0.06, { freqEnd: 900 }]]),
-    match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400 }], [0.06, 1200, 0.06, { freqEnd: 800 }], [0.16, 1000, 0.06, { freqEnd: 1600 }], [0.22, 1300, 0.06, { freqEnd: 900 }], [0.34, 1100, 0.06, { freqEnd: 1700 }], [0.4, 1400, 0.1, { freqEnd: 1000 }]]),
-  },
-  miaou: {
-    label: "Miaou",
-    icon: "🐱",
-    // Vrai enregistrement pour le like, avec repli synthétisé si le fichier ne joue pas.
-    nope: () => playMeow(0, { peakGain: 0.14, duration: 0.22 }),
-    like: () => playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow()),
-    gift: () => (playMeow(0), playMeow(0.34, { duration: 0.3 })),
+  jouet: {
+    label: "Jouet",
+    icon: "🧸",
+    nope: () => playSqueak(0, { peakGain: 0.14, duration: 0.16 }),
+    like: () => playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak()),
+    gift: () => (playSqueak(0), playSqueak(0.28, { duration: 0.26 })),
     match: () => {
-      playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow());
-      setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow()), 260);
-    },
-  },
-  wouf_gros: {
-    label: "Waouh (gros chien)",
-    icon: "🐶",
-    nope: () => playWoof(0, { peakGain: 0.2 }),
-    like: () => playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); }),
-    gift: () => (playWoof(0), playWoof(0.15), playWoof(0.32)),
-    match: () => {
-      playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); });
-      setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); }), 260);
+      playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak());
+      setTimeout(() => playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak()), 280);
     },
   },
   wouf_petit: {
@@ -724,15 +712,27 @@ const SOUND_PALETTES = {
       setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChienPetit, fallback), 260);
     },
   },
-  jouet: {
-    label: "Jouet",
-    icon: "🧸",
-    nope: () => playSqueak(0, { peakGain: 0.14, duration: 0.16 }),
-    like: () => playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak()),
-    gift: () => (playSqueak(0), playSqueak(0.28, { duration: 0.26 })),
+  wouf_gros: {
+    label: "Waouh (gros chien)",
+    icon: "🐶",
+    nope: () => playWoof(0, { peakGain: 0.2 }),
+    like: () => playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); }),
+    gift: () => (playWoof(0), playWoof(0.15), playWoof(0.32)),
     match: () => {
-      playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak());
-      setTimeout(() => playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak()), 280);
+      playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); });
+      setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); }), 260);
+    },
+  },
+  miaou: {
+    label: "Miaou",
+    icon: "🐱",
+    // Vrai enregistrement pour le like, avec repli synthétisé si le fichier ne joue pas.
+    nope: () => playMeow(0, { peakGain: 0.14, duration: 0.22 }),
+    like: () => playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow()),
+    gift: () => (playMeow(0), playMeow(0.34, { duration: 0.3 })),
+    match: () => {
+      playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow());
+      setTimeout(() => playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow()), 260);
     },
   },
 };
@@ -1290,7 +1290,13 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>Choisissez le mode "Fun" ci-dessus pour activer le son.</div>
             )}
             <div style={{ opacity: soundMode === "fun" ? 1 : 0.4, pointerEvents: soundMode === "fun" ? "auto" : "none" }}>
-              {Object.entries(SOUND_PALETTES).map(([key, p]) => (
+              {Object.entries(SOUND_PALETTES)
+                .filter(([key]) => {
+                  if (userProfile?.species === "dog" && key === "miaou") return false;
+                  if (userProfile?.species === "cat" && (key === "wouf_petit" || key === "wouf_gros")) return false;
+                  return true;
+                })
+                .map(([key, p]) => (
                 <button key={key} onClick={() => choosePalette(key)}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 14, border: soundPalette === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: soundPalette === key ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
                   <span style={{ fontSize: 22 }}>{p.icon}</span>
