@@ -510,7 +510,7 @@ function getAudioCtx() {
 // Petit helper commun : une note = une fréquence (ou une rampe vers une 2e
 // fréquence), un délai de départ, une durée et un type d'onde. Réduit la
 // duplication entre les différentes palettes ci-dessous.
-function playTone(delay, freqStart, duration, { type = "sine", peakGain = 0.12, freqEnd = null } = {}) {
+function playTone(delay, freqStart, duration, { type = "sine", peakGain = 0.192, freqEnd = null } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   const osc = ctx.createOscillator();
@@ -531,7 +531,7 @@ function playSequence(notes) {
 
 // Bruit blanc filtré passe-bande — donne le grain "raspy" nécessaire à un
 // aboiement crédible ; un simple oscillateur sonne trop musical/propre pour ça.
-function playNoiseBurst(delay, duration, { peakGain = 0.18, freqStart = 400, freqEnd = 200, q = 1.2 } = {}) {
+function playNoiseBurst(delay, duration, { peakGain = 0.288, freqStart = 400, freqEnd = 200, q = 1.2 } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime + delay;
@@ -558,7 +558,7 @@ function playNoiseBurst(delay, duration, { peakGain = 0.18, freqStart = 400, fre
 // Miaulement et aboiement synthétisés — approximatifs mais reconnaissables :
 // le miaou monte puis redescend en douceur (onde en dents de scie, glissando),
 // l'aboiement est un coup bref et grave qui chute vite (percussif).
-function playMeow(delay = 0, { peakGain = 0.11, duration = 0.38 } = {}) {
+function playMeow(delay = 0, { peakGain = 0.176, duration = 0.38 } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   const osc = ctx.createOscillator();
@@ -575,7 +575,7 @@ function playMeow(delay = 0, { peakGain = 0.11, duration = 0.38 } = {}) {
   osc.start(t0);
   osc.stop(t0 + duration + 0.03);
 }
-function playWoof(delay = 0, { peakGain = 0.2, duration = 0.14, noiseFreqStart = 500, noiseFreqEnd = 220, oscFreqStart = 160, oscFreqEnd = 80 } = {}) {
+function playWoof(delay = 0, { peakGain = 0.32, duration = 0.14, noiseFreqStart = 500, noiseFreqEnd = 220, oscFreqStart = 160, oscFreqEnd = 80 } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   // Le bruit filtré donne le grain "raspy" de l'aboiement, l'oscillateur grave
@@ -600,7 +600,7 @@ function playWoof(delay = 0, { peakGain = 0.2, duration = 0.14, noiseFreqStart =
 
 // Petit "couic" de jouet en caoutchouc — oscillateur carré avec un pitch qui
 // remonte/redescend façon jouet qu'on presse et relâche.
-function playSqueak(delay = 0, { peakGain = 0.16, duration = 0.22 } = {}) {
+function playSqueak(delay = 0, { peakGain = 0.256, duration = 0.22 } = {}) {
   const ctx = getAudioCtx();
   if (!ctx) return;
   const t0 = ctx.currentTime + delay;
@@ -624,7 +624,7 @@ function playSqueak(delay = 0, { peakGain = 0.16, duration = 0.22 } = {}) {
 function playAudioFile(url, fallback) {
   try {
     const audio = new Audio(url);
-    audio.volume = 0.9;
+    audio.volume = 1;
     const playPromise = audio.play();
     if (playPromise?.catch) playPromise.catch(() => fallback && fallback());
   } catch {
@@ -648,47 +648,47 @@ const SOUND_PALETTES = {
   classique: {
     label: "Classique",
     icon: "🔔",
-    nope: () => playTone(0, 340, 0.25, { peakGain: 0.35, freqEnd: 120 }),
-    like: () => playSequence([[0, 520, 0.19, { peakGain: 0.3 }], [0.12, 780, 0.19, { peakGain: 0.3 }]]),
-    gift: () => playSequence([[0, 520, 0.21, { peakGain: 0.32 }], [0.1, 660, 0.21, { peakGain: 0.32 }], [0.2, 880, 0.21, { peakGain: 0.32 }]]),
-    match: () => playSequence([[0, 392, 0.16, { peakGain: 0.35 }], [0.11, 523, 0.16, { peakGain: 0.35 }], [0.22, 659, 0.16, { peakGain: 0.35 }], [0.33, 784, 0.32, { peakGain: 0.38 }]]),
+    nope: () => playTone(0, 340, 0.25, { peakGain: 0.55, freqEnd: 120 }),
+    like: () => playSequence([[0, 520, 0.19, { peakGain: 0.48 }], [0.12, 780, 0.19, { peakGain: 0.48 }]]),
+    gift: () => playSequence([[0, 520, 0.21, { peakGain: 0.512 }], [0.1, 660, 0.21, { peakGain: 0.512 }], [0.2, 880, 0.21, { peakGain: 0.512 }]]),
+    match: () => playSequence([[0, 392, 0.16, { peakGain: 0.55 }], [0.11, 523, 0.16, { peakGain: 0.55 }], [0.22, 659, 0.16, { peakGain: 0.55 }], [0.33, 784, 0.32, { peakGain: 0.55 }]]),
   },
   doux: {
     label: "Doux",
     icon: "🌸",
-    nope: () => playTone(0, 260, 0.3, { peakGain: 0.26, freqEnd: 160 }),
-    like: () => playTone(0, 640, 0.4, { peakGain: 0.2 }),
-    gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.2 }], [0.16, 760, 0.32, { peakGain: 0.2 }]]),
-    match: () => playSequence([[0, 523, 0.3, { peakGain: 0.22 }], [0.2, 659, 0.3, { peakGain: 0.22 }], [0.4, 784, 0.45, { peakGain: 0.24 }]]),
+    nope: () => playTone(0, 260, 0.3, { peakGain: 0.416, freqEnd: 160 }),
+    like: () => playTone(0, 640, 0.4, { peakGain: 0.32 }),
+    gift: () => playSequence([[0, 600, 0.32, { peakGain: 0.32 }], [0.16, 760, 0.32, { peakGain: 0.32 }]]),
+    match: () => playSequence([[0, 523, 0.3, { peakGain: 0.352 }], [0.2, 659, 0.3, { peakGain: 0.352 }], [0.4, 784, 0.45, { peakGain: 0.384 }]]),
   },
   nature: {
     label: "Nature",
     icon: "🐾",
-    nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.32, freqStart: 700, freqEnd: 250, q: 1.4 }),
-    like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.3 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.3 }]]),
-    gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.3 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.3 }], [0.2, 1000, 0.06, { freqEnd: 1500, peakGain: 0.3 }], [0.26, 1300, 0.06, { freqEnd: 900, peakGain: 0.3 }]]),
-    match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.32 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.32 }], [0.16, 1000, 0.06, { freqEnd: 1600, peakGain: 0.32 }], [0.22, 1300, 0.06, { freqEnd: 900, peakGain: 0.32 }], [0.34, 1100, 0.06, { freqEnd: 1700, peakGain: 0.32 }], [0.4, 1400, 0.1, { freqEnd: 1000, peakGain: 0.34 }]]),
+    nope: () => playNoiseBurst(0, 0.1, { peakGain: 0.512, freqStart: 700, freqEnd: 250, q: 1.4 }),
+    like: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.48 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.48 }]]),
+    gift: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.48 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.48 }], [0.2, 1000, 0.06, { freqEnd: 1500, peakGain: 0.48 }], [0.26, 1300, 0.06, { freqEnd: 900, peakGain: 0.48 }]]),
+    match: () => playSequence([[0, 900, 0.06, { freqEnd: 1400, peakGain: 0.512 }], [0.06, 1200, 0.06, { freqEnd: 800, peakGain: 0.512 }], [0.16, 1000, 0.06, { freqEnd: 1600, peakGain: 0.512 }], [0.22, 1300, 0.06, { freqEnd: 900, peakGain: 0.512 }], [0.34, 1100, 0.06, { freqEnd: 1700, peakGain: 0.512 }], [0.4, 1400, 0.1, { freqEnd: 1000, peakGain: 0.544 }]]),
   },
   retro: {
     label: "Rétro",
     icon: "🕹️",
-    nope: () => playTone(0, 300, 0.12, { type: "square", peakGain: 0.26, freqEnd: 140 }),
-    like: () => playSequence([[0, 440, 0.09, { type: "square", peakGain: 0.26 }], [0.09, 660, 0.09, { type: "square", peakGain: 0.26 }]]),
-    gift: () => playSequence([[0, 440, 0.08, { type: "square", peakGain: 0.26 }], [0.08, 550, 0.08, { type: "square", peakGain: 0.26 }], [0.16, 660, 0.08, { type: "square", peakGain: 0.26 }], [0.24, 880, 0.12, { type: "square", peakGain: 0.26 }]]),
-    match: () => playSequence([[0, 392, 0.08, { type: "square", peakGain: 0.28 }], [0.08, 523, 0.08, { type: "square", peakGain: 0.28 }], [0.16, 659, 0.08, { type: "square", peakGain: 0.28 }], [0.24, 784, 0.08, { type: "square", peakGain: 0.28 }], [0.32, 1047, 0.22, { type: "square", peakGain: 0.3 }]]),
+    nope: () => playTone(0, 300, 0.12, { type: "square", peakGain: 0.416, freqEnd: 140 }),
+    like: () => playSequence([[0, 440, 0.09, { type: "square", peakGain: 0.416 }], [0.09, 660, 0.09, { type: "square", peakGain: 0.416 }]]),
+    gift: () => playSequence([[0, 440, 0.08, { type: "square", peakGain: 0.416 }], [0.08, 550, 0.08, { type: "square", peakGain: 0.416 }], [0.16, 660, 0.08, { type: "square", peakGain: 0.416 }], [0.24, 880, 0.12, { type: "square", peakGain: 0.416 }]]),
+    match: () => playSequence([[0, 392, 0.08, { type: "square", peakGain: 0.448 }], [0.08, 523, 0.08, { type: "square", peakGain: 0.448 }], [0.16, 659, 0.08, { type: "square", peakGain: 0.448 }], [0.24, 784, 0.08, { type: "square", peakGain: 0.448 }], [0.32, 1047, 0.22, { type: "square", peakGain: 0.48 }]]),
   },
   festif: {
     label: "Festif",
     icon: "🎉",
-    nope: () => playTone(0, 300, 0.22, { type: "triangle", peakGain: 0.28, freqEnd: 90 }),
-    like: () => playSequence([[0, 523, 0.16, { type: "triangle", peakGain: 0.3 }], [0.09, 659, 0.16, { type: "triangle", peakGain: 0.3 }], [0.18, 784, 0.2, { type: "triangle", peakGain: 0.3 }]]),
-    gift: () => playSequence([[0, 523, 0.14, { type: "triangle", peakGain: 0.3 }], [0.08, 659, 0.14, { type: "triangle", peakGain: 0.3 }], [0.16, 784, 0.14, { type: "triangle", peakGain: 0.3 }], [0.24, 1047, 0.22, { type: "triangle", peakGain: 0.3 }]]),
-    match: () => playSequence([[0, 523, 0.13, { type: "triangle", peakGain: 0.32 }], [0.08, 659, 0.13, { type: "triangle", peakGain: 0.32 }], [0.16, 784, 0.13, { type: "triangle", peakGain: 0.32 }], [0.24, 1047, 0.13, { type: "triangle", peakGain: 0.32 }], [0.32, 1319, 0.4, { type: "triangle", peakGain: 0.34 }]]),
+    nope: () => playTone(0, 300, 0.22, { type: "triangle", peakGain: 0.448, freqEnd: 90 }),
+    like: () => playSequence([[0, 523, 0.16, { type: "triangle", peakGain: 0.48 }], [0.09, 659, 0.16, { type: "triangle", peakGain: 0.48 }], [0.18, 784, 0.2, { type: "triangle", peakGain: 0.48 }]]),
+    gift: () => playSequence([[0, 523, 0.14, { type: "triangle", peakGain: 0.48 }], [0.08, 659, 0.14, { type: "triangle", peakGain: 0.48 }], [0.16, 784, 0.14, { type: "triangle", peakGain: 0.48 }], [0.24, 1047, 0.22, { type: "triangle", peakGain: 0.48 }]]),
+    match: () => playSequence([[0, 523, 0.13, { type: "triangle", peakGain: 0.512 }], [0.08, 659, 0.13, { type: "triangle", peakGain: 0.512 }], [0.16, 784, 0.13, { type: "triangle", peakGain: 0.512 }], [0.24, 1047, 0.13, { type: "triangle", peakGain: 0.512 }], [0.32, 1319, 0.4, { type: "triangle", peakGain: 0.544 }]]),
   },
   jouet: {
     label: "Jouet",
     icon: "🧸",
-    nope: () => playSqueak(0, { peakGain: 0.14, duration: 0.16 }),
+    nope: () => playSqueak(0, { peakGain: 0.224, duration: 0.16 }),
     like: () => playAudioFile(SOUND_FILE_URLS.jouet, () => playSqueak()),
     gift: () => (playSqueak(0), playSqueak(0.28, { duration: 0.26 })),
     match: () => {
@@ -700,7 +700,7 @@ const SOUND_PALETTES = {
     label: "Waouh (petit chien)",
     icon: "🐕",
     // Fréquences plus hautes et durée plus courte pour un "yip" au lieu d'un "waouh" grave.
-    nope: () => playWoof(0, { peakGain: 0.2, duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 }),
+    nope: () => playWoof(0, { peakGain: 0.32, duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 }),
     like: () => playAudioFile(SOUND_FILE_URLS.likeChienPetit, () => {
       playWoof(0, { duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 });
       playWoof(0.12, { duration: 0.08, noiseFreqStart: 900, noiseFreqEnd: 500, oscFreqStart: 320, oscFreqEnd: 180 });
@@ -715,7 +715,7 @@ const SOUND_PALETTES = {
   wouf_gros: {
     label: "Waouh (gros chien)",
     icon: "🐶",
-    nope: () => playWoof(0, { peakGain: 0.2 }),
+    nope: () => playWoof(0, { peakGain: 0.32 }),
     like: () => playAudioFile(SOUND_FILE_URLS.likeChienGros, () => { playWoof(0); playWoof(0.16); }),
     gift: () => (playWoof(0), playWoof(0.15), playWoof(0.32)),
     match: () => {
@@ -727,7 +727,7 @@ const SOUND_PALETTES = {
     label: "Miaou",
     icon: "🐱",
     // Vrai enregistrement pour le like, avec repli synthétisé si le fichier ne joue pas.
-    nope: () => playMeow(0, { peakGain: 0.14, duration: 0.22 }),
+    nope: () => playMeow(0, { peakGain: 0.224, duration: 0.22 }),
     like: () => playAudioFile(SOUND_FILE_URLS.likeChat, () => playMeow()),
     gift: () => (playMeow(0), playMeow(0.34, { duration: 0.3 })),
     match: () => {
