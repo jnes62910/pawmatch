@@ -595,13 +595,24 @@ function playGiftFeedback(mode) {
 const FREE_RADIUS_CAP = 20; // km
 
 // ── PHRASES D'ACCROCHE PHOTO (façon Hinge) ───────────────────────────────────
-const PHOTO_CAPTION_PROMPTS = [
-  "Mon plus grand talent est…",
-  "Je deviens fou/folle quand…",
-  "Mon rêve est de…",
-  "On me reconnaît à…",
-  "Je cherche…",
+// Certains prompts sont adaptés selon l'espèce (comportements bien différents
+// entre un chat et un chien) — d'autres restent identiques quand ça a du sens.
+const PHOTO_CAPTION_PROMPTS_RAW = [
+  { cat: "Mon plus grand talent est…", dog: "Mon plus grand talent est…" },
+  { cat: "Je deviens fou/folle quand…", dog: "Je deviens fou/folle quand…" },
+  { cat: "Mon rêve est de…", dog: "Mon rêve est de…" },
+  { cat: "On me reconnaît à…", dog: "On me reconnaît à…" },
+  { cat: "Je cherche…", dog: "Je cherche…" },
+  { cat: "Mon coin de sieste préféré est…", dog: "Mon terrain de jeu préféré est…" },
+  { cat: "Ce qui me rend zen, c'est…", dog: "Ce qui me rend fou/folle de joie, c'est…" },
+  { cat: "Ma technique pour faire craquer mon humain est…", dog: "Ma technique pour faire craquer mon humain est…" },
+  { cat: "Je juge silencieusement…", dog: "J'aboie toujours sur…" },
+  { cat: "Mon rituel du soir est…", dog: "Mon rituel du soir est…" },
 ];
+
+function getPhotoCaptionPrompts(species) {
+  return PHOTO_CAPTION_PROMPTS_RAW.map(p => species === "cat" ? p.cat : p.dog);
+}
 const PHOTO_CAPTION_MAX_LENGTH = 100;
 const PHOTO_CAPTION_MAX_EMOJIS = 2;
 
@@ -4134,6 +4145,7 @@ const INIT_PET = {
   seeking: ["Play date", "Compagnon de vie"],
   bio: "Caramel est un chat doux et curieux qui adore explorer et se faire câliner après ses aventures.",
   photos: [], video: null,
+  photoCaptions: [], showMainCaption: true,
   repro: {
     active: false, price: "", priceNegotiable: false,
     availableFrom: "", availableTo: "",
@@ -4612,7 +4624,53 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const videoRef = useRef(null);
   const docRef = useRef(null);
 
-  function openEdit() { setDraft({ ...pet, repro: { ...pet.repro } }); setEditing(true); setEditTab("profil"); }
+  function openEdit() { setDraft({ ...pet, photoCaptions: pet.photoCaptions || [], showMainCaption: pet.showMainCaption !== false, repro: { ...pet.repro } }); setEditing(true); setEditTab("profil"); }
+
+  const [captionEditorIndex, setCaptionEditorIndex] = useState(null);
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [generatingCaption, setGeneratingCaption] = useState(false);
+  const [savingCaption, setSavingCaption] = useState(false);
+  const [captionError, setCaptionError] = useState(null);
+
+  function openCaptionEditor(i) {
+    setCaptionDraft(draft.photoCaptions?.[i] || "");
+    setCaptionError(null);
+    setCaptionEditorIndex(i);
+  }
+
+  async function saveCaptionDraft() {
+    const trimmed = captionDraft.trim().slice(0, PHOTO_CAPTION_MAX_LENGTH);
+    if (!trimmed) {
+      setDraft(d => {
+        const next = [...(d.photoCaptions || [])];
+        next[captionEditorIndex] = "";
+        return { ...d, photoCaptions: next };
+      });
+      setCaptionEditorIndex(null);
+      return;
+    }
+    setSavingCaption(true);
+    setCaptionError(null);
+    const { approved, reason } = await moderateText(trimmed);
+    setSavingCaption(false);
+    if (!approved) {
+      setCaptionError(reason || "Cette phrase n'est pas autorisée, essayez une autre formulation.");
+      return;
+    }
+    setDraft(d => {
+      const next = [...(d.photoCaptions || [])];
+      next[captionEditorIndex] = trimmed;
+      return { ...d, photoCaptions: next };
+    });
+    setCaptionEditorIndex(null);
+  }
+
+  async function generateCaptionForDraft() {
+    setGeneratingCaption(true);
+    const caption = await generatePhotoCaption(draft.species || pet.species, draft.breed, draft.temper, draft.name);
+    if (caption) setCaptionDraft(caption);
+    setGeneratingCaption(false);
+  }
   async function save() {
     const updated = { ...draft, repro: { ...draft.repro } };
     setPet(updated);
@@ -4635,6 +4693,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         photos: updated.photos,
         video: updated.video,
         repro: updated.repro,
+        photo_captions: updated.photoCaptions || [],
+        show_main_caption: updated.showMainCaption !== false,
       }).eq("id", initialData.id);
       if (error) console.error("update profile error:", error);
       else onProfileUpdated({ ...initialData, ...updated, petName: updated.name });
@@ -4702,7 +4762,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     setRepro("docs", [...draft.repro.docs, ...toAdd]);
     e.target.value = "";
   }
-  function removePhoto(i) { setDraft(d => ({ ...d, photos: d.photos.filter((_, j) => j !== i) })); }
+  function removePhoto(i) { setDraft(d => ({ ...d, photos: d.photos.filter((_, j) => j !== i), photoCaptions: (d.photoCaptions || []).filter((_, j) => j !== i) })); }
   function removeDoc(i) { setRepro("docs", draft.repro.docs.filter((_, j) => j !== i)); }
 
   const inputStyle = { width: "100%", padding: "10px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none", background: "#F9FAFB", boxSizing: "border-box", fontFamily: "inherit" };
@@ -4711,7 +4771,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   // ── EDIT MODE ──────────────────────────────────────────────────────────────
   if (editing) return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #F3F4F6", background: "#fff", flexShrink: 0 }}>
         <button onClick={() => setEditing(false)} style={{ background: "none", border: "none", fontSize: 14, color: "#9CA3AF", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
@@ -4760,6 +4820,30 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoAdd} />
           {draft.photos.length < 6 && (
             <button onClick={() => photoRef.current?.click()} style={{ width: "100%", padding: "11px", borderRadius: 12, border: "2px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 18 }}>📷 Ajouter des photos</button>
+          )}
+
+          {draft.photos.length > 0 && (
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>🏷️ PHRASES D'ACCROCHE (optionnel)</label>
+              {draft.photos.map((p, i) => (
+                <button key={i} onClick={() => openCaptionEditor(i)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                    <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 700 }}>Photo {i + 1}{i === 0 ? " (principale)" : ""}</div>
+                    <div style={{ fontSize: 12.5, color: draft.photoCaptions?.[i] ? "#2D1200" : "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {draft.photoCaptions?.[i] || "+ Ajouter une phrase"}
+                    </div>
+                  </div>
+                </button>
+              ))}
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#4B5563", marginTop: 4, cursor: "pointer" }}>
+                <input type="checkbox" checked={draft.showMainCaption !== false} onChange={e => setDraft(d => ({ ...d, showMainCaption: e.target.checked }))} />
+                Afficher la phrase sur la photo principale dans Découvrir
+              </label>
+            </div>
           )}
 
           {/* Vidéo */}
@@ -4946,6 +5030,55 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </>}
         </>}
       </div>
+
+      {/* Éditeur de phrase d'accroche pour une photo */}
+      {captionEditorIndex !== null && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "flex-end" }} onClick={() => setCaptionEditorIndex(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Phrase d'accroche — Photo {captionEditorIndex + 1}</div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              {getPhotoCaptionPrompts(draft.species || pet.species).map(p => (
+                <button key={p} onClick={() => setCaptionDraft(p + " ")}
+                  style={{ padding: "7px 12px", borderRadius: 20, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <textarea value={captionDraft} onChange={e => { setCaptionDraft(e.target.value.slice(0, PHOTO_CAPTION_MAX_LENGTH)); setCaptionError(null); }}
+              placeholder="Écrivez votre propre phrase, ou complétez un des prompts ci-dessus…"
+              style={{ ...inputStyle, minHeight: 80, resize: "none", lineHeight: 1.6 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginTop: 6, marginBottom: 14 }}>
+              <span>{countEmojis(captionDraft) > PHOTO_CAPTION_MAX_EMOJIS ? `Max ${PHOTO_CAPTION_MAX_EMOJIS} emojis` : ""}</span>
+              <span>{captionDraft.length}/{PHOTO_CAPTION_MAX_LENGTH}</span>
+            </div>
+
+            {captionError && (
+              <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{captionError}</div>
+            )}
+
+            <button onClick={generateCaptionForDraft} disabled={generatingCaption}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: generatingCaption ? "default" : "pointer", marginBottom: 12 }}>
+              ✨ {generatingCaption ? "Génération..." : "Générer une phrase avec l'IA"}
+            </button>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              {draft.photoCaptions?.[captionEditorIndex] && (
+                <button onClick={() => { setCaptionDraft(""); saveCaptionDraft(); }} disabled={savingCaption}
+                  style={{ padding: "14px 16px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", color: "#9CA3AF", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                  Retirer
+                </button>
+              )}
+              <button onClick={saveCaptionDraft} disabled={savingCaption}
+                style={{ flex: 1, padding: "14px", borderRadius: 14, border: "none", background: savingCaption ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: savingCaption ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 14, cursor: savingCaption ? "default" : "pointer" }}>
+                {savingCaption ? "Vérification..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -6602,7 +6735,7 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
                     <>
                       <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       {i === 0 && <div style={{ position: "absolute", bottom: 4, left: 4, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6 }}>PRINCIPALE</div>}
-                      <button onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, photos: f.photos.filter((_, j) => j !== i) })); }}
+                      <button onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, photos: f.photos.filter((_, j) => j !== i), photoCaptions: f.photoCaptions.filter((_, j) => j !== i) })); }}
                         style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
                     </>
                   ) : (
@@ -6855,7 +6988,7 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
             <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Phrase d'accroche — Photo {captionEditorIndex + 1}</div>
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-              {PHOTO_CAPTION_PROMPTS.map(p => (
+              {getPhotoCaptionPrompts(form.species).map(p => (
                 <button key={p} onClick={() => setCaptionDraft(p + " ")}
                   style={{ padding: "7px 12px", borderRadius: 20, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                   {p}
