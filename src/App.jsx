@@ -218,6 +218,17 @@ function EnergyDots({ level }) {
   );
 }
 
+// Variante "5 pattes" du niveau d'énergie, utilisée dans Découvrir uniquement.
+function EnergyPaws({ level }) {
+  return (
+    <div style={{ display: "flex", gap: 3 }}>
+      {[1,2,3,4,5].map(i => (
+        <span key={i} style={{ fontSize: 13, opacity: i <= level ? 1 : 0.25, filter: i <= level ? "none" : "grayscale(1)" }}>🐾</span>
+      ))}
+    </div>
+  );
+}
+
 function Badge({ children, color = "#FAF0EB", text = "#8B3D28" }) {
   return (
     <span style={{ background: color, color: text, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-block" }}>
@@ -1498,7 +1509,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
               <span>↓</span><span>Glissez vers le bas pour lire le profil complet</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
+              <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{formatAge(profile.age)} {profile.gender === "F" ? "♀" : "♂"}</span></div>
               {isProfileOnline(profile) && (
                 <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#22C55E", fontWeight: 700, flexShrink: 0 }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E", display: "inline-block" }} />
@@ -1514,7 +1525,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
               <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>ÉNERGIE</span>
-              <EnergyDots level={profile.energy} />
+              <EnergyPaws level={profile.energy} />
             </div>
 
             <div style={{ height: 1, background: "rgba(0,0,0,.06)", marginBottom: 14 }} />
@@ -2967,7 +2978,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{p.name}</span>
-                    <span style={{ fontSize: 13, color: "#6B7280" }}>{p.age} {p.gender === "F" ? "♀" : "♂"}</span>
+                    <span style={{ fontSize: 13, color: "#6B7280" }}>{formatAge(p.age)} {p.gender === "F" ? "♀" : "♂"}</span>
                   </div>
                   <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 6 }}>{p.breed} · {p.distance}</div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -3115,7 +3126,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
               </div>
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>{selected.name}</div>
-                <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selected.breed} · {selected.age}</div>
+                <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selected.breed} · {formatAge(selected.age)}</div>
                 <div style={{ fontSize: 12, color: "#9CA3AF" }}>Propriétaire : {selected.owner}</div>
               </div>
             </div>
@@ -3198,7 +3209,7 @@ function ReproScreen({ isPremium = false, onPremium = () => {}, userProfile = nu
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
             <div style={{ width: 100, height: 100, borderRadius: "50%", background: selectedRequest.profile.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, margin: "0 auto 16px" }}>{selectedRequest.profile.emoji}</div>
-            <div style={{ textAlign: "center", fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{selectedRequest.profile.name}, {selectedRequest.profile.age} {selectedRequest.profile.gender === "F" ? "♀" : "♂"}</div>
+            <div style={{ textAlign: "center", fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{selectedRequest.profile.name}, {formatAge(selectedRequest.profile.age)} {selectedRequest.profile.gender === "F" ? "♀" : "♂"}</div>
             <div style={{ textAlign: "center", fontSize: 14, color: "#9CA3AF", marginBottom: 6 }}>{selectedRequest.profile.breed} · {selectedRequest.profile.distance}</div>
             <div style={{ textAlign: "center", fontSize: 12, color: "#9CA3AF", marginBottom: 16 }}>Propriétaire : {selectedRequest.profile.owner}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 16 }}>
@@ -4386,7 +4397,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
                   <button onClick={() => setShowMatchProfile(false)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,.9)", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer" }}>✕</button>
                 </div>
                 <div style={{ padding: "18px 20px 32px" }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{matchProfile.name}, {matchProfile.age} {matchProfile.gender === "F" ? "♀" : "♂"}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200" }}>{matchProfile.name}, {formatAge(matchProfile.age)} {matchProfile.gender === "F" ? "♀" : "♂"}</div>
                   <div style={{ fontSize: 14, color: "#9CA3AF", marginBottom: 12 }}>{matchProfile.breed}</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
                     {(matchProfile.temper || []).map(t => (
@@ -5415,7 +5426,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       )}
 
       <div style={{ padding: "14px 20px 24px" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{pet.name} <span style={{ fontSize: 16, color: "#6B7280", fontWeight: 400 }}>{pet.age} {pet.gender === "M" ? "♂" : "♀"}</span></div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{pet.name} <span style={{ fontSize: 16, color: "#6B7280", fontWeight: 400 }}>{formatAge(pet.age)} {pet.gender === "M" ? "♂" : "♀"}</span></div>
         <div style={{ fontSize: 14, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{pet.breed}</div>
         {pet.bio && <p style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.6, marginBottom: 12 }}>{pet.bio}</p>}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
@@ -5530,23 +5541,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               {!isPremium && <span style={{ fontSize: 11 }}>👑</span>}
             </div>
             <div style={{ filter: isPremium ? "none" : "blur(5px)", pointerEvents: isPremium ? "auto" : "none" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>65%</div>
-                  <div style={{ fontSize: 10, color: "#9CA3AF" }}>Taux de match</div>
-                </div>
-                <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>47</div>
-                  <div style={{ fontSize: 10, color: "#9CA3AF" }}>Vues cette semaine</div>
-                </div>
-              </div>
-              <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
-                <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Race la plus intéressée</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>🐕 Golden Retriever</div>
-              </div>
-              <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
-                <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Jour le plus actif</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>📅 Dimanche</div>
+              <div style={{ background: "#fff", borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
+                <div style={{ fontSize: 24, marginBottom: 6 }}>📊</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200", marginBottom: 4 }}>Vos statistiques arrivent bientôt</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF" }}>Taux de match, vues de profil, races les plus intéressées... en préparation.</div>
               </div>
             </div>
             {!isPremium && (
@@ -5701,7 +5699,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   </div>
                   <div style={{ padding: "18px 20px 32px" }}>
                     <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>
-                      {selectedLike.name}{fullProfile.age ? ` · ${fullProfile.age}` : ""}{fullProfile.gender ? ` ${fullProfile.gender === "F" ? "♀" : "♂"}` : ""}
+                      {selectedLike.name}{fullProfile.age ? ` · ${formatAge(fullProfile.age)}` : ""}{fullProfile.gender ? ` ${fullProfile.gender === "F" ? "♀" : "♂"}` : ""}
                     </div>
                     <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selectedLike.breed}</div>
                     <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 12 }}>A liké {pet.name} · {selectedLike.time}</div>
@@ -5823,7 +5821,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   return (
                     <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
                       <div style={{ fontSize: 32, marginBottom: 8 }}>💝</div>
-                      <div style={{ fontSize: 14 }}>{treatsReceived.length === 0 ? "Pas encore de friandise reçue" : "Rien dans cette catégorie pour l'instant"}</div>
+                      <div style={{ fontSize: 14 }}>{treatsReceived.length === 0 ? "Pas encore de souvenirs reçus" : "Rien dans cette catégorie pour l'instant"}</div>
                     </div>
                   );
                 }
@@ -7192,7 +7190,7 @@ function Onboarding({ onComplete, initialOwner = null, onBack = null }) {
               </div>
               <div style={{ padding: "16px" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>
-                  {form.petName || "—"} <span style={{ fontSize: 15, color: "#6B7280", fontWeight: 400 }}>{form.age} {form.gender === "M" ? "♂" : form.gender === "F" ? "♀" : ""}</span>
+                  {form.petName || "—"} <span style={{ fontSize: 15, color: "#6B7280", fontWeight: 400 }}>{formatAge(form.age)} {form.gender === "M" ? "♂" : form.gender === "F" ? "♀" : ""}</span>
                 </div>
                 <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 10 }}>{form.breed || "Race non précisée"}</div>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
@@ -7720,6 +7718,14 @@ function isProfileOnline(profile) {
 }
 
 // Formatage relatif simple ("À l'instant", "12:34", "Hier", "Lun.")
+// Ajoute automatiquement "ans" si seul un chiffre a été saisi pour l'âge
+// (ex: "3" → "3 ans"), sans toucher aux saisies déjà formulées ("3 mois", "2 ans et demi"...).
+function formatAge(age) {
+  if (!age) return age;
+  const trimmed = String(age).trim();
+  return /^\d+([.,]\d+)?$/.test(trimmed) ? `${trimmed} ans` : trimmed;
+}
+
 function formatRelativeTime(iso) {
   const date = new Date(iso);
   const now = new Date();
