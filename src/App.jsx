@@ -945,6 +945,23 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     loadDeck().finally(() => setLoadingDeck(false));
   }, [userProfile?.id, userProfile?.species, userProfile?.userId]);
 
+  // Rafraîchit uniquement le statut "en ligne" des profils déjà chargés,
+  // toutes les 30s — sans recharger tout le deck ni changer l'ordre/la
+  // position en cours, juste pour que le badge reste à jour.
+  const deckRef = useRef(deck);
+  deckRef.current = deck;
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const realIds = deckRef.current.filter(p => !p.isDemo).map(p => p.id);
+      if (realIds.length === 0) return;
+      const { data, error } = await supabase.from("profiles").select("id, last_active_at").in("id", realIds);
+      if (error || !data) return;
+      const byId = new Map(data.map(row => [row.id, row.last_active_at]));
+      setDeck(d => d.map(p => byId.has(p.id) ? { ...p, lastActiveAt: byId.get(p.id) } : p));
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   function getProfileDistance(p) {
     // Les profils de démo gardent toujours leur fausse distance, même avec une
     // vraie position activée : leurs coordonnées sont fixes (Paris), donc un
@@ -1482,6 +1499,12 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div><span style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{profile.name}</span><span style={{ fontSize: 15, color: "#6B7280", marginLeft: 8 }}>{profile.age} {profile.gender === "F" ? "♀" : "♂"}</span></div>
+              {isProfileOnline(profile) && (
+                <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#22C55E", fontWeight: 700, flexShrink: 0 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E", display: "inline-block" }} />
+                  En ligne
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{profile.breed} · {profile.distance}</div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
@@ -3957,6 +3980,21 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
   const [showMatchProfile, setShowMatchProfile] = useState(false);
   const [matchProfile, setMatchProfile] = useState(null);
   const [loadingMatchProfile, setLoadingMatchProfile] = useState(false);
+  const [onlineStatus, setOnlineStatus] = useState({ online: false, lastActiveAt: null });
+
+  // Rafraîchit le statut en ligne du match toutes les 30s pendant que la
+  // conversation est ouverte.
+  useEffect(() => {
+    if (!match?.otherUserId) return;
+    let active = true;
+    async function refresh() {
+      const status = await fetchOnlineStatus(match.otherUserId);
+      if (active) setOnlineStatus(status);
+    }
+    refresh();
+    const interval = setInterval(refresh, 30000);
+    return () => { active = false; clearInterval(interval); };
+  }, [match?.otherUserId]);
 
   async function openMatchProfile() {
     if (!match?.otherUserId) return;
@@ -4184,7 +4222,18 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
           <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#B25F46,#C97A5E)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
             {match?.photo ? <img src={match.photo} alt={match.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : match?.emoji}
           </div>
-          <div><div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div><div style={{ fontSize: 12, color: "#9CA3AF" }}>{match?.owner}</div></div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#2D1200" }}>{match?.name}</div>
+            <div style={{ fontSize: 12, color: "#9CA3AF", display: "flex", alignItems: "center", gap: 5 }}>
+              {match?.owner}
+              {onlineStatus.online && (
+                <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#22C55E", fontWeight: 600 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22C55E", display: "inline-block" }} />
+                  En ligne
+                </span>
+              )}
+            </div>
+          </div>
         </button>
       </div>
 
@@ -7295,6 +7344,7 @@ function profileFromRow(row) {
     bio: row.bio, photos: row.photos || [], video: row.video || null,
     photoCaptions: row.photo_captions || [], showMainCaption: row.show_main_caption !== false,
     location: (row.lat && row.lng) ? { lat: row.lat, lng: row.lng } : null,
+    lastActiveAt: row.last_active_at || null,
     repro: row.repro || { active: false, price: "", priceNegotiable: false, availableFrom: "", availableTo: "", pedigree: false, geneticTest: false, reproDesc: "", docs: [] },
     isPremium: row.is_premium || false,
     providerInterest: row.provider_interest || null,
@@ -7642,6 +7692,31 @@ async function fetchProfileForUser(userId) {
   const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle();
   if (error) { console.error("fetchProfileForUser error:", error); return null; }
   return data ? profileFromRow(data) : null;
+}
+
+// ── STATUT EN LIGNE ───────────────────────────────────────────────────────
+// "En ligne" = dernière activité il y a moins de 2 minutes. Pas un vrai
+// système de présence temps réel (pas de websocket dédié) — juste un
+// horodatage rafraîchi régulièrement pendant que l'app est ouverte, ce qui
+// suffit largement pour l'usage attendu ici.
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+
+async function touchLastActive(userProfile) {
+  if (!userProfile?.id) return;
+  await supabase.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", userProfile.id);
+}
+
+async function fetchOnlineStatus(userId) {
+  const { data, error } = await supabase.from("profiles").select("last_active_at").eq("user_id", userId).maybeSingle();
+  if (error || !data?.last_active_at) return { online: false, lastActiveAt: null };
+  const online = (Date.now() - new Date(data.last_active_at).getTime()) < ONLINE_THRESHOLD_MS;
+  return { online, lastActiveAt: data.last_active_at };
+}
+
+// Version synchrone, sans appel réseau, pour les profils déjà chargés en
+// mémoire (deck de Découvrir) — la donnée est déjà là via profileFromRow.
+function isProfileOnline(profile) {
+  return !!profile?.lastActiveAt && (Date.now() - new Date(profile.lastActiveAt).getTime()) < ONLINE_THRESHOLD_MS;
 }
 
 // Formatage relatif simple ("À l'instant", "12:34", "Hier", "Lun.")
@@ -8266,6 +8341,15 @@ export default function Miloute() {
   const [shopSuccessBundleLabel, setShopSuccessBundleLabel] = useState(null);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
+
+  // Heartbeat "statut en ligne" : signale sa propre activité toutes les 60s
+  // pendant que l'app est ouverte, pour que les autres voient "En ligne".
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    touchLastActive(userProfile);
+    const interval = setInterval(() => touchLastActive(userProfile), 60000);
+    return () => clearInterval(interval);
+  }, [userProfile?.id]);
 
   // Badge de notification sur l'icône Profil : friandises reçues pas encore vues.
   useEffect(() => {
