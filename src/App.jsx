@@ -9140,8 +9140,8 @@ export default function Miloute() {
               <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Achat confirmé !</div>
               <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 24, lineHeight: 1.6 }}>
                 {shopSuccessBundleLabel
-                  ? `Un ${shopSuccessBundleLabel} a été ajouté à votre compte`
-                  : `${shopSuccessCategory === "food" ? "Une friandise" : shopSuccessCategory === "gift" ? "Un cadeau" : shopSuccessCategory === "comfort" ? "Un accessoire" : "Votre achat"} a été ajouté${shopSuccessCategory === "food" ? "e" : ""} à votre compte`}. Vous pouvez le/la retrouver dans 🎁 Mon inventaire, dans la Boutique.
+                  ? `Un ${shopSuccessBundleLabel} a été ajouté à votre compte. Vous pouvez le retrouver dans 🎁 Mon inventaire, dans la Boutique.`
+                  : `${shopSuccessCategory === "food" ? "Une friandise" : shopSuccessCategory === "gift" ? "Un cadeau" : shopSuccessCategory === "comfort" ? "Un accessoire" : "Votre achat"} a été ajouté${shopSuccessCategory === "food" ? "e" : ""} à votre compte. Vous pouvez le/la retrouver dans 🎁 Mon inventaire, dans la Boutique.`}
               </div>
               <button onClick={() => setShowShopSuccess(false)}
                 style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
