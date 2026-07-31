@@ -5251,34 +5251,54 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     if (caption) setCaptionDraft(caption);
     setGeneratingCaption(false);
   }
+  const [saveError, setSaveError] = useState(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
   async function save() {
     const updated = { ...draft, repro: { ...draft.repro } };
+
+    if (!initialData?.id) {
+      // Pas de compte associé (ne devrait pas arriver) — on garde l'ancien
+      // comportement local uniquement, par sécurité.
+      setPet(updated);
+      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      return;
+    }
+
+    setSaveError(null);
+    setSavingProfile(true);
+    const { error } = await supabase.from("profiles").update({
+      pet_name: updated.name,
+      breed: updated.breed,
+      age: updated.age,
+      gender: updated.gender,
+      energy: updated.energy,
+      vaccinated: updated.vaccinated,
+      sterilized: updated.sterilized,
+      temper: updated.temper,
+      seeking: updated.seeking,
+      bio: updated.bio,
+      photos: updated.photos,
+      video: updated.video,
+      repro: updated.repro,
+      photo_captions: updated.photoCaptions || [],
+      show_main_caption: updated.showMainCaption !== false,
+    }).eq("id", initialData.id);
+    setSavingProfile(false);
+
+    if (error) {
+      console.error("update profile error:", error);
+      setSaveError("L'enregistrement a échoué (" + error.message + "). Réessayez.");
+      return; // on reste en mode édition, rien n'est perdu, l'utilisateur peut réessayer
+    }
+
     setPet(updated);
     setEditing(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-
-    if (initialData?.id) {
-      const { error } = await supabase.from("profiles").update({
-        pet_name: updated.name,
-        breed: updated.breed,
-        age: updated.age,
-        gender: updated.gender,
-        energy: updated.energy,
-        vaccinated: updated.vaccinated,
-        sterilized: updated.sterilized,
-        temper: updated.temper,
-        seeking: updated.seeking,
-        bio: updated.bio,
-        photos: updated.photos,
-        video: updated.video,
-        repro: updated.repro,
-        photo_captions: updated.photoCaptions || [],
-        show_main_caption: updated.showMainCaption !== false,
-      }).eq("id", initialData.id);
-      if (error) console.error("update profile error:", error);
-      else onProfileUpdated({ ...initialData, ...updated, petName: updated.name });
-    }
+    onProfileUpdated({ ...initialData, ...updated, petName: updated.name });
   }
   function toggleTemper(t) { setDraft(d => ({ ...d, temper: d.temper.includes(t) ? d.temper.filter(x => x !== t) : d.temper.length < 4 ? [...d.temper, t] : d.temper })); }
   function toggleSeeking(s) { setDraft(d => ({ ...d, seeking: d.seeking.includes(s) ? d.seeking.filter(x => x !== s) : [...d.seeking, s] })); }
@@ -5356,8 +5376,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #F3F4F6", background: "#fff", flexShrink: 0 }}>
         <button onClick={() => setEditing(false)} style={{ background: "none", border: "none", fontSize: 14, color: "#9CA3AF", cursor: "pointer", fontWeight: 600 }}>Annuler</button>
         <span style={{ fontWeight: 800, fontSize: 16, color: "#2D1200" }}>Modifier le profil</span>
-        <button onClick={save} style={{ background: "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 14, padding: "6px 14px", cursor: "pointer" }}>Sauver</button>
+        <button onClick={save} disabled={savingProfile} style={{ background: savingProfile ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: "none", borderRadius: 10, color: savingProfile ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 14, padding: "6px 14px", cursor: savingProfile ? "default" : "pointer" }}>{savingProfile ? "..." : "Sauver"}</button>
       </div>
+
+      {saveError && (
+        <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", padding: "10px 16px", flexShrink: 0 }}>{saveError}</div>
+      )}
 
       {/* Tab switcher */}
       <div style={{ display: "flex", background: "#F9FAFB", padding: "8px 16px", gap: 8, flexShrink: 0, borderBottom: "1px solid #F3F4F6" }}>
@@ -5710,7 +5734,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         </div>
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 5, letterSpacing: 1 }}>ÉNERGIE</div>
-          <EnergyDots level={pet.energy} />
+          <EnergyPaws level={pet.energy} />
         </div>
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", marginBottom: 5, letterSpacing: 1 }}>CHERCHE</div>
@@ -8642,6 +8666,7 @@ function WelcomeScreen({ onStartEmailSignup, onLoggedIn }) {
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function Miloute() {
   const [onboarded, setOnboarded] = useState(() => loadProfile() !== null);
+  const [photoUploadWarning, setPhotoUploadWarning] = useState(0); // nombre de photos qui ont échoué à l'envoi à l'inscription
   const [unseenTreats, setUnseenTreats] = useState(0);
   const [unseenLikes, setUnseenLikes] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -8887,6 +8912,7 @@ export default function Miloute() {
     // compte = pas de dossier Storage). Maintenant que le compte existe, on les
     // envoie réellement et on récupère leurs vraies URLs publiques.
     const uploadedPhotos = [];
+    let photoUploadFailures = 0;
     for (const p of form.photos) {
       if (p.file) {
         try {
@@ -8894,6 +8920,7 @@ export default function Miloute() {
           uploadedPhotos.push({ url, name: p.name });
         } catch (err) {
           console.error("Échec de l'envoi d'une photo :", err); // on n'annule pas toute l'inscription pour une photo
+          photoUploadFailures++;
         }
       } else if (p.url) {
         uploadedPhotos.push({ url: p.url, name: p.name });
@@ -8936,6 +8963,7 @@ export default function Miloute() {
     setUserProfile(normalized);
     setOnboarded(true);
     saveProfile(normalized); // cache local — utile pour un chargement instantané au prochain lancement
+    if (photoUploadFailures > 0) setPhotoUploadWarning(photoUploadFailures);
   }
 
   function openChat(id) { setChatId(id); setScreen("chat"); }
@@ -9120,6 +9148,23 @@ export default function Miloute() {
               <button onClick={() => setShowShopSuccess(false)}
                 style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
                 Super !
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Avertissement si une ou plusieurs photos n'ont pas pu être envoyées à l'inscription */}
+        {photoUploadWarning > 0 && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", width: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 6 }}>
+                {photoUploadWarning === 1 ? "Une photo n'a pas pu être envoyée" : `${photoUploadWarning} photos n'ont pas pu être envoyées`}
+              </div>
+              <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.5, marginBottom: 20 }}>Votre compte a bien été créé, mais un problème technique a empêché l'envoi de {photoUploadWarning === 1 ? "cette photo" : "ces photos"}. Vous pouvez la/les rajouter depuis « Modifier le profil ».</div>
+              <button onClick={() => setPhotoUploadWarning(0)}
+                style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+                Compris
               </button>
             </div>
           </div>
