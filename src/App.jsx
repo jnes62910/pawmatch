@@ -6031,9 +6031,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     {typeof fullProfile.energy === "number" && (
                       <div style={{ marginBottom: 14 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 4 }}>ÉNERGIE</div>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          {[1,2,3,4,5].map(i => <div key={i} style={{ width: 20, height: 6, borderRadius: 3, background: i <= fullProfile.energy ? "#B25F46" : "#F3F4F6" }} />)}
-                        </div>
+                        <EnergyPaws level={fullProfile.energy} />
                       </div>
                     )}
 
