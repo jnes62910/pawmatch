@@ -5200,6 +5200,30 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       markTreatsSeen(initialData).then(() => { setUnseenTreatsCount(0); onTreatsSeen(); });
     }
   }
+
+  const [showJournalModal, setShowJournalModal] = useState(false);
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [loadingJournal, setLoadingJournal] = useState(false);
+
+  function openJournal() {
+    setShowJournalModal(true);
+    setLoadingJournal(true);
+    fetchJournalEntries(initialData).then(entries => {
+      setJournalEntries(entries);
+      setLoadingJournal(false);
+    });
+  }
+
+  const [advancedStats, setAdvancedStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  useEffect(() => {
+    if (!isPremium || !initialData?.id) { setLoadingStats(false); return; }
+    setLoadingStats(true);
+    fetchAdvancedStats(initialData).then(stats => {
+      setAdvancedStats(stats);
+      setLoadingStats(false);
+    });
+  }, [isPremium, initialData?.id]);
   const photoRef = useRef(null);
   const videoRef = useRef(null);
   const docRef = useRef(null);
@@ -5726,6 +5750,23 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       <div style={{ padding: "14px 20px 24px" }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: "#2D1200" }}>{pet.name} <span style={{ fontSize: 16, color: "#6B7280", fontWeight: 400 }}>{formatAge(pet.age)} {pet.gender === "M" ? "♂" : "♀"}</span></div>
         <div style={{ fontSize: 14, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{pet.breed}</div>
+
+        {/* Heartbeat de l'animal — un signal affectif doux, jamais pénalisant */}
+        {(() => {
+          const tier = getHeartbeatTier(initialData?.lastActiveAt);
+          const hb = HEARTBEAT_INFO[tier];
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#FAF0EB", borderRadius: 14, padding: "10px 14px", marginBottom: 14 }}>
+              <style>{`@keyframes heartbeatPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.22); } }`}</style>
+              <span style={{ fontSize: 24, display: "inline-block", animation: `heartbeatPulse ${hb.speed} ease-in-out infinite` }}>{hb.icon}</span>
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: hb.color }}>{hb.label}</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF" }}>{hb.text}</div>
+              </div>
+            </div>
+          );
+        })()}
+
         {pet.bio && <p style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.6, marginBottom: 12 }}>{pet.bio}</p>}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
           {pet.temper.map(t => <Badge key={t}>{t}</Badge>)}
@@ -5831,6 +5872,17 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             </button>
           )}
 
+          {/* Journal de Bord */}
+          <button onClick={openJournal}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "12px", marginBottom: 14, border: "none", cursor: "pointer", textAlign: "left" }}>
+            <span style={{ fontSize: 22 }}>📖</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>Mon Journal de Bord</div>
+              <div style={{ fontSize: 11, color: "#9CA3AF" }}>Vos matchs, cadeaux et moments partagés</div>
+            </div>
+            <span style={{ fontSize: 13, color: "#9CA3AF" }}>›</span>
+          </button>
+
           <div style={{ height: 1, background: "#E5E7EB", marginBottom: 14 }} />
 
           <div style={{ position: "relative" }}>
@@ -5839,11 +5891,36 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               {!isPremium && <span style={{ fontSize: 11 }}>👑</span>}
             </div>
             <div style={{ filter: isPremium ? "none" : "blur(5px)", pointerEvents: isPremium ? "auto" : "none" }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
-                <div style={{ fontSize: 24, marginBottom: 6 }}>📊</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200", marginBottom: 4 }}>Vos statistiques arrivent bientôt</div>
-                <div style={{ fontSize: 11, color: "#9CA3AF" }}>Taux de match, vues de profil, races les plus intéressées... en préparation.</div>
-              </div>
+              {loadingStats ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}><PawLogo size={24} color="#E8B89F" /></div>
+              ) : !advancedStats || (advancedStats.matchCount === 0 && advancedStats.likesReceived === 0 && advancedStats.treatsReceived === 0) ? (
+                <div style={{ background: "#fff", borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
+                  <div style={{ fontSize: 24, marginBottom: 6 }}>📊</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200", marginBottom: 4 }}>Pas encore assez de données</div>
+                  <div style={{ fontSize: 11, color: "#9CA3AF" }}>Vos statistiques apparaîtront ici dès vos premiers swipes, matchs et cadeaux.</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                    <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>{advancedStats.matchRate !== null ? `${advancedStats.matchRate}%` : "—"}</div>
+                      <div style={{ fontSize: 10, color: "#9CA3AF" }}>Taux de match</div>
+                    </div>
+                    <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#8B3D28" }}>{advancedStats.likesReceived}</div>
+                      <div style={{ fontSize: 10, color: "#9CA3AF" }}>Likes reçus au total</div>
+                    </div>
+                  </div>
+                  <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Race la plus fréquente parmi vos matchs</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{advancedStats.topBreed ? `${pet.species === "cat" ? "🐱" : "🐕"} ${advancedStats.topBreed}` : "Pas encore de match"}</div>
+                  </div>
+                  <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Cadeaux reçus au total</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>🎁 {advancedStats.treatsReceived}</div>
+                  </div>
+                </>
+              )}
             </div>
             {!isPremium && (
               <button onClick={() => onPremium()}
@@ -6164,6 +6241,38 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 );
               })()}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modale Journal de Bord */}
+      {showJournalModal && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setShowJournalModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200", marginBottom: 4 }}>📖 Mon Journal de Bord</div>
+            <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 18 }}>Tous vos moments sur Miloute, dans l'ordre</div>
+
+            {loadingJournal ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><PawLogo size={28} color="#E8B89F" /></div>
+            ) : journalEntries.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "#9CA3AF" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
+                <div style={{ fontSize: 14 }}>Votre histoire commence tout juste — revenez ici au fil de vos matchs et de vos moments partagés.</div>
+              </div>
+            ) : (
+              <div style={{ position: "relative", paddingLeft: 22 }}>
+                <div style={{ position: "absolute", left: 9, top: 6, bottom: 6, width: 2, background: "#F3E0D3" }} />
+                {journalEntries.map(entry => (
+                  <div key={entry.id} style={{ position: "relative", marginBottom: 18 }}>
+                    <div style={{ position: "absolute", left: -22, top: 0, width: 20, height: 20, borderRadius: "50%", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, border: "2px solid #fff", boxShadow: "0 0 0 2px #F3E0D3" }}>{entry.icon}</div>
+                    <div style={{ fontSize: 13.5, color: "#2D1200", fontWeight: 600 }}>{entry.text}</div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>{formatRelativeTime(entry.date)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -8013,6 +8122,67 @@ function isProfileOnline(profile) {
   return !!profile?.lastActiveAt && (Date.now() - new Date(profile.lastActiveAt).getTime()) < ONLINE_THRESHOLD_MS;
 }
 
+// ── HEARTBEAT DE L'ANIMAL ─────────────────────────────────────────────────
+// Réutilise last_active_at (déjà suivi pour le statut en ligne) plutôt que
+// de créer un nouveau système : un simple signal affectif basé sur la
+// dernière fois où le propriétaire est venu sur l'app. Jamais pénalisant —
+// juste un petit rappel tendre, pas de dégradation réelle du profil.
+function getHeartbeatTier(lastActiveAt) {
+  if (!lastActiveAt) return "sleepy";
+  const days = (Date.now() - new Date(lastActiveAt).getTime()) / (24 * 60 * 60 * 1000);
+  if (days < 1) return "vibrant";
+  if (days < 3) return "lonely";
+  return "sleepy";
+}
+const HEARTBEAT_INFO = {
+  vibrant: { icon: "💓", label: "En pleine forme", color: "#DC2626", speed: "1s", text: "Votre compagnon est ravi de vous voir aujourd'hui !" },
+  lonely: { icon: "💛", label: "Un peu esseulé", color: "#D4A017", speed: "2s", text: "Ça fait un petit moment... il commence à s'ennuyer un peu." },
+  sleepy: { icon: "💤", label: "Il s'ennuie de vous", color: "#9CA3AF", speed: "3.2s", text: "Il serait tellement content d'une petite visite." },
+};
+
+// ── MOMENTS MAGIQUES ──────────────────────────────────────────────────────
+// Petite récompense surprise, gratuite, jamais liée à un achat réel.
+// Garde-fous volontaires : jamais plus d'une fois tous les 3 jours (écart
+// mini côté serveur, impossible à contourner en local), et une chance
+// modeste par jour au-delà de cet écart — en moyenne 1 à 2 fois par
+// semaine, jamais plus. Toujours un vrai article gratuit à la clé, jamais
+// un mécanisme de pure chance sans contrepartie.
+const MAGIC_MOMENT_MIN_GAP_DAYS = 3;
+const MAGIC_MOMENT_DAILY_CHANCE = 0.25;
+const MAGIC_MOMENT_POOL = ["bone", "fish", "croc_dog", "croc_cat", "milk", "tunapate", "bouquet", "plush", "collar", "bacon", "broccoli", "chicken"];
+
+async function checkMagicMoment(userProfile) {
+  if (!userProfile?.id) return null;
+
+  // Un seul tirage par jour et par appareil, même si l'app est relancée
+  // plusieurs fois dans la journée.
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const localKey = `miloute_magic_checked_${userProfile.id}_${todayKey}`;
+  try { if (localStorage.getItem(localKey)) return null; } catch {}
+  try { localStorage.setItem(localKey, "1"); } catch {}
+
+  const { data, error } = await supabase.from("profiles").select("last_magic_moment_at, gift_inventory").eq("id", userProfile.id).maybeSingle();
+  if (error || !data) return null;
+
+  const lastAt = data.last_magic_moment_at ? new Date(data.last_magic_moment_at).getTime() : null;
+  const daysSince = lastAt ? (Date.now() - lastAt) / (24 * 60 * 60 * 1000) : Infinity;
+  if (daysSince < MAGIC_MOMENT_MIN_GAP_DAYS) return null;
+  if (Math.random() > MAGIC_MOMENT_DAILY_CHANCE) return null;
+
+  const giftId = MAGIC_MOMENT_POOL[Math.floor(Math.random() * MAGIC_MOMENT_POOL.length)];
+  const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
+  const currentInventory = data.gift_inventory || {};
+  const newInventory = { ...currentInventory, [giftId]: (currentInventory[giftId] || 0) + 1 };
+
+  const { error: updateError } = await supabase.from("profiles").update({
+    gift_inventory: newInventory,
+    last_magic_moment_at: new Date().toISOString(),
+  }).eq("id", userProfile.id);
+  if (updateError) return null;
+
+  return { giftId, emoji: giftInfo?.emoji || "🎁", label: giftInfo?.label || "Cadeau", giftInventory: newInventory };
+}
+
 // Formatage relatif simple ("À l'instant", "12:34", "Hier", "Lun.")
 // Ajoute automatiquement "ans" si seul un chiffre a été saisi pour l'âge
 // (ex: "3" → "3 ans"), sans toucher aux saisies déjà formulées ("3 mois", "2 ans et demi"...).
@@ -8490,6 +8660,80 @@ async function unmatchUser(matchId) {
   if (error) throw new Error(error.message);
 }
 
+// ── JOURNAL DE BORD ───────────────────────────────────────────────────────
+// Fusionne 3 sources déjà existantes (matchs, cadeaux reçus, posts publiés)
+// en une seule chronologie — pas de nouvelle table, juste un assemblage.
+async function fetchJournalEntries(userProfile) {
+  if (!userProfile?.userId) return [];
+
+  const [{ data: matchRows }, { data: treatRows }, { data: postRows }] = await Promise.all([
+    supabase.from("matches").select("id, created_at, profile_a, profile_b")
+      .or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`),
+    supabase.from("treats").select("id, created_at, sender_profile_id, gift_id")
+      .eq("target_user_id", userProfile.userId),
+    supabase.from("community_posts").select("id, created_at, text")
+      .eq("user_id", userProfile.userId),
+  ]);
+
+  const otherProfileIds = [...new Set([
+    ...(matchRows || []).map(m => (m.profile_a === userProfile.id ? m.profile_b : m.profile_a)),
+    ...(treatRows || []).map(t => t.sender_profile_id),
+  ])].filter(Boolean);
+  const { data: otherProfiles } = otherProfileIds.length > 0
+    ? await supabase.from("profiles").select("id, pet_name, species").in("id", otherProfileIds)
+    : { data: [] };
+  const profileById = Object.fromEntries((otherProfiles || []).map(p => [p.id, p]));
+
+  const entries = [
+    ...(matchRows || []).map(m => {
+      const otherId = m.profile_a === userProfile.id ? m.profile_b : m.profile_a;
+      const other = profileById[otherId];
+      return { id: `match-${m.id}`, date: m.created_at, icon: other?.species === "cat" ? "🐱" : "🐕", text: `C'est un match avec ${other?.pet_name || "un compagnon"} !` };
+    }),
+    ...(treatRows || []).map(t => {
+      const sender = profileById[t.sender_profile_id];
+      const giftInfo = GIFT_CATALOG.find(g => g.id === t.gift_id);
+      return { id: `treat-${t.id}`, date: t.created_at, icon: giftInfo?.emoji || "🎁", text: `${sender?.pet_name || "Un compagnon"} vous a envoyé ${giftInfo?.label || "un cadeau"}` };
+    }),
+    ...(postRows || []).map(p => ({ id: `post-${p.id}`, date: p.created_at, icon: "📸", text: "Vous avez publié dans la Communauté" })),
+  ];
+
+  return entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+// ── STATISTIQUES AVANCÉES (Premium) ──────────────────────────────────────
+// Calculées à partir de vraies données (swipes, matchs, cadeaux) — pas de
+// "vues de profil" ici, cette donnée n'est pas tracée par l'app aujourd'hui,
+// on ne l'invente pas.
+async function fetchAdvancedStats(userProfile) {
+  if (!userProfile?.userId || !userProfile?.id) return null;
+
+  const [likesSentRes, likesReceivedRes, matchRowsRes, treatsRes] = await Promise.all([
+    supabase.from("swipes").select("id", { count: "exact", head: true }).eq("swiper_user_id", userProfile.userId).eq("direction", "like"),
+    supabase.from("swipes").select("id", { count: "exact", head: true }).eq("target_profile_id", userProfile.id).eq("direction", "like"),
+    supabase.from("matches").select("profile_a, profile_b").or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`),
+    supabase.from("treats").select("id", { count: "exact", head: true }).eq("target_user_id", userProfile.userId),
+  ]);
+
+  const likesSent = likesSentRes.count || 0;
+  const likesReceived = likesReceivedRes.count || 0;
+  const matchRows = matchRowsRes.data || [];
+  const treatsReceived = treatsRes.count || 0;
+  const matchRate = likesSent > 0 ? Math.round((matchRows.length / likesSent) * 100) : null;
+
+  let topBreed = null;
+  if (matchRows.length > 0) {
+    const otherIds = matchRows.map(m => m.profile_a === userProfile.id ? m.profile_b : m.profile_a);
+    const { data: matchProfiles } = await supabase.from("profiles").select("id, breed").in("id", otherIds);
+    const counts = {};
+    (matchProfiles || []).forEach(p => { if (p.breed) counts[p.breed] = (counts[p.breed] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) topBreed = sorted[0][0];
+  }
+
+  return { matchRate, likesReceived, matchCount: matchRows.length, treatsReceived, topBreed };
+}
+
 async function fetchMatchesForUser(userProfile) {
   if (!userProfile?.userId) return [];
   const { data: matchRows, error } = await supabase
@@ -8690,13 +8934,34 @@ export default function Miloute() {
   const [shopSuccessBundleLabel, setShopSuccessBundleLabel] = useState(null);
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
+  const [magicMomentReward, setMagicMomentReward] = useState(null);
+
+  // Moment Magique : une fois par session/jour, tirage discret d'une petite
+  // récompense surprise gratuite (voir garde-fous dans checkMagicMoment).
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    checkMagicMoment(userProfile).then(reward => {
+      if (reward) {
+        setMagicMomentReward(reward);
+        setUserProfile(u => u ? { ...u, giftInventory: reward.giftInventory } : u);
+        playGiftFeedback(loadSoundMode(), loadSoundPalette(), userProfile.species);
+      }
+    });
+  }, [userProfile?.id]);
 
   // Heartbeat "statut en ligne" : signale sa propre activité toutes les 60s
   // pendant que l'app est ouverte, pour que les autres voient "En ligne".
+  // Met aussi à jour le profil local (pas seulement la base) pour que le
+  // Heartbeat de l'animal, affiché dans Profil, reflète l'activité en cours.
   useEffect(() => {
     if (!userProfile?.id) return;
-    touchLastActive(userProfile);
-    const interval = setInterval(() => touchLastActive(userProfile), 60000);
+    function beat() {
+      const now = new Date().toISOString();
+      touchLastActive(userProfile);
+      setUserProfile(u => u ? { ...u, lastActiveAt: now } : u);
+    }
+    beat();
+    const interval = setInterval(beat, 60000);
     return () => clearInterval(interval);
   }, [userProfile?.id]);
 
@@ -9163,6 +9428,25 @@ export default function Miloute() {
               <button onClick={() => setPhotoUploadWarning(0)}
                 style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
                 Compris
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Célébration d'un Moment Magique */}
+        {magicMomentReward && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(45,18,0,.55)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div style={{ background: "#fff", borderRadius: 24, padding: "30px 24px", width: "100%", textAlign: "center" }}>
+              <div style={{ fontSize: 44, marginBottom: 10 }}>✨</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 6 }}>Moment Magique !</div>
+              <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.5, marginBottom: 18 }}>Comme ça, sans raison — juste pour vous faire sourire aujourd'hui.</div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "#FAF0EB", borderRadius: 16, padding: "12px 20px", marginBottom: 22 }}>
+                <span style={{ fontSize: 28 }}>{magicMomentReward.emoji}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#8B3D28" }}>{magicMomentReward.label} offert(e) !</span>
+              </div>
+              <button onClick={() => setMagicMomentReward(null)}
+                style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+                Merci ! 🐾
               </button>
             </div>
           </div>
