@@ -8609,7 +8609,12 @@ export default function Miloute() {
 
     if (insertError) throw new Error(insertError.message);
 
-    const normalized = { ...form, name: form.petName, photos: uploadedPhotos, id: insertedRow.id, userId: insertedRow.user_id };
+    // Important : on reconstruit le profil local depuis la vraie ligne insérée
+    // (via profileFromRow, le mappeur canonique utilisé partout ailleurs dans
+    // l'app), pas depuis le formulaire brut d'onboarding — sinon tout ce qui
+    // est calculé/ajouté côté serveur à l'insertion (cadeaux de bienvenue,
+    // quêtes, etc.) manque dans l'app tant qu'on n'a pas rechargé/reconnecté.
+    const normalized = profileFromRow(insertedRow);
     setUserProfile(normalized);
     setOnboarded(true);
     saveProfile(normalized); // cache local — utile pour un chargement instantané au prochain lancement
