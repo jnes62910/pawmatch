@@ -3340,9 +3340,94 @@ const INIT_COMMENTS = {
   ],
 };
 
-function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUpdated = () => {} }) {
+function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUpdated = () => {}, onNav = () => {}, onGoToShop = () => {} }) {
   const [breedFilter, setBreedFilter] = useState("all");
   const [showBreedMenu, setShowBreedMenu] = useState(false);
+  const [radiusFilter, setRadiusFilter] = useState(100); // km, 100 = illimité
+  const [showRadiusSheet, setShowRadiusSheet] = useState(false);
+  const [selectedPostAuthor, setSelectedPostAuthor] = useState(null); // le post dont on regarde l'auteur
+  const [authorProfile, setAuthorProfile] = useState(null);
+  const [loadingAuthorProfile, setLoadingAuthorProfile] = useState(false);
+  const [authorPhotoIdx, setAuthorPhotoIdx] = useState(0);
+  const [likingAuthorId, setLikingAuthorId] = useState(null);
+  const [justMatchedWithAuthor, setJustMatchedWithAuthor] = useState(null);
+  const [showAuthorGiftPicker, setShowAuthorGiftPicker] = useState(false);
+  const [sendingAuthorGift, setSendingAuthorGift] = useState(false);
+  const [authorGiftMessage, setAuthorGiftMessage] = useState("");
+  const [authorGiftToast, setAuthorGiftToast] = useState(null);
+
+  function openPostAuthorProfile(post) {
+    if (post.isDemo) return; // profils de démo : rien de réel à afficher/liker
+    setAuthorPhotoIdx(0);
+    setSelectedPostAuthor(post);
+  }
+
+  useEffect(() => {
+    if (!selectedPostAuthor) { setAuthorProfile(null); return; }
+    let active = true;
+    setLoadingAuthorProfile(true);
+    fetchProfileForUser(selectedPostAuthor.userId).then(profile => {
+      if (active) { setAuthorProfile(profile); setLoadingAuthorProfile(false); }
+    });
+    return () => { active = false; };
+  }, [selectedPostAuthor]);
+
+  async function handleLikeAuthor() {
+    if (!authorProfile) return;
+    setLikingAuthorId(authorProfile.id);
+    try {
+      const { matched, questResult } = await likeProfileAndCheckMatch(userProfile, authorProfile);
+      if (questResult) onProfileUpdated({ ...userProfile, giftInventory: questResult.giftInventory, questsCompleted: questResult.questsCompleted });
+      setSelectedPostAuthor(null);
+      if (matched) setJustMatchedWithAuthor(authorProfile);
+    } catch (err) {
+      console.error("handleLikeAuthor error:", err);
+    }
+    setLikingAuthorId(null);
+  }
+
+  async function handleDeclineAuthor() {
+    if (!authorProfile) return;
+    setLikingAuthorId(authorProfile.id);
+    try {
+      await declineProfile(userProfile, authorProfile);
+      setSelectedPostAuthor(null);
+    } catch (err) {
+      console.error("handleDeclineAuthor error:", err);
+    }
+    setLikingAuthorId(null);
+  }
+
+  async function sendGiftToAuthor(giftId, emoji) {
+    if (!authorProfile) return;
+    if (!(userProfile?.giftInventory?.[giftId] > 0)) {
+      setShowAuthorGiftPicker(false);
+      onGoToShop();
+      return;
+    }
+    setSendingAuthorGift(true);
+    const result = await spendGift(userProfile, giftId);
+    if (result.success) {
+      onProfileUpdated({ ...userProfile, giftInventory: result.giftInventory });
+      const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
+      setAuthorGiftToast({
+        name: authorProfile.name,
+        emoji: giftInfo?.emoji || emoji,
+        label: giftInfo?.label || "Cadeau",
+        article: giftInfo?.gender === "f" ? "Une" : "Un",
+      });
+      setTimeout(() => setAuthorGiftToast(null), 2600);
+      sendTreatToProfile(userProfile, authorProfile, giftId, authorGiftMessage.trim() || null).catch(err => console.error("sendTreat error:", err));
+      setAuthorGiftMessage("");
+      if (!userProfile?.questsCompleted?.first_gift_sent) {
+        claimQuest(userProfile, "first_gift_sent").then(r => {
+          if (r.claimed) onProfileUpdated({ ...userProfile, giftInventory: r.giftInventory, questsCompleted: r.questsCompleted });
+        }).catch(() => {});
+      }
+    }
+    setSendingAuthorGift(false);
+    setShowAuthorGiftPicker(false);
+  }
   const [showPremium, setShowPremium] = useState(false);
   const [previewPlan, setPreviewPlan] = useState("yearly");
   const [openComments, setOpenComments] = useState(null); // post id
@@ -3379,7 +3464,14 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
   }, [userProfile?.id, userProfile?.species]);
 
   const availableBreeds = userProfile?.species === "cat" ? CAT_BREEDS : DOG_BREEDS;
-  const filtered = posts.filter(p => breedFilter === "all" || p.breed === breedFilter);
+  const filtered = posts.filter(p => {
+    if (breedFilter !== "all" && p.breed !== breedFilter) return false;
+    if (radiusFilter < 100 && userProfile?.location && p.authorLocation) {
+      const d = distanceKm(userProfile.location.lat, userProfile.location.lng, p.authorLocation.lat, p.authorLocation.lng);
+      if (d > radiusFilter) return false;
+    }
+    return true;
+  });
 
   const TAG_COLORS = {
     "Événement": ["#E3F2FD","#1565C0"],
@@ -3515,17 +3607,23 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
   const activePost = posts.find(p => p.id === openComments);
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Filtre par race — menu déroulant */}
-      <div style={{ position: "relative", padding: "10px 16px", background: "#fff", flexShrink: 0, borderBottom: "1px solid #F3F4F6" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      {/* Filtres — race et distance */}
+      <div style={{ position: "relative", padding: "10px 16px", background: "#fff", flexShrink: 0, borderBottom: "1px solid #F3F4F6", display: "flex", gap: 8 }}>
         <button onClick={() => setShowBreedMenu(m => !m)}
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14,
+          style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14,
             border: `2px solid ${breedFilter !== "all" ? "#8B3D28" : "#E5E7EB"}`,
             background: breedFilter !== "all" ? "#FAF0EB" : "#fff", cursor: "pointer" }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: breedFilter !== "all" ? "#8B3D28" : "#2D1200" }}>
             {breedFilter === "all" ? "Toutes les races" : breedFilter}
           </span>
           <span style={{ fontSize: 12, color: "#9CA3AF", transform: showBreedMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+        </button>
+        <button onClick={() => setShowRadiusSheet(true)}
+          style={{ display: "flex", alignItems: "center", gap: 5, padding: "10px 14px", borderRadius: 14, flexShrink: 0,
+            border: `2px solid ${radiusFilter < 100 ? "#8B3D28" : "#E5E7EB"}`,
+            background: radiusFilter < 100 ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, color: radiusFilter < 100 ? "#8B3D28" : "#2D1200", whiteSpace: "nowrap" }}>
+          📍 {radiusFilter >= 100 ? "Illimité" : `${radiusFilter} km`}
         </button>
 
         {showBreedMenu && (
@@ -3546,6 +3644,33 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
           </div>
         )}
       </div>
+
+      {/* Rayon de recherche pour la communauté */}
+      {showRadiusSheet && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setShowRadiusSheet(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 24, padding: "28px 24px", width: "100%" }}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#2D1200", marginBottom: 4, textAlign: "center" }}>Rayon de la communauté</div>
+            <div style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", marginBottom: 24 }}>Affichez les publications des membres dans cette distance</div>
+            <div style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#B25F46", marginBottom: 16 }}>{radiusFilter >= 100 ? "Illimité" : `${radiusFilter} km`}</div>
+            <input type="range" min="1" max="100" value={radiusFilter}
+              onChange={e => setRadiusFilter(Number(e.target.value))}
+              style={{ width: "100%", marginBottom: 8, accentColor: "#B25F46" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9CA3AF", marginBottom: 16 }}>
+              <span>1 km</span><span>100 km +</span>
+            </div>
+            {!userProfile?.location && (
+              <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
+                Activez votre position dans Profil pour filtrer par distance réelle.
+              </div>
+            )}
+            <button onClick={() => setShowRadiusSheet(false)}
+              style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+              Appliquer
+            </button>
+          </div>
+        </div>
+      )}
 
       <PullToRefresh onRefresh={reloadPosts}>
         {/* New post */}
@@ -3570,12 +3695,14 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
               <div style={{ padding: "14px 14px 10px" }}>
                 {/* Author */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${post.emoji === "🐱" ? "#B25F46,#C97A5E" : "#8B3D28,#8B3510"})`, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                    {post.photo ? <img src={post.photo} alt={post.pet} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : post.emoji}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{post.pet} <span style={{ fontWeight: 400, color: "#9CA3AF" }}>· {post.author}</span></div>
-                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>{post.breed} · {post.time}</div>
+                  <div onClick={() => openPostAuthorProfile(post)} style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, cursor: post.isDemo ? "default" : "pointer" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg,${post.emoji === "🐱" ? "#B25F46,#C97A5E" : "#8B3D28,#8B3510"})`, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                      {post.photo ? <img src={post.photo} alt={post.pet} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : post.emoji}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{post.pet} <span style={{ fontWeight: 400, color: "#9CA3AF" }}>· {post.author}</span></div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF" }}>{post.breed} · {post.time}</div>
+                    </div>
                   </div>
                   {post.tag && <span style={{ background: bgTag, color: textTag, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>{post.tag}</span>}
                 </div>
@@ -3765,6 +3892,151 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
                 style={{ width: 38, height: 38, borderRadius: "50%", border: "none", background: (commentInputs[openComments] || "").trim() ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#E5E7EB", cursor: (commentInputs[openComments] || "").trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s" }}><PawLogo size={18} color={(commentInputs[openComments] || "").trim() ? "#fff" : "#9CA3AF"} /></button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Fiche complète de l'auteur d'un post */}
+      {selectedPostAuthor && (() => {
+        const fullProfile = authorProfile;
+        return (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 70, display: "flex", alignItems: "flex-end" }} onClick={() => setSelectedPostAuthor(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", boxSizing: "border-box" }}>
+              <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "12px auto 0" }} />
+              {loadingAuthorProfile ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 60 }}><PawLogo size={32} color="#E8B89F" /></div>
+              ) : !fullProfile ? (
+                <div style={{ textAlign: "center", padding: "60px 20px", color: "#9CA3AF" }}>Profil introuvable.</div>
+              ) : (
+                <>
+                  <div style={{ width: "100%", aspectRatio: "1", background: "#FAF0EB", position: "relative", marginTop: 12 }}>
+                    {photoUrl(fullProfile.photos?.[authorPhotoIdx]) ? (
+                      <img src={photoUrl(fullProfile.photos[authorPhotoIdx])} alt={selectedPostAuthor.author} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>{selectedPostAuthor.emoji}</div>
+                    )}
+                    {fullProfile.photos?.length > 1 && (
+                      <>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 6, position: "absolute", top: 12, left: 0, right: 0, zIndex: 2, pointerEvents: "none" }}>
+                          {fullProfile.photos.map((_, i) => (
+                            <div key={i} style={{ width: i === authorPhotoIdx ? 24 : 16, height: 4, borderRadius: 2, background: i === authorPhotoIdx ? "#B25F46" : "rgba(255,255,255,.6)", transition: "width .2s" }} />
+                          ))}
+                        </div>
+                        <div style={{ position: "absolute", inset: 0, display: "flex", zIndex: 1 }}>
+                          <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setAuthorPhotoIdx(i => Math.max(0, i - 1))} />
+                          <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setAuthorPhotoIdx(i => Math.min(fullProfile.photos.length - 1, i + 1))} />
+                        </div>
+                      </>
+                    )}
+                    <button onClick={() => setSelectedPostAuthor(null)} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,.9)", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", zIndex: 3 }}>✕</button>
+                  </div>
+                  <div style={{ padding: "18px 20px 32px" }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200" }}>
+                      {selectedPostAuthor.pet}{fullProfile.age ? ` · ${formatAge(fullProfile.age)}` : ""}{fullProfile.gender ? ` ${fullProfile.gender === "F" ? "♀" : "♂"}` : ""}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600 }}>{selectedPostAuthor.breed} · {selectedPostAuthor.author}</div>
+
+                    {(fullProfile.vaccinated || fullProfile.sterilized) && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, marginBottom: 10 }}>
+                        {fullProfile.vaccinated && <Badge color="#E3F2FD" text="#1565C0">Vacciné·e ✓</Badge>}
+                        {fullProfile.sterilized && <Badge color="#F3E5F5" text="#7B1FA2">Stérilisé·e</Badge>}
+                      </div>
+                    )}
+
+                    {fullProfile.temper?.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                        {fullProfile.temper.map(t => <Badge key={t} color="#FAF0EB" text="#8B3D28">{t}</Badge>)}
+                      </div>
+                    )}
+
+                    {fullProfile.bio && (
+                      <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.7, marginBottom: 14 }}>{fullProfile.bio}</p>
+                    )}
+
+                    {fullProfile.seeking?.length > 0 && (
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 6 }}>CHERCHE</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {fullProfile.seeking.map(s => <Badge key={s} color="#FAF0EB" text="#8B3D28">{s}</Badge>)}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", justifyContent: "center", gap: 22 }}>
+                      <button onClick={handleDeclineAuthor} disabled={likingAuthorId === fullProfile.id}
+                        style={{ width: 56, height: 56, borderRadius: "50%", background: "#fff", border: "1.5px solid #F3F4F6", cursor: likingAuthorId === fullProfile.id ? "default" : "pointer", fontSize: 22, color: "#B25F46", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.1)" }}>
+                        ✕
+                      </button>
+                      <button onClick={() => setShowAuthorGiftPicker(true)} disabled={likingAuthorId === fullProfile.id}
+                        style={{ width: 56, height: 56, borderRadius: "50%", background: "#fff", border: "1.5px solid #F3F4F6", cursor: likingAuthorId === fullProfile.id ? "default" : "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.1)" }}>
+                        🎁
+                      </button>
+                      <button onClick={handleLikeAuthor} disabled={likingAuthorId === fullProfile.id}
+                        style={{ width: 56, height: 56, borderRadius: "50%", background: "#fff", border: "1.5px solid #F3F4F6", cursor: likingAuthorId === fullProfile.id ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(0,0,0,.1)" }}>
+                        <PawLogo size={26} color="#B25F46" />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Sélecteur de cadeau pour l'auteur d'un post */}
+      {showAuthorGiftPicker && authorProfile && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 90, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setShowAuthorGiftPicker(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "20px 20px 28px", width: "100%", maxHeight: "70vh", overflowY: "auto", boxSizing: "border-box" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 10 }}>🎁 Envoyer à {authorProfile.name}</div>
+            <input value={authorGiftMessage} onChange={e => setAuthorGiftMessage(e.target.value.slice(0, 120))} onClick={e => e.stopPropagation()}
+              placeholder="Ajouter un mot (optionnel)..."
+              style={{ width: "100%", boxSizing: "border-box", padding: "9px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 13, outline: "none", background: "#F9FAFB", marginBottom: 14 }} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {GIFT_CATALOG.filter(g => g.species === "both" || g.species === authorProfile.species).map(g => {
+                const owned = userProfile?.giftInventory?.[g.id] || 0;
+                return (
+                  <button key={g.id} onClick={() => sendGiftToAuthor(g.id, g.emoji)} disabled={sendingAuthorGift}
+                    style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "10px 4px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#F9FAFB", cursor: sendingAuthorGift ? "default" : "pointer", opacity: owned > 0 ? 1 : .65 }}>
+                    {owned > 0 && (
+                      <span style={{ position: "absolute", top: 2, right: 2, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{owned}</span>
+                    )}
+                    <span style={{ fontSize: 22 }}>{g.emoji}</span>
+                    <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", textAlign: "center" }}>{g.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 12 }}>Un article grisé n'est plus en stock — tapez dessus pour l'acheter dans la Boutique.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation d'envoi de cadeau */}
+      {authorGiftToast && (
+        <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 95, background: "#2D1200", color: "#fff", padding: "12px 20px", borderRadius: 30, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px rgba(0,0,0,.25)", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 18 }}>{authorGiftToast.emoji}</span>
+          {authorGiftToast.article} {authorGiftToast.label} envoyé à {authorGiftToast.name} !
+        </div>
+      )}
+
+      {/* Célébration après un match déclenché depuis Communauté */}
+      {justMatchedWithAuthor && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(45,18,0,.92)", zIndex: 80, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+          <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, textAlign: "center" }}>C'est un match !</div>
+          <div style={{ fontSize: 15, color: "rgba(255,255,255,.85)", marginBottom: 28, textAlign: "center", lineHeight: 1.5, maxWidth: 320 }}>{generateMatchMessage(userProfile, justMatchedWithAuthor)}</div>
+          <div style={{ width: 96, height: 96, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, marginBottom: 28, border: "3px solid #fff" }}>
+            {photoUrl(justMatchedWithAuthor.photos?.[0]) ? <img src={photoUrl(justMatchedWithAuthor.photos[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (justMatchedWithAuthor.species === "cat" ? "🐱" : "🐕")}
+          </div>
+          <button onClick={() => { setJustMatchedWithAuthor(null); onNav("messages"); }}
+            style={{ width: "100%", maxWidth: 320, padding: "16px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 12 }}>
+            💬 Voir la conversation
+          </button>
+          <button onClick={() => setJustMatchedWithAuthor(null)}
+            style={{ width: "100%", maxWidth: 320, padding: "14px", borderRadius: 14, border: "none", background: "none", color: "rgba(255,255,255,.7)", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+            Continuer
+          </button>
         </div>
       )}
     </div>
@@ -7850,9 +8122,11 @@ async function fetchCommunityPosts(userProfile) {
   if (error || !posts || posts.length === 0) return [];
 
   const postIds = posts.map(p => p.id);
-  const [{ data: likeRows }, { data: commentRows }] = await Promise.all([
+  const authorProfileIds = [...new Set(posts.map(p => p.profile_id).filter(Boolean))];
+  const [{ data: likeRows }, { data: commentRows }, { data: authorRows }] = await Promise.all([
     supabase.from("community_likes").select("post_id, user_id").in("post_id", postIds),
     supabase.from("community_comments").select("post_id").in("post_id", postIds),
+    authorProfileIds.length > 0 ? supabase.from("profiles").select("id, lat, lng").in("id", authorProfileIds) : Promise.resolve({ data: [] }),
   ]);
   const likeCounts = {}, myLikes = new Set(), commentCounts = {};
   (likeRows || []).forEach(l => {
@@ -7860,6 +8134,8 @@ async function fetchCommunityPosts(userProfile) {
     if (l.user_id === userProfile.userId) myLikes.add(l.post_id);
   });
   (commentRows || []).forEach(c => { commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1; });
+  const authorLocationById = {};
+  (authorRows || []).forEach(r => { if (r.lat && r.lng) authorLocationById[r.id] = { lat: r.lat, lng: r.lng }; });
 
   return posts.map(row => ({
     id: row.id, userId: row.user_id, profileId: row.profile_id,
@@ -7871,6 +8147,7 @@ async function fetchCommunityPosts(userProfile) {
     likes: likeCounts[row.id] || 0,
     likedByMe: myLikes.has(row.id),
     commentCount: commentCounts[row.id] || 0,
+    authorLocation: row.profile_id ? (authorLocationById[row.profile_id] || null) : null,
   }));
 }
 
@@ -8071,6 +8348,47 @@ async function fetchTreatsFromSender(userProfile, senderProfileId) {
 
 // "Matcher" en retour depuis "Qui craque pour vous" : la personne nous a
 // déjà liké, donc notre like crée forcément un match immédiat.
+// Like générique avec détection de match réciproque — utilisé partout où on
+// peut liker un profil sans certitude qu'il nous a déjà liké en retour
+// (contrairement à likeBackAndMatch, réservé à "Qui a craqué pour vous").
+async function declineProfile(userProfile, targetProfile) {
+  const { error } = await supabase.from("swipes").insert({
+    swiper_user_id: userProfile.userId,
+    target_profile_id: targetProfile.id,
+    direction: "nope",
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function likeProfileAndCheckMatch(userProfile, targetProfile) {
+  await supabase.from("swipes").insert({
+    swiper_user_id: userProfile.userId,
+    target_profile_id: targetProfile.id,
+    direction: "like",
+  });
+  const { data: reciprocal } = await supabase
+    .from("swipes")
+    .select("id")
+    .eq("swiper_user_id", targetProfile.userId)
+    .eq("target_profile_id", userProfile.id)
+    .eq("direction", "like")
+    .maybeSingle();
+  if (!reciprocal) return { matched: false, questResult: null };
+
+  await supabase.from("matches").insert({
+    user_a: userProfile.userId, user_b: targetProfile.userId,
+    profile_a: userProfile.id, profile_b: targetProfile.id,
+  });
+  let questResult = null;
+  if (!userProfile?.questsCompleted?.first_match) {
+    try {
+      const result = await claimQuest(userProfile, "first_match");
+      if (result?.claimed) questResult = result;
+    } catch {}
+  }
+  return { matched: true, questResult };
+}
+
 async function likeBackAndMatch(userProfile, like) {
   await supabase.from("swipes").insert({
     swiper_user_id: userProfile.userId,
@@ -8686,7 +9004,7 @@ export default function Miloute() {
                 {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToProviderSetup={() => { setRequestOpenProviderScreen(true); setScreen("profile"); }} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 
-                {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
+                {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToShop={goToShop} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} onProfileUpdated={updateUserProfile} onGoToShop={goToShop} />}
                 {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} />}
