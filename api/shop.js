@@ -11,17 +11,14 @@
 // pour que ça ait un sens) — à réintroduire plus tard si besoin.
 // Pas de monnaie virtuelle intermédiaire (type "Milouttes") : achat direct en
 // euros, choix assumé pour rester simple et transparent.
-
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
 const admin = require('firebase-admin');
-
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
 // Vrai catalogue de cadeaux — chacun a son propre prix et sa propre identité,
 // stocké individuellement dans profiles.gift_inventory (ex: {"bone": 3}).
 const GIFT_CATALOG = {
@@ -61,7 +58,6 @@ const GIFT_CATALOG = {
   trophy:   { label: 'Trophée Miloute',   emoji: '🏆', amountCents: 299, premiumOnly: true },
   diamond:  { label: 'Diamant Miloute',   emoji: '💎', amountCents: 399, premiumOnly: true },
 };
-
 // Packs groupés — plusieurs articles réunis à prix légèrement réduit. Un seul
 // achat, mais crédite chaque article du pack individuellement dans l'inventaire.
 const GIFT_BUNDLES = {
@@ -72,7 +68,6 @@ const GIFT_BUNDLES = {
   romance_dog_pack: { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur_dog'], amountCents: 499 },
   romance_cat_pack: { label: 'Pack Romantique', items: ['bouquet', 'rose', 'coeur_cat'], amountCents: 499 },
 };
-
 // Quêtes ponctuelles — chacune ne peut être récompensée qu'une seule fois par
 // profil (suivi dans profiles.quests_completed). Pas de série quotidienne, pas
 // de notification de rappel : uniquement de vraies étapes utiles du parcours.
@@ -86,7 +81,6 @@ const QUESTS = {
   first_booking:     { rewardLabel: '1 Gâteau Fiesta' },
   first_gift_sent:   { rewardLabel: '1 Cœur (selon l\'espèce)' },
 };
-
 // Notifications push réelles — initialise l'app Firebase Admin une seule
 // fois (réutilisée entre les appels tant que la fonction reste "chaude").
 function getFirebaseApp() {
@@ -99,20 +93,30 @@ function getFirebaseApp() {
     }),
   });
 }
-
 module.exports = async (req, res) => {
+  // Autorise les appels depuis l'app Android native (origine "https://localhost",
+  // différente du site web) — sans ça, le navigateur/WebView bloque la requête
+  // avant même qu'elle n'atteigne ce code (erreur CORS).
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Requête de vérification envoyée automatiquement par le navigateur avant
+  // la vraie requête POST — il faut y répondre correctement (200, avec les
+  // en-têtes ci-dessus) pour que la vraie requête soit ensuite autorisée.
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   const { action } = req.body;
-
   try {
     // ── Créer la session de paiement (article seul ou pack groupé) ────────
     if (action === 'create-checkout') {
       const { itemId, bundleId, profileId, userId, successUrl, cancelUrl } = req.body;
       if (!profileId || !userId) return res.status(400).json({ error: 'profileId and userId are required' });
-
       let label, amountCents, metadata;
       if (bundleId) {
         const bundle = GIFT_BUNDLES[bundleId];
@@ -137,7 +141,6 @@ module.exports = async (req, res) => {
         label = item.label; amountCents = item.amountCents;
         metadata = { type: 'shop', itemId, profileId, userId };
       }
-
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         payment_method_types: ['card'],
@@ -153,20 +156,16 @@ module.exports = async (req, res) => {
         success_url: successUrl,
         cancel_url: cancelUrl,
       });
-
       return res.status(200).json({ checkoutUrl: session.url });
     }
-
     // ── Vérifier le paiement et créditer l'achat ──────────────────────────
     if (action === 'verify-session') {
       const { sessionId } = req.body;
       if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
-
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status !== 'paid') {
         return res.status(200).json({ paid: false });
       }
-
       // Idempotence : déjà traité ?
       const { data: existing } = await supabase
         .from('shop_purchases').select('*').eq('stripe_checkout_session_id', sessionId).maybeSingle();
@@ -174,101 +173,78 @@ module.exports = async (req, res) => {
         const { data: profile } = await supabase.from('profiles').select('gift_inventory').eq('id', existing.profile_id).single();
         return res.status(200).json({ paid: true, alreadyProcessed: true, giftInventory: profile?.gift_inventory, itemId: existing.pack_id });
       }
-
       const meta = session.metadata;
-
       if (meta.bundleId) {
         const bundle = GIFT_BUNDLES[meta.bundleId];
         if (!bundle) return res.status(400).json({ error: 'Pack inconnu' });
-
         const { data: profile, error: fetchError } = await supabase
           .from('profiles').select('gift_inventory').eq('id', meta.profileId).single();
         if (fetchError) throw fetchError;
-
         const inventory = profile.gift_inventory || {};
         const newInventory = { ...inventory };
         bundle.items.forEach(id => { newInventory[id] = (newInventory[id] || 0) + 1; });
-
         const { error: updateError } = await supabase
           .from('profiles').update({ gift_inventory: newInventory }).eq('id', meta.profileId);
         if (updateError) throw updateError;
-
         await supabase.from('shop_purchases').insert({
           user_id: meta.userId, profile_id: meta.profileId, pack_id: meta.bundleId,
           stripe_checkout_session_id: sessionId, amount_cents: bundle.amountCents, credited_treats: bundle.items.length,
         });
-
         return res.status(200).json({ paid: true, giftInventory: newInventory, itemId: meta.bundleId });
       }
-
       const gift = GIFT_CATALOG[meta.itemId];
       if (!gift) return res.status(400).json({ error: 'Article inconnu' });
-
       const { data: profile, error: fetchError } = await supabase
         .from('profiles').select('gift_inventory').eq('id', meta.profileId).single();
       if (fetchError) throw fetchError;
-
       const inventory = profile.gift_inventory || {};
       const newInventory = { ...inventory, [meta.itemId]: (inventory[meta.itemId] || 0) + 1 };
-
       const { error: updateError } = await supabase
         .from('profiles').update({ gift_inventory: newInventory }).eq('id', meta.profileId);
       if (updateError) throw updateError;
-
       await supabase.from('shop_purchases').insert({
         user_id: meta.userId, profile_id: meta.profileId, pack_id: meta.itemId,
         stripe_checkout_session_id: sessionId, amount_cents: gift.amountCents, credited_treats: 1,
       });
-
       return res.status(200).json({ paid: true, giftInventory: newInventory, itemId: meta.itemId });
     }
-
     // ── Consommer un cadeau précis de l'inventaire ─────────────────────────
     if (action === 'spend-gift') {
       const { profileId, userId, giftId } = req.body;
       if (!profileId || !userId || !GIFT_CATALOG[giftId]) {
         return res.status(400).json({ error: 'profileId, userId and a valid giftId are required' });
       }
-
       const { data: profile, error: fetchError } = await supabase
         .from('profiles').select('id, user_id, gift_inventory').eq('id', profileId).single();
       if (fetchError || !profile) throw fetchError || new Error('Profil introuvable');
       if (profile.user_id !== userId) return res.status(403).json({ error: 'Ce profil ne vous appartient pas.' });
-
       const inventory = profile.gift_inventory || {};
       const current = inventory[giftId] || 0;
       if (current <= 0) return res.status(400).json({ error: "Vous n'avez plus ce cadeau en stock." });
-
       const newInventory = { ...inventory, [giftId]: current - 1 };
       const { error: updateError } = await supabase
         .from('profiles').update({ gift_inventory: newInventory }).eq('id', profileId);
       if (updateError) throw updateError;
-
       return res.status(200).json({ success: true, giftInventory: newInventory });
     }
-
     // ── Réclamer la récompense d'une quête ponctuelle ─────────────────────
     if (action === 'claim-quest') {
       const { profileId, userId, questId } = req.body;
       const quest = QUESTS[questId];
       if (!quest) return res.status(400).json({ error: 'Quête inconnue' });
       if (!profileId || !userId) return res.status(400).json({ error: 'profileId and userId are required' });
-
       const { data: profile, error: fetchError } = await supabase
         .from('profiles').select('*').eq('id', profileId).single();
       if (fetchError || !profile) throw fetchError || new Error('Profil introuvable');
       if (profile.user_id !== userId) return res.status(403).json({ error: 'Ce profil ne vous appartient pas.' });
-
       const completed = profile.quests_completed || {};
       if (completed[questId]) {
         return res.status(200).json({ claimed: false, alreadyClaimed: true });
       }
-
       // Vérification serveur de l'éligibilité réelle — jamais fait confiance
       // au client seul pour valider qu'une quête est bien accomplie.
       let eligible = false;
       let rewardItemId = quest.rewardItemId;
-
       if (questId === 'profile_complete') {
         const score = (profile.photos?.length > 0 ? 25 : 0) + (profile.video ? 20 : 0) + (profile.bio ? 20 : 0)
           + (profile.temper?.length > 0 ? 15 : 0) + (profile.vaccinated ? 10 : 0)
@@ -300,25 +276,19 @@ module.exports = async (req, res) => {
         eligible = (treatCount || 0) + (chatGiftCount || 0) >= 1;
         rewardItemId = profile.species === 'cat' ? 'coeur_cat' : 'coeur_dog';
       }
-
       if (!eligible) return res.status(200).json({ claimed: false, eligible: false });
-
       const inventory = profile.gift_inventory || {};
       const newInventory = { ...inventory, [rewardItemId]: (inventory[rewardItemId] || 0) + 1 };
       const newCompleted = { ...completed, [questId]: true };
-
       const { error: updateError } = await supabase
         .from('profiles').update({ gift_inventory: newInventory, quests_completed: newCompleted }).eq('id', profileId);
       if (updateError) throw updateError;
-
       return res.status(200).json({ claimed: true, giftInventory: newInventory, questsCompleted: newCompleted, rewardItemId });
     }
-
     // ── Enregistrer le token d'un appareil pour les notifications push ────
     if (action === 'register-token') {
       const { userId, token, platform } = req.body;
       if (!userId || !token) return res.status(400).json({ error: 'userId et token requis' });
-
       const { error } = await supabase.from('device_tokens').upsert(
         { user_id: userId, token, platform: platform || 'android' },
         { onConflict: 'user_id,token' }
@@ -326,20 +296,16 @@ module.exports = async (req, res) => {
       if (error) throw error;
       return res.status(200).json({ success: true });
     }
-
     // ── Envoyer une notification push réelle (hors app) ────────────────────
     if (action === 'send-push') {
       const { targetUserId, title, body, data } = req.body;
       if (!targetUserId || !title || !body) return res.status(400).json({ error: 'targetUserId, title et body requis' });
-
       const { data: tokenRows, error: fetchError } = await supabase
         .from('device_tokens').select('token').eq('user_id', targetUserId);
       if (fetchError) throw fetchError;
       if (!tokenRows || tokenRows.length === 0) return res.status(200).json({ success: true, sent: 0, reason: 'no_device' });
-
       getFirebaseApp();
       const messaging = admin.messaging();
-
       let sent = 0;
       const staleTokens = [];
       for (const row of tokenRows) {
@@ -361,14 +327,11 @@ module.exports = async (req, res) => {
           }
         }
       }
-
       if (staleTokens.length > 0) {
         await supabase.from('device_tokens').delete().eq('user_id', targetUserId).in('token', staleTokens);
       }
-
       return res.status(200).json({ success: true, sent });
     }
-
     return res.status(400).json({ error: 'Action inconnue' });
   } catch (err) {
     console.error('shop.js error:', err);
