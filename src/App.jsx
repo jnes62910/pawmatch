@@ -6848,7 +6848,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               {Object.entries(BOOK_THEMES).map(([key, th]) => (
                 <button key={key} onClick={() => applyBookCustomization({ theme: key })}
                   style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 4px", borderRadius: 12, border: (bookCustom.theme || "doux") === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: th.pageBg, cursor: "pointer" }}>
-                  <span style={{ fontSize: 18 }}>{th.icon}</span>
+                  {th.useLogo ? <PawLogo size={18} color={th.accent} /> : <span style={{ fontSize: 18 }}>{th.icon}</span>}
                   <span style={{ fontSize: 10, fontWeight: 700, color: th.text }}>{th.label}</span>
                 </button>
               ))}
@@ -9510,6 +9510,9 @@ const BOOK_THEMES = {
   nuit: { label: "Nuit étoilée", icon: "🌙", pageBg: "#1B2340", accent: "#E8C468", accentDark: "#C9A94E", text: "#F5F0E6", subtext: "#9CA3C4", frameBg: "#0E1226", pdfBg: [27, 35, 64] },
   nature: { label: "Nature", icon: "🌿", pageBg: "#F1F5EC", accent: "#5A8F5A", accentDark: "#3F6B3F", text: "#233B23", subtext: "#8FA88F", frameBg: "#1E2E1E", pdfBg: [241, 245, 236] },
   pastel: { label: "Pastel", icon: "💜", pageBg: "#F3F0FB", accent: "#8B7BC7", accentDark: "#6C5AA8", text: "#332B4D", subtext: "#A79FC4", frameBg: "#2A2440", pdfBg: [243, 240, 251] },
+  ocean: { label: "Océan", icon: "🌊", pageBg: "#EAF4F6", accent: "#2E7D9A", accentDark: "#1F5A70", text: "#1A3A42", subtext: "#8FB4BE", frameBg: "#0F2C36", pdfBg: [234, 244, 246] },
+  automne: { label: "Automne", icon: "🍂", pageBg: "#FCF0E4", accent: "#C2703D", accentDark: "#94502A", text: "#4A2A16", subtext: "#C9A385", frameBg: "#3D2416", pdfBg: [252, 240, 228] },
+  dore: { label: "Doré", icon: "✨", pageBg: "#FFF9EC", accent: "#B8912C", accentDark: "#8B6F1A", text: "#3D3320", subtext: "#C4B48A", frameBg: "#2B2410", pdfBg: [255, 249, 236] },
 };
 
 function loadBookCustomization(petId) {
