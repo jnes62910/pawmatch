@@ -1,6 +1,10 @@
 // api/moderate-photo.js
-// Vérifie qu'une image (photo ou frame de vidéo) montre bien un chat ou un
-// chien, et que le contenu est approprié. Utilise l'API Claude (vision).
+// Vérifie qu'une image (photo ou frame de vidéo) est appropriée. Utilise
+// l'API Claude (vision). Le paramètre `context` adapte les règles :
+// - "pet" (par défaut) : exige un chat ou un chien clairement visible —
+//   utilisé pour les photos de profil d'un animal.
+// - "prestataire" : n'exige pas d'animal (salon, équipements, photo de
+//   l'équipe...), vérifie uniquement que le contenu est approprié.
 // Variable d'environnement requise sur Vercel : ANTHROPIC_API_KEY
 // Certains modèles habillent parfois leur réponse de balises ```json ... ```
 // ou d'un court commentaire malgré la consigne stricte — on nettoie avant
@@ -13,6 +17,29 @@ function extractJson(rawText) {
   if (braceMatch) return braceMatch[0];
   return text;
 }
+
+function promptFor(context) {
+  if (context === 'prestataire') {
+    return (
+      "Tu es un modérateur de contenu pour Miloute, une application avec un annuaire de prestataires " +
+      "indépendants pour animaux (toiletteurs, pet-sitters, éducateurs canins...). Cette image est destinée à la " +
+      "galerie photo d'un profil prestataire (salon, équipements, animaux déjà toilettés, photo de l'équipe...) — " +
+      "elle n'a PAS besoin de montrer un chat ou un chien pour être acceptée. " +
+      "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, sans balises markdown, au format exact : " +
+      '{"is_appropriate": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
+      "is_appropriate : l'image est-elle dépourvue de contenu choquant, violent, sexuel, ou manifestement sans " +
+      "rapport avec une activité professionnelle liée aux animaux ?"
+    );
+  }
+  return (
+    "Tu es un modérateur de contenu pour une application de rencontre entre animaux (Miloute). " +
+    "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, sans balises markdown, au format exact : " +
+    '{"is_cat_or_dog": true|false, "is_appropriate": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
+    "is_cat_or_dog : l'image montre-t-elle clairement un chat ou un chien (le sujet principal) ? " +
+    "is_appropriate : l'image est-elle dépourvue de contenu choquant, violent, sexuel, ou non lié aux animaux (personnes, objets sans rapport, texte publicitaire, etc.) ?"
+  );
+}
+
 module.exports = async (req, res) => {
   // Autorise les appels depuis l'app Android native (origine "https://localhost",
   // différente du site web) — sans ça, le navigateur/WebView bloque la requête
@@ -32,7 +59,7 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   try {
-    const { image, mimeType } = req.body;
+    const { image, mimeType, context } = req.body;
     if (!image) {
       return res.status(400).json({ error: 'image is required' });
     }
@@ -56,12 +83,7 @@ module.exports = async (req, res) => {
               },
               {
                 type: 'text',
-                text:
-                  "Tu es un modérateur de contenu pour une application de rencontre entre animaux (Miloute). " +
-                  "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, sans balises markdown, au format exact : " +
-                  '{"is_cat_or_dog": true|false, "is_appropriate": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
-                  "is_cat_or_dog : l'image montre-t-elle clairement un chat ou un chien (le sujet principal) ? " +
-                  "is_appropriate : l'image est-elle dépourvue de contenu choquant, violent, sexuel, ou non lié aux animaux (personnes, objets sans rapport, texte publicitaire, etc.) ?",
+                text: promptFor(context),
               },
             ],
           },
@@ -83,12 +105,16 @@ module.exports = async (req, res) => {
       console.error('moderate-photo: réponse non-JSON reçue de Claude :', textBlock?.text);
       return res.status(200).json({ approved: false, reason: 'Vérification impossible, réessayez.' });
     }
-    const approved = !!parsed.is_cat_or_dog && !!parsed.is_appropriate;
+    const approved = context === 'prestataire'
+      ? !!parsed.is_appropriate
+      : !!parsed.is_cat_or_dog && !!parsed.is_appropriate;
     return res.status(200).json({
       approved,
       reason: approved
         ? null
-        : parsed.reason || 'Seules les photos de chats et chiens, au contenu approprié, sont autorisées.',
+        : parsed.reason || (context === 'prestataire'
+          ? 'Cette photo ne respecte pas les règles de Miloute.'
+          : 'Seules les photos de chats et chiens, au contenu approprié, sont autorisées.'),
     });
   } catch (err) {
     console.error('moderate-photo error:', err);
