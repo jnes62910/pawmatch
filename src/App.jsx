@@ -6386,7 +6386,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
               <button onClick={() => { setShowGiftBrowser(true); setTreatsFilterCategory("all"); }}
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8 }}>
-                🎁 Voir toutes mes friandises et cadeaux
+                🎁 Voir tous mes cadeaux et photos
               </button>
 
               <button onClick={openAddEncounter}
@@ -6730,7 +6730,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
             {page.type === "intro" && (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 30px", textAlign: "center" }}>
-                <div style={{ fontSize: 30, marginBottom: 16 }}>🐾</div>
+                <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                  {theme.useLogo ? <PawLogo size={34} color={theme.accent} /> : <span style={{ fontSize: 30 }}>🐾</span>}
+                </div>
                 <div style={{ fontFamily: "Georgia, serif", fontSize: 16, color: theme.text, lineHeight: 1.8 }}>
                   Depuis son arrivée sur Miloute, <strong>{page.petName}</strong> a vécu de belles rencontres et reçu de jolies attentions.
                   <br /><br />
@@ -6757,7 +6759,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
             {page.type === "conclusion" && (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 30px", textAlign: "center" }}>
-                <div style={{ fontSize: 30, marginBottom: 16 }}>🐾</div>
+                <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                  {theme.useLogo ? <PawLogo size={34} color={theme.accent} /> : <span style={{ fontSize: 30 }}>🐾</span>}
+                </div>
                 <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", color: theme.accent }}>L'histoire continue…</div>
               </div>
             )}
@@ -9501,6 +9505,7 @@ function buildBookPages(pet, treatsReceived, encounterPhotos, custom = {}) {
 // Thèmes visuels — chacun définit les couleurs de fond/texte/accent utilisées
 // à la fois par la vue in-app et par l'export PDF, pour rester cohérents.
 const BOOK_THEMES = {
+  miloute: { label: "Miloute", icon: "🐾", useLogo: true, pageBg: "#FAF0EB", accent: "#B25F46", accentDark: "#8B3D28", text: "#2D1200", subtext: "#9CA3AF", frameBg: "#8B3D28", pdfBg: [250, 240, 235] },
   doux: { label: "Doux", icon: "🌸", pageBg: "#FDF6EE", accent: "#B25F46", accentDark: "#8B3D28", text: "#2D1200", subtext: "#9CA3AF", frameBg: "#2D1200", pdfBg: [250, 240, 235] },
   nuit: { label: "Nuit étoilée", icon: "🌙", pageBg: "#1B2340", accent: "#E8C468", accentDark: "#C9A94E", text: "#F5F0E6", subtext: "#9CA3C4", frameBg: "#0E1226", pdfBg: [27, 35, 64] },
   nature: { label: "Nature", icon: "🌿", pageBg: "#F1F5EC", accent: "#5A8F5A", accentDark: "#3F6B3F", text: "#233B23", subtext: "#8FA88F", frameBg: "#1E2E1E", pdfBg: [241, 245, 236] },
