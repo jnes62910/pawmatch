@@ -5291,7 +5291,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   }
 
   function moveContentPage(pageId, direction) {
-    const contentIds = bookPages.filter(p => p.id).map(p => p.id);
+    const contentIds = buildAllContentItems(treatsReceived, encounterPhotos, bookCustom).map(item => item.id);
     const idx = contentIds.indexOf(pageId);
     const swapWith = idx + direction;
     if (idx === -1 || swapWith < 0 || swapWith >= contentIds.length) return;
@@ -6882,7 +6882,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             )}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>PAGES (réorganiser / masquer)</div>
-            {bookPages.filter(p => p.id).map((page, i, arr) => {
+            {buildAllContentItems(treatsReceived, encounterPhotos, bookCustom).map((page, i, arr) => {
               const isHidden = (bookCustom.hiddenIds || []).includes(page.id);
               return (
                 <div key={page.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, background: "#F9FAFB", marginBottom: 6, opacity: isHidden ? 0.5 : 1 }}>
@@ -9465,7 +9465,12 @@ async function updateTreatNote(treatId, note) {
 // même structure, pour que les deux restent toujours cohérents.
 // `custom` (optionnel) permet la personnalisation : titre, photo de
 // couverture, pages masquées, ordre personnalisé des pages de contenu.
-function buildBookPages(pet, treatsReceived, encounterPhotos, custom = {}) {
+// Construit la liste de TOUS les souvenirs (cadeaux + rencontres), triés et
+// réordonnés selon la personnalisation — sans appliquer le masquage. Sert de
+// base à la fois à buildBookPages (qui applique le masquage) et au panneau
+// de gestion des pages (qui doit lister aussi les pages masquées, pour
+// pouvoir les démasquer).
+function buildAllContentItems(treatsReceived, encounterPhotos, custom = {}) {
   let contentItems = [
     ...treatsReceived.map(t => ({ id: `gift-${t.id}`, kind: "gift", date: t.createdAt, photo: t.photo, emoji: t.giftEmoji, title: t.giftLabel, subtitle: `de ${t.name}`, quote: t.message })),
     ...encounterPhotos.map(e => ({ id: `encounter-${e.id}`, kind: "encounter", date: e.createdAt, photo: e.photo, emoji: "📸", title: e.otherName ? `Rencontre avec ${e.otherName}` : "Une belle rencontre", subtitle: e.location || "", quote: e.caption })),
@@ -9489,10 +9494,14 @@ function buildBookPages(pet, treatsReceived, encounterPhotos, custom = {}) {
     contentItems = [...ordered, ...remaining];
   }
 
-  // Pages masquées
-  if (custom.hiddenIds?.length > 0) {
-    contentItems = contentItems.filter(item => !custom.hiddenIds.includes(item.id));
-  }
+  return contentItems;
+}
+
+function buildBookPages(pet, treatsReceived, encounterPhotos, custom = {}) {
+  const allItems = buildAllContentItems(treatsReceived, encounterPhotos, custom);
+  const contentItems = custom.hiddenIds?.length > 0
+    ? allItems.filter(item => !custom.hiddenIds.includes(item.id))
+    : allItems;
 
   const startDate = contentItems.length > 0 ? [...contentItems].sort((a, b) => new Date(a.date) - new Date(b.date))[0].date : new Date().toISOString();
 
