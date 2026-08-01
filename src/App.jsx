@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./lib/supabaseClient";
+// ⚠️ Nécessite `npm install @capacitor/push-notifications` — cet import
+// casse le build web tant que le paquet n'est pas installé, même s'il n'est
+// jamais réellement exécuté sur le web (isNativeAndroid() le désactive à
+// l'exécution, mais Webpack le résout quand même à la compilation).
+import { PushNotifications } from "@capacitor/push-notifications";
 
 
 // ── LOGO ──────────────────────────────────────────────────────────────────────
@@ -4447,6 +4452,7 @@ function ChatScreen({ matchId, onBack, userProfile = null, onMessagesRead = () =
     // Pas besoin de mettre à jour msgs manuellement : le message revient via
     // l'abonnement temps réel ci-dessus, pour soi comme pour l'autre personne.
     if (error) setModerationError("Le message n'a pas pu être envoyé, réessayez.");
+    else if (match?.otherUserId) sendPushNotification(match.otherUserId, userProfile.name, text, { type: "message", matchId });
   }
 
   async function sendPhoto(e) {
@@ -8886,6 +8892,55 @@ function isNativeAndroid() {
   }
 }
 
+// ── NOTIFICATIONS PUSH RÉELLES (hors app) ─────────────────────────────────
+// ⚠️ Nécessite `npm install @capacitor/push-notifications` — cet import
+// casse le build web tant que le paquet n'est pas installé, même s'il n'est
+// jamais réellement exécuté sur le web (isNativeAndroid() le désactive à
+// l'exécution, mais Webpack le résout quand même à la compilation).
+
+// Demande la permission et enregistre le token de l'appareil auprès du
+// serveur — à appeler une fois, après connexion, uniquement sur Android natif.
+async function registerPushNotifications(userProfile) {
+  if (!isNativeAndroid() || !userProfile?.userId) return;
+  try {
+    const perm = await PushNotifications.requestPermissions();
+    if (perm.receive !== "granted") return;
+    await PushNotifications.register();
+
+    PushNotifications.addListener("registration", async (token) => {
+      try {
+        await fetch("/api/shop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "register-token", userId: userProfile.userId, token: token.value, platform: "android" }),
+        });
+      } catch (err) {
+        console.error("register-token error:", err);
+      }
+    });
+    PushNotifications.addListener("registrationError", (err) => {
+      console.error("Erreur enregistrement push:", err);
+    });
+  } catch (err) {
+    console.error("registerPushNotifications error:", err);
+  }
+}
+
+// Demande au serveur d'envoyer une notification push à un utilisateur —
+// silencieux en cas d'échec (ne bloque jamais l'action principale du client,
+// comme un like ou un message, si la notification elle-même échoue).
+async function sendPushNotification(targetUserId, title, body, data) {
+  try {
+    await fetch("/api/shop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "send-push", targetUserId, title, body, data: data || {} }),
+    });
+  } catch (err) {
+    console.error("sendPushNotification error:", err);
+  }
+}
+
 // Texte de consentement EXIGÉ par Google si vous choisissez l'Option A
 // (facturation alternative). Ne suffit PAS à lui seul à être conforme : il
 // faut aussi faire remonter chaque transaction à Google via la Play
@@ -9471,6 +9526,7 @@ async function likeProfileAndCheckMatch(userProfile, targetProfile) {
     user_a: userProfile.userId, user_b: targetProfile.userId,
     profile_a: userProfile.id, profile_b: targetProfile.id,
   });
+  sendPushNotification(targetProfile.userId, "C'est un match ! 🎉", `${userProfile.name} et ${targetProfile.name} se sont likés mutuellement.`, { type: "match" });
   let questResult = null;
   if (!userProfile?.questsCompleted?.first_match) {
     try {
@@ -9491,6 +9547,7 @@ async function likeBackAndMatch(userProfile, like) {
     user_a: userProfile.userId, user_b: like.userId,
     profile_a: userProfile.id, profile_b: like.profileId,
   });
+  sendPushNotification(like.userId, "C'est un match ! 🎉", `${userProfile.name} et ${like.name} se sont likés mutuellement.`, { type: "match" });
   if (!userProfile?.questsCompleted?.first_match) {
     try {
       const result = await claimQuest(userProfile, "first_match");
@@ -10089,6 +10146,13 @@ export default function Miloute() {
     const interval = setInterval(beat, 60000);
     return () => clearInterval(interval);
   }, [userProfile?.id]);
+
+  // Enregistrement des notifications push — une fois, à la connexion,
+  // uniquement sur Android natif (no-op silencieux sur le web).
+  useEffect(() => {
+    if (!userProfile?.userId) return;
+    registerPushNotifications(userProfile);
+  }, [userProfile?.userId]);
 
   // Badge de notification sur l'icône Profil : friandises reçues pas encore vues.
   useEffect(() => {
