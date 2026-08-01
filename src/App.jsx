@@ -6101,7 +6101,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ filter: isPremium ? "none" : "blur(5px)", pointerEvents: isPremium ? "auto" : "none" }}>
               {loadingStats ? (
                 <div style={{ display: "flex", justifyContent: "center", padding: 24 }}><PawLogo size={24} color="#E8B89F" /></div>
-              ) : !advancedStats || (advancedStats.matchCount === 0 && advancedStats.likesReceived === 0 && advancedStats.treatsReceived === 0) ? (
+              ) : !advancedStats || !advancedStats.hasAnyData ? (
                 <div style={{ background: "#fff", borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
                   <div style={{ fontSize: 24, marginBottom: 6 }}>📊</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200", marginBottom: 4 }}>Pas encore assez de données</div>
@@ -6123,9 +6123,13 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                     <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Race la plus fréquente parmi vos matchs</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{advancedStats.topBreed ? `${pet.species === "cat" ? "🐱" : "🐕"} ${advancedStats.topBreed}` : "Pas encore de match"}</div>
                   </div>
+                  <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Article le plus offert</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{advancedStats.topGiftSent || "Pas encore de cadeau envoyé"}</div>
+                  </div>
                   <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Cadeaux reçus au total</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>🎁 {advancedStats.treatsReceived}</div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 2 }}>Membre depuis</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>🐾 {advancedStats.memberSince || "—"}</div>
                   </div>
                 </>
               )}
@@ -9712,17 +9716,19 @@ async function fetchJournalEntries(userProfile) {
 async function fetchAdvancedStats(userProfile) {
   if (!userProfile?.userId || !userProfile?.id) return null;
 
-  const [likesSentRes, likesReceivedRes, matchRowsRes, treatsRes] = await Promise.all([
+  const [likesSentRes, likesReceivedRes, matchRowsRes, treatsReceivedRes, treatsSentRes, profileRes] = await Promise.all([
     supabase.from("swipes").select("id", { count: "exact", head: true }).eq("swiper_user_id", userProfile.userId).eq("direction", "like"),
     supabase.from("swipes").select("id", { count: "exact", head: true }).eq("target_profile_id", userProfile.id).eq("direction", "like"),
     supabase.from("matches").select("profile_a, profile_b").or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`),
     supabase.from("treats").select("id", { count: "exact", head: true }).eq("target_user_id", userProfile.userId),
+    supabase.from("treats").select("gift_id").eq("sender_user_id", userProfile.userId),
+    supabase.from("profiles").select("created_at").eq("id", userProfile.id).maybeSingle(),
   ]);
 
   const likesSent = likesSentRes.count || 0;
   const likesReceived = likesReceivedRes.count || 0;
   const matchRows = matchRowsRes.data || [];
-  const treatsReceived = treatsRes.count || 0;
+  const treatsReceivedCount = treatsReceivedRes.count || 0;
   const matchRate = likesSent > 0 ? Math.round((matchRows.length / likesSent) * 100) : null;
 
   let topBreed = null;
@@ -9735,7 +9741,30 @@ async function fetchAdvancedStats(userProfile) {
     if (sorted.length > 0) topBreed = sorted[0][0];
   }
 
-  return { matchRate, likesReceived, matchCount: matchRows.length, treatsReceived, topBreed };
+  let topGiftSent = null;
+  const sentRows = treatsSentRes.data || [];
+  if (sentRows.length > 0) {
+    const counts = {};
+    sentRows.forEach(t => { if (t.gift_id) counts[t.gift_id] = (counts[t.gift_id] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) {
+      const giftInfo = GIFT_CATALOG.find(g => g.id === sorted[0][0]);
+      topGiftSent = giftInfo ? `${giftInfo.emoji} ${giftInfo.label}` : null;
+    }
+  }
+
+  let memberSince = null;
+  if (profileRes.data?.created_at) {
+    const days = Math.floor((Date.now() - new Date(profileRes.data.created_at).getTime()) / (24 * 60 * 60 * 1000));
+    if (days < 1) memberSince = "Aujourd'hui";
+    else if (days < 31) memberSince = `${days} jour${days > 1 ? "s" : ""}`;
+    else if (days < 365) memberSince = `${Math.floor(days / 30)} mois`;
+    else memberSince = `${Math.floor(days / 365)} an${Math.floor(days / 365) > 1 ? "s" : ""}`;
+  }
+
+  const hasAnyData = matchRows.length > 0 || likesReceived > 0 || treatsReceivedCount > 0 || sentRows.length > 0;
+
+  return { matchRate, likesReceived, matchCount: matchRows.length, topBreed, topGiftSent, memberSince, hasAnyData };
 }
 
 async function fetchMatchesForUser(userProfile) {
