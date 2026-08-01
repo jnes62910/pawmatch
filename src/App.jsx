@@ -1858,6 +1858,16 @@ async function createProviderReview(userProfile, spotId, rating, text) {
     rating, text,
   }, { onConflict: "spot_id,user_id" });
   if (error) throw new Error(error.message);
+
+  const { data: spot } = await supabase.from("spots").select("added_by_user_id, name").eq("id", spotId).maybeSingle();
+  if (spot?.added_by_user_id && spot.added_by_user_id !== userProfile.userId) {
+    sendPushNotification(
+      spot.added_by_user_id,
+      `Nouvel avis reçu ⭐`,
+      `${userProfile.name} vous a laissé ${rating}/5${text ? ` — « ${text} »` : ""}`,
+      { type: "review", spotId }
+    );
+  }
 }
 
 async function createCommunityProvider(userProfile, { name, type, address, phone, description, lat, lng }) {
@@ -8690,7 +8700,16 @@ async function confirmBooking(bookingId, userId) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bookingId, userId }),
   });
-  return res.json();
+  const data = await res.json();
+  if (data.booking) {
+    const otherUserId = data.booking.client_user_id === userId ? data.booking.provider_user_id : data.booking.client_user_id;
+    if (data.booking.status === "released") {
+      sendPushNotification(otherUserId, "Réservation finalisée ✅", `"${data.booking.service_title}" a été confirmée par les deux parties.`, { type: "booking" });
+    } else {
+      sendPushNotification(otherUserId, "Confirmation de réservation", `Une confirmation a été faite pour "${data.booking.service_title}".`, { type: "booking" });
+    }
+  }
+  return data;
 }
 
 async function cancelBooking(bookingId, userId) {
@@ -8699,7 +8718,12 @@ async function cancelBooking(bookingId, userId) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bookingId, userId, action: "cancel" }),
   });
-  return res.json();
+  const data = await res.json();
+  if (data.booking) {
+    const otherUserId = data.booking.client_user_id === userId ? data.booking.provider_user_id : data.booking.client_user_id;
+    sendPushNotification(otherUserId, "Réservation annulée ❌", `"${data.booking.service_title}" a été annulée.`, { type: "booking" });
+  }
+  return data;
 }
 
 function mapBookingRow(row, isProvider) {
@@ -9350,6 +9374,16 @@ async function createCommunityComment(userProfile, postId, text, parentCommentId
     parent_comment_id: parentCommentId,
   });
   if (error) throw new Error(error.message);
+
+  const { data: post } = await supabase.from("community_posts").select("user_id").eq("id", postId).maybeSingle();
+  if (post?.user_id && post.user_id !== userProfile.userId) {
+    sendPushNotification(
+      post.user_id,
+      `${userProfile.name} a commenté votre post 💬`,
+      text,
+      { type: "comment", postId }
+    );
+  }
 }
 
 async function toggleCommunityLike(userProfile, postId, currentlyLiked) {
@@ -9370,6 +9404,15 @@ async function sendTreatToProfile(userProfile, targetProfile, giftId, message = 
     message: message || null,
   });
   if (error) throw new Error(error.message);
+
+  const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
+  const giftLabel = giftInfo ? `${giftInfo.emoji} ${giftInfo.label}` : "un cadeau";
+  sendPushNotification(
+    targetProfile.userId,
+    `${userProfile.name} vous a envoyé un cadeau ! 🎁`,
+    `${giftLabel}${message ? ` — « ${message} »` : ""}`,
+    { type: "gift" }
+  );
 }
 
 async function fetchUnreadMessagesCount(userProfile) {
