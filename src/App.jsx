@@ -3477,7 +3477,8 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
     "Événement": ["#E3F2FD","#1565C0"],
     "Conseil": ["#FFF9E6","#854D0E"],
     "Anniversaire": ["#FAF0EB","#8B3D28"],
-    "Reproduction": ["#E8F5E9","#2E7D32"]
+    "Reproduction": ["#E8F5E9","#2E7D32"],
+    "Rencontre": ["#FCE4EC","#AD1457"],
   };
 
   const [moderatingComment, setModeratingComment] = useState({}); // { [postId]: bool }
@@ -5161,9 +5162,102 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     }
   }
   const [treatsReceived, setTreatsReceived] = useState([]);
+  const [encounterPhotos, setEncounterPhotos] = useState([]);
+
+  const [showAddEncounter, setShowAddEncounter] = useState(false);
+  const [encounterStep, setEncounterStep] = useState(1);
+  const [encounterFile, setEncounterFile] = useState(null);
+  const [encounterPreview, setEncounterPreview] = useState(null);
+  const [encounterMatches, setEncounterMatches] = useState([]);
+  const [loadingEncounterMatches, setLoadingEncounterMatches] = useState(false);
+  const [encounterSelectedMatch, setEncounterSelectedMatch] = useState(null);
+  const [encounterCaption, setEncounterCaption] = useState("");
+  const [encounterDate, setEncounterDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [encounterLocation, setEncounterLocation] = useState("");
+  const [encounterShare, setEncounterShare] = useState("private"); // "private" | "community"
+  const [savingEncounter, setSavingEncounter] = useState(false);
+  const [encounterError, setEncounterError] = useState(null);
+  const [encounterSuccessMsg, setEncounterSuccessMsg] = useState(null);
+  const encounterFileRef = useRef(null);
+  const encounterCameraRef = useRef(null);
+
+  function openAddEncounter() {
+    setEncounterStep(1);
+    setEncounterFile(null);
+    setEncounterPreview(null);
+    setEncounterSelectedMatch(null);
+    setEncounterCaption("");
+    setEncounterDate(new Date().toISOString().slice(0, 10));
+    setEncounterLocation("");
+    setEncounterShare("private");
+    setEncounterError(null);
+    setShowAddEncounter(true);
+  }
+
+  function handleEncounterFileChosen(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEncounterFile(file);
+    setEncounterPreview(URL.createObjectURL(file));
+    setLoadingEncounterMatches(true);
+    fetchMatchesForUser(initialData).then(matches => {
+      setEncounterMatches(matches);
+      setLoadingEncounterMatches(false);
+    });
+    setEncounterStep(2);
+  }
+
+  async function saveEncounterPhoto() {
+    if (!encounterFile) return;
+    setSavingEncounter(true);
+    setEncounterError(null);
+    try {
+      const photoUrl = await uploadPhotoToStorage(encounterFile, initialData.userId);
+      const created = await createEncounterPhoto(initialData, {
+        photoUrl,
+        matchId: encounterSelectedMatch?.id || null,
+        otherProfileId: encounterSelectedMatch?.otherProfileId || null,
+        caption: encounterCaption.trim() || null,
+        encounterDate: encounterDate || null,
+        location: encounterLocation.trim() || null,
+        shareToCommunity: encounterShare === "community",
+      });
+      setEncounterPhotos(list => [{
+        id: created.id, photo: photoUrl, caption: created.caption, encounterDate: created.encounter_date,
+        location: created.location, otherName: encounterSelectedMatch?.name || null,
+        sharedToCommunity: created.shared_to_community, createdAt: created.created_at,
+      }, ...list]);
+      const successText = encounterShare === "community"
+        ? "Souvenir ajouté et partagé dans la Communauté"
+        : `Souvenir ajouté à la Boîte de ${initialData.name}`;
+      setEncounterSuccessMsg(successText);
+      setTimeout(() => setEncounterSuccessMsg(null), 3000);
+      setShowAddEncounter(false);
+    } catch (err) {
+      console.error("saveEncounterPhoto error:", err);
+      setEncounterError("L'enregistrement a échoué. Réessayez.");
+    }
+    setSavingEncounter(false);
+  }
+
   const [treatsFilterCategory, setTreatsFilterCategory] = useState("all");
   const [confirmDeleteTreat, setConfirmDeleteTreat] = useState(null);
   const [deletingTreat, setDeletingTreat] = useState(false);
+  const [confirmDeleteEncounter, setConfirmDeleteEncounter] = useState(null);
+  const [deletingEncounter, setDeletingEncounter] = useState(false);
+
+  async function handleDeleteEncounter() {
+    if (!confirmDeleteEncounter) return;
+    setDeletingEncounter(true);
+    try {
+      await deleteEncounterPhoto(confirmDeleteEncounter.id);
+      setEncounterPhotos(list => list.filter(e => e.id !== confirmDeleteEncounter.id));
+    } catch (err) {
+      console.error("deleteEncounterPhoto error:", err);
+    }
+    setDeletingEncounter(false);
+    setConfirmDeleteEncounter(null);
+  }
 
   async function handleDeleteTreat() {
     if (!confirmDeleteTreat) return;
@@ -5195,6 +5289,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   function openTreatsModal() {
     setShowTreatsModal(true);
+    fetchEncounterPhotos(initialData).then(setEncounterPhotos);
     if (unseenTreatsCount > 0) {
       playGiftFeedback(loadSoundMode(), loadSoundPalette(), initialData?.species);
       markTreatsSeen(initialData).then(() => { setUnseenTreatsCount(0); onTreatsSeen(); });
@@ -6164,7 +6259,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         </div>
       )}
 
-      {/* Modale Friandises reçues */}
+      {/* Modale Boîte à Souvenirs */}
       {showTreatsModal && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "flex-end" }}
           onClick={() => setShowTreatsModal(false)}>
@@ -6172,14 +6267,24 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>💝 Ma Boîte à Souvenirs</div>
-                <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer" }}>✕</button>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>
+                  {(() => {
+                    const total = treatsReceived.length + encounterPhotos.length;
+                    if (total === 0) return `💝 La Boîte à Souvenirs de ${pet.name} est encore vide`;
+                    if (total === 1) return `💝 Le premier souvenir de ${pet.name}`;
+                    return `💝 ${total} beaux souvenirs avec ${pet.name}`;
+                  })()}
+                </div>
+                <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer", flexShrink: 0, marginLeft: 10 }}>✕</button>
               </div>
-              {treatsReceived.length > 0 && (
-                <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 10 }}>{treatsReceived.length} souvenir{treatsReceived.length > 1 ? "s" : ""} reçu{treatsReceived.length > 1 ? "s" : ""} depuis ton inscription</div>
-              )}
+
+              <button onClick={openAddEncounter}
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>
+                📸 Ajouter une photo de rencontre
+              </button>
+
               <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-                {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"]].map(([v, l]) => (
+                {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"], ["encounter", "Rencontres"]].map(([v, l]) => (
                   <button key={v} onClick={() => setTreatsFilterCategory(v)}
                     style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
                     {l}
@@ -6189,19 +6294,71 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px" }}>
               {(() => {
-                const filtered = treatsFilterCategory === "all" ? treatsReceived : treatsReceived.filter(t => t.giftCategory === treatsFilterCategory);
-                if (filtered.length === 0) {
+                const showTreats = treatsFilterCategory === "all" || treatsFilterCategory === "food" || treatsFilterCategory === "gift" || treatsFilterCategory === "comfort";
+                const showEncounters = treatsFilterCategory === "all" || treatsFilterCategory === "encounter";
+                const filteredTreats = !showTreats ? [] : (treatsFilterCategory === "all" ? treatsReceived : treatsReceived.filter(t => t.giftCategory === treatsFilterCategory));
+                const filteredEncounters = treatsFilterCategory === "encounter" ? encounterPhotos : (treatsFilterCategory === "all" ? encounterPhotos : []);
+                const nothingAtAll = treatsReceived.length === 0 && encounterPhotos.length === 0;
+                const nothingInFilter = filteredTreats.length === 0 && filteredEncounters.length === 0;
+
+                if (nothingInFilter) {
+                  const emptyCopy = {
+                    all: ["Ici se collectionneront tous les cadeaux et moments magiques que", "recevra.", "Découvrir les cadeaux"],
+                    food: ["Aucune friandise pour le moment", "Les gourmandises reçues par", "apparaîtront ici.", null],
+                    gift: ["Aucun cadeau pour le moment", "Les cadeaux reçus par", "apparaîtront ici.", null],
+                    comfort: ["Aucun accessoire pour le moment", "Les accessoires reçus par", "apparaîtront ici.", null],
+                    encounter: ["Aucune rencontre pour le moment", "Ajoutez vos plus belles photos de play dates avec", ".", null],
+                  };
                   return (
-                    <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF" }}>
-                      <div style={{ fontSize: 32, marginBottom: 8 }}>💝</div>
-                      <div style={{ fontSize: 14 }}>{treatsReceived.length === 0 ? "Pas encore de souvenirs reçus" : "Rien dans cette catégorie pour l'instant"}</div>
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#9CA3AF" }}>
+                      <div style={{ fontSize: 32, marginBottom: 10 }}>{treatsFilterCategory === "encounter" ? "📸" : "💝"}</div>
+                      {nothingAtAll && treatsFilterCategory === "all" ? (
+                        <>
+                          <div style={{ fontSize: 14, marginBottom: 16 }}>Ici se collectionneront tous les cadeaux et moments magiques que {pet.name} recevra.</div>
+                          <button onClick={() => { setShowTreatsModal(false); onGoToShop(); }}
+                            style={{ padding: "12px 22px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                            Découvrir les cadeaux
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 14 }}>
+                          {treatsFilterCategory === "food" && `Les gourmandises reçues par ${pet.name} apparaîtront ici.`}
+                          {treatsFilterCategory === "gift" && `Les cadeaux reçus par ${pet.name} apparaîtront ici.`}
+                          {treatsFilterCategory === "comfort" && `Les accessoires reçus par ${pet.name} apparaîtront ici.`}
+                          {treatsFilterCategory === "encounter" && `Ajoutez vos plus belles photos de play dates avec ${pet.name}.`}
+                        </div>
+                      )}
                     </div>
                   );
                 }
+
                 return (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-                    {filtered.map(t => (
-                      <div key={t.id} style={{ position: "relative", borderRadius: 18, overflow: "visible", boxShadow: "0 3px 12px rgba(0,0,0,.1)" }}>
+                    {filteredEncounters.map(enc => (
+                      <div key={`enc-${enc.id}`} style={{ position: "relative", borderRadius: 18, overflow: "hidden", boxShadow: "0 3px 12px rgba(0,0,0,.1)" }}>
+                        <div style={{ position: "relative", width: "100%", aspectRatio: "1", background: "#FAF0EB" }}>
+                          <img src={enc.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.25) 45%, transparent 70%)" }} />
+                          <div style={{ position: "absolute", top: 8, left: 8, width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,.95)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, boxShadow: "0 2px 6px rgba(0,0,0,.2)" }}>
+                            📸
+                          </div>
+                          <button onClick={e => { e.stopPropagation(); setConfirmDeleteEncounter(enc); }}
+                            style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.4)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            ✕
+                          </button>
+                          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 10px" }}>
+                            {enc.otherName && <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>Avec {enc.otherName}</div>}
+                            {enc.caption && <div style={{ color: "rgba(255,255,255,.9)", fontSize: 10, fontStyle: "italic", marginTop: 2, lineHeight: 1.3 }}>« {enc.caption} »</div>}
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, color: "rgba(255,255,255,.65)", fontSize: 9.5, marginTop: 2 }}>
+                              <span>♡</span>
+                              <span>{formatRelativeTime(enc.createdAt)}{enc.location ? ` · ${enc.location}` : ""}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredTreats.map(t => (
+                      <div key={`treat-${t.id}`} style={{ position: "relative", borderRadius: 18, overflow: "visible", boxShadow: "0 3px 12px rgba(0,0,0,.1)" }}>
                         {!t.seen && (
                           <style>{`
                             @keyframes boxRevealPop { 0% { transform: scale(0) rotate(-18deg); opacity: 0; } 55% { transform: scale(1.15) rotate(6deg); opacity: 1; } 75% { transform: scale(0.95) rotate(-3deg); } 100% { transform: scale(1) rotate(0deg); } }
@@ -6232,7 +6389,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                             <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{t.giftLabel}</div>
                             <div style={{ color: "rgba(255,255,255,.85)", fontSize: 10.5 }}>de {t.name}</div>
                             {t.message && <div style={{ color: "rgba(255,255,255,.9)", fontSize: 10, fontStyle: "italic", marginTop: 2, lineHeight: 1.3 }}>« {t.message} »</div>}
-                            <div style={{ color: "rgba(255,255,255,.65)", fontSize: 9.5, marginTop: 2 }}>{t.time}</div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, color: "rgba(255,255,255,.65)", fontSize: 9.5 }}>
+                                <span>♡</span><span>{t.time}</span>
+                              </div>
+                              <button onClick={e => { e.stopPropagation(); setShowTreatsModal(false); onNav("messages"); }}
+                                style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 8, color: "#fff", fontSize: 9.5, fontWeight: 700, padding: "3px 8px", cursor: "pointer" }}>
+                                Répondre
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -6296,6 +6461,151 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Confirmation de suppression d'une photo de rencontre */}
+      {confirmDeleteEncounter && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => !deletingEncounter && setConfirmDeleteEncounter(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>🗑️</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 6 }}>Supprimer cette photo de rencontre ?</div>
+            <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 20, lineHeight: 1.5 }}>Cette photo sera définitivement retirée de votre Boîte à Souvenirs{confirmDeleteEncounter.sharedToCommunity ? " (le post associé dans la Communauté restera visible)" : ""}. Cette action est irréversible.</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDeleteEncounter(null)} disabled={deletingEncounter}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                Annuler
+              </button>
+              <button onClick={handleDeleteEncounter} disabled={deletingEncounter}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: deletingEncounter ? "#E5E7EB" : "#DC2626", color: deletingEncounter ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: deletingEncounter ? "default" : "pointer" }}>
+                {deletingEncounter ? "..." : "Oui, supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flow d'ajout d'une photo de rencontre (4 écrans) */}
+      {showAddEncounter && (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 95, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <button onClick={() => { if (encounterStep === 1) setShowAddEncounter(false); else setEncounterStep(s => s - 1); }}
+              style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#2D1200", padding: 4 }}>←</button>
+            <div style={{ flex: 1, textAlign: "center", fontSize: 13, fontWeight: 700, color: "#9CA3AF" }}>Étape {encounterStep} / 4</div>
+            <div style={{ width: 28 }} />
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px" }}>
+            {encounterStep === 1 && (
+              <div style={{ textAlign: "center", paddingTop: 30 }}>
+                <div style={{ fontSize: 40, marginBottom: 14 }}>📸</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Immortaliser une rencontre</div>
+                <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 32, lineHeight: 1.5 }}>Garde précieusement les plus beaux moments de ton animal.</div>
+                <input ref={encounterFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleEncounterFileChosen} />
+                <input ref={encounterCameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleEncounterFileChosen} />
+                <button onClick={() => encounterFileRef.current?.click()}
+                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 12 }}>
+                  🖼️ Choisir une photo
+                </button>
+                <button onClick={() => encounterCameraRef.current?.click()}
+                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                  📷 Prendre une photo
+                </button>
+              </div>
+            )}
+
+            {encounterStep === 2 && (
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 16, textAlign: "center" }}>Cette rencontre était avec…</div>
+                {loadingEncounterMatches ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={26} color="#E8B89F" /></div>
+                ) : encounterMatches.length === 0 ? (
+                  <div style={{ textAlign: "center", color: "#9CA3AF", padding: "20px 0", fontSize: 13 }}>Aucun match pour l'instant — vous pourrez quand même enregistrer cette photo sans l'associer à personne.</div>
+                ) : (
+                  encounterMatches.map(m => (
+                    <button key={m.id} onClick={() => { setEncounterSelectedMatch(m); setEncounterStep(3); }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14, border: encounterSelectedMatch?.id === m.id ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: encounterSelectedMatch?.id === m.id ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                      <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+                        {m.photo ? <img src={m.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : m.emoji}
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#2D1200" }}>{m.name}</span>
+                    </button>
+                  ))
+                )}
+                <button onClick={() => { setEncounterSelectedMatch(null); setEncounterStep(3); }}
+                  style={{ width: "100%", padding: "10px", marginTop: 8, background: "none", border: "none", fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>
+                  Ne pas associer à un match
+                </button>
+              </div>
+            )}
+
+            {encounterStep === 3 && (
+              <div>
+                {encounterPreview && (
+                  <div style={{ width: "100%", aspectRatio: "1", borderRadius: 16, overflow: "hidden", marginBottom: 18, background: "#FAF0EB" }}>
+                    <img src={encounterPreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                )}
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>LÉGENDE (OPTIONNEL)</label>
+                <textarea value={encounterCaption} onChange={e => setEncounterCaption(e.target.value.slice(0, 200))}
+                  placeholder="Écris un petit mot..."
+                  style={{ width: "100%", boxSizing: "border-box", minHeight: 70, resize: "none", padding: "10px 12px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 13, marginTop: 6, marginBottom: 16, fontFamily: "inherit" }} />
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DATE DE LA RENCONTRE</label>
+                <input type="date" value={encounterDate} onChange={e => setEncounterDate(e.target.value)}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 13, marginTop: 6, marginBottom: 16 }} />
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>LIEU (OPTIONNEL)</label>
+                <input value={encounterLocation} onChange={e => setEncounterLocation(e.target.value.slice(0, 80))}
+                  placeholder="Parc des Buttes-Chaumont..."
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 13, marginTop: 6, marginBottom: 20 }} />
+                <button onClick={() => setEncounterStep(4)}
+                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+                  Suivant
+                </button>
+              </div>
+            )}
+
+            {encounterStep === 4 && (
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 18, textAlign: "center" }}>Souhaites-tu partager cette photo ?</div>
+                <button onClick={() => setEncounterShare("private")}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px", borderRadius: 14, border: encounterShare === "private" ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: encounterShare === "private" ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 10, textAlign: "left" }}>
+                  <span style={{ fontSize: 20 }}>💝</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: "#2D1200" }}>Uniquement dans ma Boîte à Souvenirs</div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>Reste privé, visible par vous seul</div>
+                  </div>
+                  {encounterShare === "private" && <span style={{ color: "#B25F46", fontSize: 16 }}>✓</span>}
+                </button>
+                <button onClick={() => setEncounterShare("community")}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px", borderRadius: 14, border: encounterShare === "community" ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: encounterShare === "community" ? "#FAF0EB" : "#fff", cursor: "pointer", marginBottom: 20, textAlign: "left" }}>
+                  <span style={{ fontSize: 20 }}>🏆</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: "#2D1200" }}>Partager dans la Communauté</div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>Visible par tous, avec l'étiquette "Rencontre"</div>
+                  </div>
+                  {encounterShare === "community" && <span style={{ color: "#B25F46", fontSize: 16 }}>✓</span>}
+                </button>
+
+                {encounterError && (
+                  <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{encounterError}</div>
+                )}
+
+                <button onClick={saveEncounterPhoto} disabled={savingEncounter}
+                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: savingEncounter ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: savingEncounter ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: savingEncounter ? "default" : "pointer" }}>
+                  {savingEncounter ? "Enregistrement..." : "Enregistrer le souvenir"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation d'ajout réussi d'une photo de rencontre */}
+      {encounterSuccessMsg && (
+        <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 98, background: "#2D1200", color: "#fff", padding: "12px 20px", borderRadius: 30, fontSize: 13, fontWeight: 700, boxShadow: "0 8px 24px rgba(0,0,0,.25)", maxWidth: "88%", textAlign: "center" }}
+          onAnimationEnd={() => {}}>
+          {encounterSuccessMsg}
         </div>
       )}
 
@@ -8357,6 +8667,57 @@ async function fetchCommentsForPost(postId) {
   }));
 }
 
+// ── PHOTOS DE RENCONTRE (Boîte à Souvenirs) ──────────────────────────────
+async function createEncounterPhoto(userProfile, { photoUrl, matchId, otherProfileId, caption, encounterDate, location, shareToCommunity }) {
+  let communityPostId = null;
+  if (shareToCommunity) {
+    const post = await createCommunityPost(userProfile, { text: caption || "", photoUrl, tag: "Rencontre" });
+    communityPostId = post.id;
+  }
+  const { data, error } = await supabase.from("encounter_photos").insert({
+    user_id: userProfile.userId,
+    profile_id: userProfile.id,
+    match_id: matchId || null,
+    other_profile_id: otherProfileId || null,
+    photo_url: photoUrl,
+    caption: caption || null,
+    encounter_date: encounterDate || null,
+    location: location || null,
+    shared_to_community: !!shareToCommunity,
+    community_post_id: communityPostId,
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function fetchEncounterPhotos(userProfile) {
+  if (!userProfile?.id) return [];
+  const { data, error } = await supabase.from("encounter_photos").select("*").eq("profile_id", userProfile.id).order("created_at", { ascending: false });
+  if (error || !data) return [];
+
+  const otherIds = [...new Set(data.map(e => e.other_profile_id).filter(Boolean))];
+  const { data: otherProfiles } = otherIds.length > 0
+    ? await supabase.from("profiles").select("id, pet_name").in("id", otherIds)
+    : { data: [] };
+  const nameById = Object.fromEntries((otherProfiles || []).map(p => [p.id, p.pet_name]));
+
+  return data.map(e => ({
+    id: e.id,
+    photo: e.photo_url,
+    caption: e.caption,
+    encounterDate: e.encounter_date,
+    location: e.location,
+    otherName: e.other_profile_id ? nameById[e.other_profile_id] : null,
+    sharedToCommunity: e.shared_to_community,
+    createdAt: e.created_at,
+  }));
+}
+
+async function deleteEncounterPhoto(encounterId) {
+  const { error } = await supabase.from("encounter_photos").delete().eq("id", encounterId);
+  if (error) throw new Error(error.message);
+}
+
 async function createCommunityPost(userProfile, { text, photoUrl, tag }) {
   const { data, error } = await supabase.from("community_posts").insert({
     user_id: userProfile.userId,
@@ -8636,6 +8997,7 @@ async function fetchReceivedTreats(userProfile) {
       photo: sender?.photos?.[0]?.url || null,
       emoji: sender?.species === "cat" ? "🐱" : "🐕",
       senderProfileId: t.sender_profile_id,
+      senderUserId: sender?.userId || null,
       giftId: t.gift_id || null,
       giftLabel: giftInfo?.label || "Cadeau",
       giftEmoji: giftInfo?.emoji || "🎁",
