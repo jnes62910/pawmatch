@@ -11,7 +11,7 @@
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "jspdf": "^2.5.1",
-    "@capacitor/push-notifications": "^6.0.0",
+    "@capacitor/push-notifications": "^8.1.1",
     "stripe": "^16.0.0"
   },
   "scripts": {
