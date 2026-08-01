@@ -312,9 +312,9 @@ module.exports = async (req, res) => {
         try {
           await messaging.send({
             token: row.token,
-            notification: { title, body, imageUrl: 'https://miloute.app/logo-notif.PNG' },
+            notification: { title, body, imageUrl: 'https://miloute.app/logo-notif.png' },
             data: data || {},
-            android: { priority: 'high', notification: { imageUrl: 'https://miloute.app/logo-notif.PNG' } },
+            android: { priority: 'high', notification: { imageUrl: 'https://miloute.app/logo-notif.png' } },
           });
           sent++;
         } catch (err) {
