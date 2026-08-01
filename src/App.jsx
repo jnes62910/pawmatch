@@ -5340,7 +5340,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     setBookError(null);
     setBookExportProgress({ done: 0, total: bookPages.length });
     try {
-      await exportBookToPdf(bookPages, (done, total) => setBookExportProgress({ done, total }), BOOK_THEMES[bookCustom.theme] || BOOK_THEMES.doux);
+      await exportBookToPdf(bookPages, (done, total) => setBookExportProgress({ done, total }), BOOK_THEMES[bookCustom.theme] || BOOK_THEMES.miloute);
     } catch (err) {
       console.error("exportBookToPdf error:", err);
       setBookError("L'export a échoué. Vérifiez que la bibliothèque jsPDF est bien installée (npm install jspdf).");
@@ -6742,7 +6742,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
       {/* Le Livre Magique de Souvenirs — feuilletable */}
       {showMagicBook && bookPages.length > 0 && !bookOpening && (() => {
-        const theme = BOOK_THEMES[bookCustom.theme] || BOOK_THEMES.doux;
+        const theme = BOOK_THEMES[bookCustom.theme] || BOOK_THEMES.miloute;
 
         const renderBookPage = (page) => (
           <>
@@ -6880,7 +6880,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
               {Object.entries(BOOK_THEMES).map(([key, th]) => (
                 <button key={key} onClick={() => applyBookCustomization({ theme: key })}
-                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 4px", borderRadius: 12, border: (bookCustom.theme || "doux") === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: th.pageBg, cursor: "pointer" }}>
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 4px", borderRadius: 12, border: (bookCustom.theme || "miloute") === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: th.pageBg, cursor: "pointer" }}>
                   <div style={{ width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {th.useLogo ? <PawLogo size={18} color={th.accent} /> : <span style={{ fontSize: 18, lineHeight: 1 }}>{th.icon}</span>}
                   </div>
@@ -9572,13 +9572,13 @@ function buildBookPages(pet, treatsReceived, encounterPhotos, custom = {}) {
 // à la fois par la vue in-app et par l'export PDF, pour rester cohérents.
 const BOOK_THEMES = {
   miloute: { label: "Miloute", icon: "🐾", useLogo: true, pageBg: "#FAF0EB", accent: "#B25F46", accentDark: "#8B3D28", text: "#2D1200", subtext: "#9CA3AF", frameBg: "#8B3D28", pdfBg: [250, 240, 235] },
-  doux: { label: "Doux", icon: "🌸", pageBg: "#FDF6EE", accent: "#B25F46", accentDark: "#8B3D28", text: "#2D1200", subtext: "#9CA3AF", frameBg: "#2D1200", pdfBg: [250, 240, 235] },
+  doux: { label: "Doux", icon: "🌸", pageBg: "#FBE0EA", accent: "#C4527A", accentDark: "#9A3D5E", text: "#4A2534", subtext: "#C494A8", frameBg: "#7A3450", pdfBg: [251, 224, 234] },
   nuit: { label: "Nuit étoilée", icon: "🌙", pageBg: "#1B2340", accent: "#E8C468", accentDark: "#C9A94E", text: "#F5F0E6", subtext: "#9CA3C4", frameBg: "#0E1226", pdfBg: [27, 35, 64] },
-  nature: { label: "Nature", icon: "🌿", pageBg: "#F1F5EC", accent: "#5A8F5A", accentDark: "#3F6B3F", text: "#233B23", subtext: "#8FA88F", frameBg: "#1E2E1E", pdfBg: [241, 245, 236] },
+  nature: { label: "Nature", icon: "🌿", pageBg: "#CDEBCD", accent: "#3F7D3F", accentDark: "#2C5C2C", text: "#1D3A1D", subtext: "#7FAA7F", frameBg: "#2C5C2C", pdfBg: [205, 235, 205] },
   pastel: { label: "Pastel", icon: "💜", pageBg: "#F3F0FB", accent: "#8B7BC7", accentDark: "#6C5AA8", text: "#332B4D", subtext: "#A79FC4", frameBg: "#2A2440", pdfBg: [243, 240, 251] },
-  ocean: { label: "Océan", icon: "🌊", pageBg: "#EAF4F6", accent: "#2E7D9A", accentDark: "#1F5A70", text: "#1A3A42", subtext: "#8FB4BE", frameBg: "#0F2C36", pdfBg: [234, 244, 246] },
+  ocean: { label: "Océan", icon: "🌊", pageBg: "#CDEBFA", accent: "#1D6E8F", accentDark: "#154F67", text: "#123240", subtext: "#79A9BE", frameBg: "#154F67", pdfBg: [205, 235, 250] },
   automne: { label: "Automne", icon: "🍂", pageBg: "#FCF0E4", accent: "#C2703D", accentDark: "#94502A", text: "#4A2A16", subtext: "#C9A385", frameBg: "#3D2416", pdfBg: [252, 240, 228] },
-  dore: { label: "Doré", icon: "✨", pageBg: "#FFF9EC", accent: "#B8912C", accentDark: "#8B6F1A", text: "#3D3320", subtext: "#C4B48A", frameBg: "#2B2410", pdfBg: [255, 249, 236] },
+  dore: { label: "Doré", icon: "✨", pageBg: "#F9DE8B", accent: "#8B6A16", accentDark: "#6B4F0F", text: "#3D2E08", subtext: "#B49A4E", frameBg: "#6B4F0F", pdfBg: [249, 222, 139] },
 };
 
 function loadBookCustomization(petId) {
