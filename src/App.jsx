@@ -6483,18 +6483,17 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               )}
 
               {showGiftBrowser && (
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: 6, overflowX: "auto", flex: 1 }}>
-                    {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"], ["encounter", "Rencontres"]].map(([v, l]) => (
-                      <button key={v} onClick={() => setTreatsFilterCategory(v)}
-                        style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={() => setMemoryViewMode(m => m === "grid" ? "timeline" : "grid")} title={memoryViewMode === "grid" ? "Vue chronologie" : "Vue grille"}
-                    style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", background: "#fff", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>
-                    {memoryViewMode === "grid" ? "📖" : "▦"}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                  {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"], ["encounter", "Rencontres"]].map(([v, l]) => (
+                    <button key={v} onClick={() => setTreatsFilterCategory(v)}
+                      style={{ padding: "8px 6px", borderRadius: 12, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+                      {l}
+                    </button>
+                  ))}
+                  <button onClick={() => setMemoryViewMode(m => m === "grid" ? "timeline" : "grid")}
+                    style={{ padding: "8px 6px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", cursor: "pointer", fontSize: 12, fontWeight: 600, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                    <span style={{ fontSize: 13 }}>{memoryViewMode === "grid" ? "📋" : "▦"}</span>
+                    {memoryViewMode === "grid" ? "Chronologie" : "Grille"}
                   </button>
                 </div>
               )}
