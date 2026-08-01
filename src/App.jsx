@@ -566,6 +566,14 @@ function playNoiseBurst(delay, duration, { peakGain = 0.288, freqStart = 400, fr
   source.stop(t0 + duration + 0.02);
 }
 
+// Léger froissement de page, pour le Livre Magique — volontairement neutre
+// (indépendant de la palette de son choisie pour le swipe), respecte juste
+// le mode son général (coupé si "Off").
+function playPageTurnSound() {
+  if (loadSoundMode() === "off") return;
+  playNoiseBurst(0, 0.16, { peakGain: 0.1, freqStart: 2200, freqEnd: 800, q: 0.6 });
+}
+
 // Miaulement et aboiement synthétisés — approximatifs mais reconnaissables :
 // le miaou monte puis redescend en douceur (onde en dents de scie, glissando),
 // l'aboiement est un coup bref et grave qui chute vite (percussif).
@@ -5269,6 +5277,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [bookOpening, setBookOpening] = useState(false);
   const [bookFlip, setBookFlip] = useState(null); // "next" | "prev" | null, pendant l'animation de tournage
   const [bookFlippingFrom, setBookFlippingFrom] = useState(null); // page affichée pendant le tournage (avant de basculer sur la nouvelle)
+  const [bookPageSparkle, setBookPageSparkle] = useState(false);
   const [bookTitleDraft, setBookTitleDraft] = useState("");
   const [bookIntroDraft, setBookIntroDraft] = useState("");
   const [bookConclusionDraft, setBookConclusionDraft] = useState("");
@@ -5289,6 +5298,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     setBookPages(buildBookPages(pet, treatsReceived, encounterPhotos, saved));
     setShowMagicBook(true);
     setBookOpening(true);
+    playGiftFeedback(loadSoundMode(), loadSoundPalette(), initialData?.species);
     setTimeout(() => setBookOpening(false), 900);
   }
 
@@ -5318,6 +5328,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     if (bookFlip || bookPageIndex >= bookPages.length - 1) return;
     setBookFlippingFrom(bookPageIndex);
     setBookFlip("next");
+    playPageTurnSound();
+    setBookPageSparkle(true);
+    setTimeout(() => setBookPageSparkle(false), 500);
     setTimeout(() => {
       setBookPageIndex(i => Math.min(i + 1, bookPages.length - 1));
       setBookFlip(null);
@@ -5328,6 +5341,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     if (bookFlip || bookPageIndex <= 0) return;
     setBookFlippingFrom(bookPageIndex);
     setBookFlip("prev");
+    playPageTurnSound();
+    setBookPageSparkle(true);
+    setTimeout(() => setBookPageSparkle(false), 500);
     setTimeout(() => {
       setBookPageIndex(i => Math.max(i - 1, 0));
       setBookFlip(null);
@@ -6718,25 +6734,25 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         </div>
       )}
 
-      {/* Ouverture du Livre Magique — lumière et particules */}
+      {/* Ouverture du Livre Magique — lumière et particules, en or */}
       {bookOpening && (
         <div style={{ position: "absolute", inset: 0, background: "#2D1200", zIndex: 98, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
           <style>{`
             @keyframes bookGlowPulse { 0% { transform: scale(.2); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(2.6); opacity: 0; } }
-            @keyframes bookOpenParticle { 0% { transform: translate(0,0) scale(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--px), var(--py)) scale(1); opacity: 0; } }
+            @keyframes bookOpenParticle { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--px), var(--py)) scale(1) rotate(160deg); opacity: 0; } }
           `}</style>
-          <div style={{ position: "absolute", width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,196,104,.9), transparent 70%)", animation: "bookGlowPulse .9s ease-out" }} />
+          <div style={{ position: "absolute", width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,.95), transparent 70%)", animation: "bookGlowPulse .9s ease-out" }} />
           {Array.from({ length: 14 }).map((_, i) => {
             const angle = (i / 14) * Math.PI * 2;
             const dist = 140 + (i % 3) * 30;
             return (
               <span key={i} style={{
-                position: "absolute", fontSize: 12, "--px": `${Math.cos(angle) * dist}px`, "--py": `${Math.sin(angle) * dist}px`,
+                position: "absolute", fontSize: 12, color: "#E8C468", "--px": `${Math.cos(angle) * dist}px`, "--py": `${Math.sin(angle) * dist}px`,
                 animation: `bookOpenParticle .9s ease-out ${i * 0.02}s both`, pointerEvents: "none",
-              }}>✨</span>
+              }}>★</span>
             );
           })}
-          <div style={{ position: "relative", fontSize: 40 }}>📖</div>
+          <div style={{ position: "relative", fontSize: 40, filter: "drop-shadow(0 0 10px rgba(212,175,55,.8))" }}>📖</div>
         </div>
       )}
 
@@ -6776,12 +6792,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
             {(page.type === "gift" || page.type === "encounter") && (
               <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <div style={{ width: "100%", aspectRatio: "1", background: "rgba(0,0,0,.06)", flexShrink: 0 }}>
-                  {page.photo && <img src={page.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                <div style={{ width: "100%", aspectRatio: "1", background: "rgba(0,0,0,.06)", flexShrink: 0, overflow: "hidden" }}>
+                  {page.photo && <img key={page.id} src={page.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", animation: "bookPhotoReveal .5s ease-out" }} />}
                 </div>
                 <div style={{ flex: 1, padding: "18px 22px", textAlign: "center", overflowY: "auto" }}>
                   {page.special && (
-                    <div style={{ display: "inline-block", fontSize: 10, fontWeight: 800, color: "#946800", background: "#FFF3CD", padding: "3px 10px", borderRadius: 10, marginBottom: 8 }}>{page.special}</div>
+                    <div style={{ display: "inline-block", fontSize: 10, fontWeight: 800, color: "#946800", background: "#FFF3CD", padding: "3px 10px", borderRadius: 10, marginBottom: 8, animation: "bookSpecialPop .5s cubic-bezier(.34,1.56,.64,1) .15s both" }}>{page.special}</div>
                   )}
                   <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: theme.text, marginBottom: 4 }}>{page.emoji} {page.title}</div>
                   {page.subtitle && <div style={{ fontSize: 12, color: theme.subtext, marginBottom: 8 }}>{page.subtitle}</div>}
@@ -6808,6 +6824,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         <div style={{ position: "absolute", inset: 0, background: theme.frameBg, zIndex: 97, display: "flex", flexDirection: "column" }}>
           <style>{`
             @keyframes bookSparkleTwinkle { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+            @keyframes bookPageSparkleFly { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--px), var(--py)) scale(1) rotate(140deg); opacity: 0; } }
+            @keyframes bookPhotoReveal { 0% { opacity: 0; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+            @keyframes bookSpecialPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
           `}</style>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", flexShrink: 0 }}>
@@ -6853,6 +6872,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             }}>
               {renderBookPage(bookPages[currentIdx])}
             </div>
+
+            {/* Éclat d'étincelles au bord qui tourne */}
+            {bookPageSparkle && (
+              <div style={{ position: "absolute", top: "50%", [bookFlip === "prev" ? "left" : "right"]: 16, zIndex: 4, pointerEvents: "none" }}>
+                {[["-10px", "-30px"], ["12px", "-22px"], ["-4px", "10px"], ["10px", "24px"]].map(([tx, ty], idx) => (
+                  <span key={idx} style={{ position: "absolute", fontSize: 11, color: theme.accent, "--px": tx, "--py": ty, animation: `bookPageSparkleFly .5s ease-out ${idx * 0.03}s both` }}>★</span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ padding: "10px 20px 22px", flexShrink: 0 }}>
