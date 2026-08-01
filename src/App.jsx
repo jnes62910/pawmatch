@@ -6736,7 +6736,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
       {/* Ouverture du Livre Magique — lumière et particules, en or */}
       {bookOpening && (
-        <div style={{ position: "absolute", inset: 0, background: "#2D1200", zIndex: 98, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at center, #FAF0EB 0%, #B25F46 75%)", zIndex: 98, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
           <style>{`
             @keyframes bookGlowPulse { 0% { transform: scale(.2); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(2.6); opacity: 0; } }
             @keyframes bookOpenParticle { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--px), var(--py)) scale(1) rotate(160deg); opacity: 0; } }
