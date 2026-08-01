@@ -475,14 +475,14 @@ function compressImageForModeration(base64, mimeType) {
 
 // Retourne { approved: boolean, reason: string|null }. En cas d'erreur réseau,
 // on refuse par prudence plutôt que de laisser passer un contenu non vérifié.
-async function moderateImage(base64, mimeType = "image/jpeg") {
+async function moderateImage(base64, mimeType = "image/jpeg", context = "pet") {
   if (!MODERATION_ENABLED) return { approved: true, reason: null };
   try {
     const compressed = await compressImageForModeration(base64, mimeType);
     const res = await fetch(apiUrl("/api/moderate-photo"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: compressed, mimeType: "image/jpeg" }),
+      body: JSON.stringify({ image: compressed, mimeType: "image/jpeg", context }),
     });
     if (!res.ok) return { approved: false, reason: "Vérification indisponible, réessayez." };
     const data = await res.json();
@@ -1788,7 +1788,7 @@ function mapProviderRow(row) {
     id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
     lat: row.lat, lng: row.lng, address: row.address, phone: row.phone, desc: row.description,
     open: row.open, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
-    isFounder: !!row.is_founder,
+    isFounder: !!row.is_founder, photos: row.photos || [],
   };
 }
 
@@ -2608,6 +2608,15 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 20px" }}>
+              {selected.photos?.length > 0 && (
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 16 }}>
+                  {selected.photos.map((p, i) => (
+                    <div key={i} style={{ width: 110, height: 110, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "#000" }}>
+                      <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  ))}
+                </div>
+              )}
               {selected.affiliateUrl ? (
                 <>
                   {selected.desc && <p style={{ fontSize: 14, color: "#4B5563", lineHeight: 1.6, marginBottom: 16 }}>{selected.desc}</p>}
@@ -5105,6 +5114,65 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [buyingItemId, setBuyingItemId] = useState(null);
   const [shopError, setShopError] = useState(null);
 
+  const [selfSpotId, setSelfSpotId] = useState(null);
+  const [loadingSelfSpot, setLoadingSelfSpot] = useState(true);
+  const [spotPhotos, setSpotPhotos] = useState([]);
+  const [uploadingSpotPhoto, setUploadingSpotPhoto] = useState(false);
+  const [spotPhotoError, setSpotPhotoError] = useState(null);
+  const spotPhotoRef = useRef(null);
+
+  const [newSpotName, setNewSpotName] = useState("");
+  const [newSpotCategory, setNewSpotCategory] = useState("petsitter");
+  const [creatingSpot, setCreatingSpot] = useState(false);
+  const [createSpotError, setCreateSpotError] = useState(null);
+
+  async function createMySpot() {
+    if (!newSpotName.trim()) { setCreateSpotError("Le nom de votre activité est requis."); return; }
+    setCreateSpotError(null);
+    setCreatingSpot(true);
+    try {
+      const spotId = await ensureProviderSpot(initialData, newSpotCategory, newSpotName.trim());
+      setSelfSpotId(spotId);
+      setSpotPhotos([]);
+    } catch {
+      setCreateSpotError("La création a échoué, réessayez.");
+    }
+    setCreatingSpot(false);
+  }
+
+  async function handleSpotPhotoAdd(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permet de resélectionner le même fichier ensuite
+    if (!file || !selfSpotId) return;
+    if (spotPhotos.length >= 6) { setSpotPhotoError("Maximum 6 photos."); return; }
+    setSpotPhotoError(null);
+    setUploadingSpotPhoto(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const modResult = await moderateImage(base64, file.type, "prestataire");
+      if (!modResult.approved) {
+        setSpotPhotoError(modResult.reason || "Cette photo ne respecte pas les règles de Miloute.");
+        setUploadingSpotPhoto(false);
+        return;
+      }
+      const url = await uploadPhotoToStorage(file, initialData.userId);
+      const next = [...spotPhotos, { url, name: file.name }];
+      await updateSpotPhotos(selfSpotId, next);
+      setSpotPhotos(next);
+    } catch (err) {
+      console.error("handleSpotPhotoAdd error:", err);
+      setSpotPhotoError("L'envoi a échoué, réessayez.");
+    }
+    setUploadingSpotPhoto(false);
+  }
+
+  async function removeSpotPhoto(index) {
+    if (!selfSpotId) return;
+    const next = spotPhotos.filter((_, i) => i !== index);
+    setSpotPhotos(next);
+    try { await updateSpotPhotos(selfSpotId, next); } catch (err) { console.error("removeSpotPhoto error:", err); }
+  }
+
   async function buyItem(itemId, bundleId) {
     setBuyingItemId(bundleId || itemId);
     setShopError(null);
@@ -5163,6 +5231,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     fetchProviderServices(initialData.id).then(setProviderServices);
     fetchCommissionRate().then(({ rate, promoUntil }) => { setCommissionRate(rate); setCommissionPromoUntil(promoUntil); });
     setConnectOnboarded(!!initialData.stripeConnectOnboarded);
+    fetchSelfProviderSpot(initialData.userId).then(spot => {
+      setSelfSpotId(spot?.id || null);
+      setSpotPhotos(spot?.photos || []);
+      setLoadingSelfSpot(false);
+    });
   }, [initialData?.id, initialData?.stripeConnectOnboarded]);
 
   // Au retour de l'onboarding Stripe Connect, revérifie le statut réel.
@@ -7162,6 +7235,35 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 40px" }}>
+            {loadingSelfSpot ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: 60 }}><PawLogo size={32} color="#E8B89F" /></div>
+            ) : !selfSpotId ? (
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Créez votre fiche prestataire</div>
+                <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5, marginBottom: 20 }}>Toiletteur, éducateur, pet-sitter, pension... commencez par donner un nom à votre activité. Vous pourrez ensuite ajouter des photos, vos prestations et vos tarifs à votre rythme.</div>
+
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>NOM DE VOTRE ACTIVITÉ *</label>
+                <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Le nom affiché dans l'annuaire — celui de votre salon, entreprise, ou simplement le vôtre.</div>
+                <input value={newSpotName} onChange={e => setNewSpotName(e.target.value)} placeholder="Ex: Léa, pet-sitter du 15e"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
+
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
+                <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+                  {PROVIDER_TYPES.filter(t => t !== "insurance").map(t => (
+                    <button key={t} onClick={() => setNewSpotCategory(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newSpotCategory === t ? "#B25F46" : "#E5E7EB"}`, background: newSpotCategory === t ? "#FAF0EB" : "#fff", color: newSpotCategory === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
+                  ))}
+                </div>
+
+                {createSpotError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{createSpotError}</div>}
+
+                <button onClick={createMySpot} disabled={creatingSpot}
+                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: creatingSpot ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: creatingSpot ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: creatingSpot ? "default" : "pointer" }}>
+                  {creatingSpot ? "Création..." : "Créer ma fiche"}
+                </button>
+              </div>
+            ) : (
+              <>
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Bienvenue dans votre Espace prestataire !</div>
               <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Toiletteur, éducateur, pet-sitter, pension... proposez vos services aux propriétaires d'animaux près de chez vous. Ajoutez votre première prestation pour apparaître dans l'annuaire, et recevez vos paiements directement une fois la prestation confirmée par les deux parties !</div>
@@ -7194,6 +7296,30 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 </>
               )}
             </div>
+
+            {/* Galerie photo du profil prestataire */}
+            {selfSpotId && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>PHOTOS ({spotPhotos.length}/6)</div>
+                <div style={{ fontSize: 11.5, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Salon, équipements, animaux toilettés, photo de vous ou de l'équipe... — pas besoin qu'un animal soit visible sur chaque photo.</div>
+                <input ref={spotPhotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleSpotPhotoAdd} />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: spotPhotoError ? 8 : 0 }}>
+                  {spotPhotos.map((p, i) => (
+                    <div key={i} style={{ aspectRatio: "1", borderRadius: 12, overflow: "hidden", position: "relative", background: "#000" }}>
+                      <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button onClick={() => removeSpotPhoto(i)} style={{ position: "absolute", top: 5, right: 5, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
+                    </div>
+                  ))}
+                  {spotPhotos.length < 6 && (
+                    <div onClick={() => !uploadingSpotPhoto && spotPhotoRef.current?.click()}
+                      style={{ aspectRatio: "1", borderRadius: 12, background: "#F3F4F6", border: "2px dashed #D1D5DB", cursor: uploadingSpotPhoto ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {uploadingSpotPhoto ? <PawLogo size={20} color="#E8B89F" /> : <span style={{ fontSize: 24, color: "#E8B89F" }}>+</span>}
+                    </div>
+                  )}
+                </div>
+                {spotPhotoError && <div style={{ fontSize: 11.5, color: "#DC2626" }}>{spotPhotoError}</div>}
+              </div>
+            )}
 
             {/* Transparence commission */}
             <div style={{ display: "flex", gap: 10, background: commissionPromoUntil ? "#FFF8E7" : "#F9FAFB", border: commissionPromoUntil ? "1.5px solid #E8C468" : "none", borderRadius: 12, padding: "12px 14px", marginBottom: 20, alignItems: "flex-start" }}>
@@ -7237,6 +7363,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "#DC2626" }}>🗑️</button>
               </div>
             ))}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -7245,6 +7373,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       {showAddService && (
         <AddServiceForm
           userProfile={initialData}
+          spotId={selfSpotId}
           onClose={() => setShowAddService(false)}
           onAdded={async () => {
             setShowAddService(false);
@@ -7513,24 +7642,16 @@ function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, i
   );
 }
 
-function AddServiceForm({ userProfile, onClose, onAdded }) {
+function AddServiceForm({ userProfile, spotId, onClose, onAdded }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [category, setCategory] = useState("petsitter");
-  const [businessName, setBusinessName] = useState("");
-  const [hasExistingSpot, setHasExistingSpot] = useState(true); // true tant qu'on n'a pas vérifié, pour ne pas flasher le sélecteur inutilement
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchSelfProviderSpot(userProfile.userId).then(spot => setHasExistingSpot(!!spot));
-  }, [userProfile.userId]);
 
   async function submit() {
     const priceNum = parseFloat(price.replace(",", "."));
     if (!title.trim()) { setError("Le titre est requis."); return; }
-    if (!hasExistingSpot && !businessName.trim()) { setError("Le nom de votre activité est requis."); return; }
     if (!priceNum || priceNum <= 0) { setError("Indiquez un prix valide."); return; }
     setError(null);
     setSubmitting(true);
@@ -7543,7 +7664,6 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
       }
     }
     try {
-      const spotId = await ensureProviderSpot(userProfile, category, businessName.trim());
       await createProviderService(userProfile, { title: title.trim(), description: description.trim(), priceCents: Math.round(priceNum * 100), spotId });
       onAdded();
     } catch {
@@ -7557,23 +7677,6 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
       <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "90%", overflowY: "auto", padding: "20px 20px 32px" }}>
         <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
         <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Ajouter une prestation</div>
-
-        {!hasExistingSpot && (
-          <>
-            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>NOM DE VOTRE ACTIVITÉ *</label>
-            <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Le nom affiché dans l'annuaire — celui de votre salon, entreprise, ou simplement le vôtre.</div>
-            <input value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Ex: Léa, pet-sitter du 15e"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
-
-            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
-            <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-              {PROVIDER_TYPES.filter(t => t !== "insurance").map(t => (
-                <button key={t} onClick={() => setCategory(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${category === t ? "#B25F46" : "#E5E7EB"}`, background: category === t ? "#FAF0EB" : "#fff", color: category === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
-              ))}
-            </div>
-          </>
-        )}
 
         <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>TITRE *</label>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Garde à domicile (journée)"
@@ -8749,6 +8852,11 @@ function mapBookingRow(row, isProvider) {
 async function fetchSelfProviderSpot(userId) {
   const { data } = await supabase.from("spots").select("*").eq("added_by_user_id", userId).eq("source", "self").maybeSingle();
   return data || null;
+}
+
+async function updateSpotPhotos(spotId, photos) {
+  const { error } = await supabase.from("spots").update({ photos }).eq("id", spotId);
+  if (error) throw new Error(error.message);
 }
 
 async function ensureProviderSpot(userProfile, category, businessName) {
