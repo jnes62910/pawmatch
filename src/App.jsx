@@ -5241,6 +5241,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   }
 
   const [treatsFilterCategory, setTreatsFilterCategory] = useState("all");
+  const [showGiftBrowser, setShowGiftBrowser] = useState(false);
   const [memoryViewMode, setMemoryViewMode] = useState("grid"); // "grid" | "timeline"
   const [confirmDeleteTreat, setConfirmDeleteTreat] = useState(null);
   const [deletingTreat, setDeletingTreat] = useState(false);
@@ -5400,6 +5401,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   function openTreatsModal() {
     setShowTreatsModal(true);
+    setShowGiftBrowser(false);
     fetchEncounterPhotos(initialData).then(setEncounterPhotos);
     if (unseenTreatsCount > 0) {
       playGiftFeedback(loadSoundMode(), loadSoundPalette(), initialData?.species);
@@ -6378,16 +6380,14 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
               <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 14px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>
-                  {(() => {
-                    const total = treatsReceived.length + encounterPhotos.length;
-                    if (total === 0) return `💝 La Boîte à Souvenirs de ${pet.name} est encore vide`;
-                    if (total === 1) return `💝 Le premier souvenir de ${pet.name}`;
-                    return `💝 ${total} beaux souvenirs avec ${pet.name}`;
-                  })()}
-                </div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#2D1200" }}>💝 Ma Boîte à Souvenirs</div>
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer", flexShrink: 0, marginLeft: 10 }}>✕</button>
               </div>
+
+              <button onClick={() => { setShowGiftBrowser(true); setTreatsFilterCategory("all"); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8 }}>
+                🎁 Voir toutes mes friandises et cadeaux
+              </button>
 
               <button onClick={openAddEncounter}
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8 }}>
@@ -6396,26 +6396,29 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
               {(treatsReceived.length + encounterPhotos.length) > 0 && (
                 <button onClick={openMagicBook}
-                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: showGiftBrowser ? 12 : 8 }}>
                   ✨ Ouvrir le Livre Magique
                 </button>
               )}
 
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ display: "flex", gap: 6, overflowX: "auto", flex: 1 }}>
-                  {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"], ["encounter", "Rencontres"]].map(([v, l]) => (
-                    <button key={v} onClick={() => setTreatsFilterCategory(v)}
-                      style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-                      {l}
-                    </button>
-                  ))}
+              {showGiftBrowser && (
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 6, overflowX: "auto", flex: 1 }}>
+                    {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"], ["encounter", "Rencontres"]].map(([v, l]) => (
+                      <button key={v} onClick={() => setTreatsFilterCategory(v)}
+                        style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setMemoryViewMode(m => m === "grid" ? "timeline" : "grid")} title={memoryViewMode === "grid" ? "Vue chronologie" : "Vue grille"}
+                    style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", background: "#fff", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>
+                    {memoryViewMode === "grid" ? "📖" : "▦"}
+                  </button>
                 </div>
-                <button onClick={() => setMemoryViewMode(m => m === "grid" ? "timeline" : "grid")} title={memoryViewMode === "grid" ? "Vue chronologie" : "Vue grille"}
-                  style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", background: "#fff", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>
-                  {memoryViewMode === "grid" ? "📖" : "▦"}
-                </button>
-              </div>
+              )}
             </div>
+            {showGiftBrowser && (
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px" }}>
               {(() => {
                 const showTreats = treatsFilterCategory === "all" || treatsFilterCategory === "food" || treatsFilterCategory === "gift" || treatsFilterCategory === "comfort";
@@ -6574,6 +6577,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 );
               })()}
             </div>
+            )}
           </div>
         </div>
       )}
