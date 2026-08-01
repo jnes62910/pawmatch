@@ -5241,10 +5241,56 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   }
 
   const [treatsFilterCategory, setTreatsFilterCategory] = useState("all");
+  const [memoryViewMode, setMemoryViewMode] = useState("grid"); // "grid" | "timeline"
   const [confirmDeleteTreat, setConfirmDeleteTreat] = useState(null);
   const [deletingTreat, setDeletingTreat] = useState(false);
   const [confirmDeleteEncounter, setConfirmDeleteEncounter] = useState(null);
   const [deletingEncounter, setDeletingEncounter] = useState(false);
+  const [editingNoteFor, setEditingNoteFor] = useState(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [generatingBook, setGeneratingBook] = useState(false);
+  const [bookProgress, setBookProgress] = useState(null);
+  const [bookError, setBookError] = useState(null);
+
+  async function handleGenerateMemoryBook() {
+    const items = [
+      ...treatsReceived.map(t => ({ photo: t.photo, title: `${t.giftLabel} de ${t.name}`, subtitle: t.time, quote: t.message, date: t.createdAt })),
+      ...encounterPhotos.map(e => ({ photo: e.photo, title: e.otherName ? `Rencontre avec ${e.otherName}` : "Photo de rencontre", subtitle: e.location || "", quote: e.caption, date: e.createdAt })),
+    ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (items.length === 0) return;
+
+    setGeneratingBook(true);
+    setBookError(null);
+    setBookProgress({ done: 0, total: items.length });
+    try {
+      await generateMemoryBookPdf(pet.name, items, (done, total) => setBookProgress({ done, total }));
+    } catch (err) {
+      console.error("generateMemoryBookPdf error:", err);
+      setBookError("La génération a échoué. Vérifiez que la bibliothèque jsPDF est bien installée.");
+    }
+    setGeneratingBook(false);
+    setBookProgress(null);
+  }
+
+  function openNoteEditor(treat) {
+    setEditingNoteFor(treat);
+    setNoteDraft(treat.ownerNote || "");
+  }
+
+  async function saveNote() {
+    if (!editingNoteFor) return;
+    setSavingNote(true);
+    try {
+      await updateTreatNote(editingNoteFor.id, noteDraft.trim());
+      setTreatsReceived(list => list.map(t => t.id === editingNoteFor.id ? { ...t, ownerNote: noteDraft.trim() || null } : t));
+      setEditingNoteFor(null);
+    } catch (err) {
+      console.error("saveNote error:", err);
+    }
+    setSavingNote(false);
+  }
 
   async function handleDeleteEncounter() {
     if (!confirmDeleteEncounter) return;
@@ -6279,17 +6325,33 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </div>
 
               <button onClick={openAddEncounter}
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px dashed #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8 }}>
                 📸 Ajouter une photo de rencontre
               </button>
 
-              <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-                {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"], ["encounter", "Rencontres"]].map(([v, l]) => (
-                  <button key={v} onClick={() => setTreatsFilterCategory(v)}
-                    style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-                    {l}
-                  </button>
-                ))}
+              {(treatsReceived.length + encounterPhotos.length) > 0 && (
+                <button onClick={handleGenerateMemoryBook} disabled={generatingBook}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: generatingBook ? "default" : "pointer", marginBottom: 12 }}>
+                  {generatingBook ? `📕 Génération... (${bookProgress?.done || 0}/${bookProgress?.total || 0})` : "📕 Générer mon Livre de Souvenirs (PDF)"}
+                </button>
+              )}
+              {bookError && (
+                <div style={{ fontSize: 11, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{bookError}</div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 6, overflowX: "auto", flex: 1 }}>
+                  {[["all", "Tous"], ["food", "Friandises"], ["gift", "Cadeaux"], ["comfort", "Confort"], ["encounter", "Rencontres"]].map(([v, l]) => (
+                    <button key={v} onClick={() => setTreatsFilterCategory(v)}
+                      style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${treatsFilterCategory === v ? "#B25F46" : "#E5E7EB"}`, background: treatsFilterCategory === v ? "#FAF0EB" : "#fff", color: treatsFilterCategory === v ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setMemoryViewMode(m => m === "grid" ? "timeline" : "grid")} title={memoryViewMode === "grid" ? "Vue chronologie" : "Vue grille"}
+                  style={{ padding: "6px 10px", borderRadius: 20, border: "1.5px solid #E5E7EB", background: "#fff", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>
+                  {memoryViewMode === "grid" ? "📖" : "▦"}
+                </button>
               </div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px" }}>
@@ -6328,6 +6390,37 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                           {treatsFilterCategory === "encounter" && `Ajoutez vos plus belles photos de play dates avec ${pet.name}.`}
                         </div>
                       )}
+                    </div>
+                  );
+                }
+
+                if (memoryViewMode === "timeline") {
+                  const combined = [
+                    ...filteredTreats.map(t => ({ kind: "treat", date: t.createdAt, data: t })),
+                    ...filteredEncounters.map(e => ({ kind: "encounter", date: e.createdAt, data: e })),
+                  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+                  return (
+                    <div style={{ position: "relative", paddingLeft: 22 }}>
+                      <div style={{ position: "absolute", left: 9, top: 6, bottom: 6, width: 2, background: "#F3E0D3" }} />
+                      {combined.map(item => (
+                        <div key={`${item.kind}-${item.data.id}`} style={{ position: "relative", marginBottom: 16, display: "flex", gap: 10 }}>
+                          <div style={{ position: "absolute", left: -22, top: 0, width: 20, height: 20, borderRadius: "50%", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, border: "2px solid #fff", boxShadow: "0 0 0 2px #F3E0D3", flexShrink: 0 }}>
+                            {item.kind === "treat" ? item.data.giftEmoji : "📸"}
+                          </div>
+                          <div style={{ width: 46, height: 46, borderRadius: 10, overflow: "hidden", background: "#FAF0EB", flexShrink: 0 }}>
+                            {item.data.photo && <img src={item.data.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#2D1200" }}>
+                              {item.kind === "treat" ? `${item.data.giftLabel} de ${item.data.name}` : (item.data.otherName ? `Rencontre avec ${item.data.otherName}` : "Photo de rencontre")}
+                            </div>
+                            {(item.kind === "treat" ? item.data.message : item.data.caption) && (
+                              <div style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>« {item.kind === "treat" ? item.data.message : item.data.caption} »</div>
+                            )}
+                            <div style={{ fontSize: 10.5, color: "#9CA3AF" }}>{formatRelativeTime(item.date)}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   );
                 }
@@ -6388,16 +6481,29 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 10px" }}>
                             <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{t.giftLabel}</div>
                             <div style={{ color: "rgba(255,255,255,.85)", fontSize: 10.5 }}>de {t.name}</div>
-                            {t.message && <div style={{ color: "rgba(255,255,255,.9)", fontSize: 10, fontStyle: "italic", marginTop: 2, lineHeight: 1.3 }}>« {t.message} »</div>}
+                            {t.message ? (
+                              <div style={{ color: "rgba(255,255,255,.9)", fontSize: 10, fontStyle: "italic", marginTop: 2, lineHeight: 1.3 }}>« {t.message} »</div>
+                            ) : (
+                              <div style={{ color: "rgba(255,255,255,.75)", fontSize: 10, fontStyle: "italic", marginTop: 2, lineHeight: 1.3 }}>{getMemoryNarrative(t.id, t.name)}</div>
+                            )}
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 3 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 4, color: "rgba(255,255,255,.65)", fontSize: 9.5 }}>
                                 <span>♡</span><span>{t.time}</span>
                               </div>
-                              <button onClick={e => { e.stopPropagation(); setShowTreatsModal(false); onNav("messages"); }}
-                                style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 8, color: "#fff", fontSize: 9.5, fontWeight: 700, padding: "3px 8px", cursor: "pointer" }}>
-                                Répondre
-                              </button>
+                              <div style={{ display: "flex", gap: 5 }}>
+                                <button onClick={e => { e.stopPropagation(); openNoteEditor(t); }}
+                                  style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 8, color: "#fff", fontSize: 9.5, fontWeight: 700, padding: "3px 8px", cursor: "pointer" }}>
+                                  {t.ownerNote ? "📝" : "+ Note"}
+                                </button>
+                                <button onClick={e => { e.stopPropagation(); setShowTreatsModal(false); onNav("messages"); }}
+                                  style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 8, color: "#fff", fontSize: 9.5, fontWeight: 700, padding: "3px 8px", cursor: "pointer" }}>
+                                  Répondre
+                                </button>
+                              </div>
                             </div>
+                            {t.ownerNote && (
+                              <div style={{ color: "#FFE8A3", fontSize: 9.5, marginTop: 3, lineHeight: 1.3 }}>📝 {t.ownerNote}</div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -6431,7 +6537,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <div style={{ position: "absolute", left: 9, top: 6, bottom: 6, width: 2, background: "#F3E0D3" }} />
                 {journalEntries.map(entry => (
                   <div key={entry.id} style={{ position: "relative", marginBottom: 18 }}>
-                    <div style={{ position: "absolute", left: -22, top: 0, width: 20, height: 20, borderRadius: "50%", background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, border: "2px solid #fff", boxShadow: "0 0 0 2px #F3E0D3" }}>{entry.icon}</div>
+                    <div style={{ position: "absolute", left: -22, top: 0, width: 20, height: 20, borderRadius: "50%", background: entry.special ? "#FFF3CD" : "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, border: "2px solid #fff", boxShadow: entry.special ? "0 0 0 2px #E8C468" : "0 0 0 2px #F3E0D3" }}>{entry.icon}</div>
+                    {entry.special && (
+                      <div style={{ display: "inline-block", fontSize: 10, fontWeight: 800, color: "#946800", background: "#FFF3CD", padding: "2px 8px", borderRadius: 8, marginBottom: 3 }}>{entry.special}</div>
+                    )}
                     <div style={{ fontSize: 13.5, color: "#2D1200", fontWeight: 600 }}>{entry.text}</div>
                     <div style={{ fontSize: 11, color: "#9CA3AF" }}>{formatRelativeTime(entry.date)}</div>
                   </div>
@@ -6458,6 +6567,30 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               <button onClick={handleDeleteTreat} disabled={deletingTreat}
                 style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: deletingTreat ? "#E5E7EB" : "#DC2626", color: deletingTreat ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: deletingTreat ? "default" : "pointer" }}>
                 {deletingTreat ? "..." : "Oui, supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Note personnelle sur un cadeau reçu */}
+      {editingNoteFor && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => !savingNote && setEditingNoteFor(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: "22px 20px", width: "100%" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>📝 Votre note personnelle</div>
+            <div style={{ fontSize: 11.5, color: "#9CA3AF", marginBottom: 14 }}>Visible par vous seul — sur le {editingNoteFor.giftLabel} de {editingNoteFor.name}</div>
+            <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value.slice(0, 200))}
+              placeholder="Ce que ce moment représente pour vous..."
+              style={{ width: "100%", boxSizing: "border-box", minHeight: 80, resize: "none", padding: "10px 12px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 13, marginBottom: 16, fontFamily: "inherit" }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setEditingNoteFor(null)} disabled={savingNote}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                Annuler
+              </button>
+              <button onClick={saveNote} disabled={savingNote}
+                style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: savingNote ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: savingNote ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: savingNote ? "default" : "pointer" }}>
+                {savingNote ? "..." : "Enregistrer"}
               </button>
             </div>
           </div>
@@ -8254,6 +8387,24 @@ async function clearProfileLocation(profileId) {
 // (profiles.gift_inventory), au lieu d'un crédit générique indifférencié.
 // Sert à la fois au bouton friandise du swipe (🦴/🐟 selon l'espèce) et au
 // choix complet proposé dans le chat une fois matché.
+// Petits textes narratifs pour les cartes de la Boîte à Souvenirs — variés,
+// choisis de façon stable (toujours le même pour un souvenir donné, basé sur
+// son id) plutôt qu'aléatoire à chaque rendu.
+const MEMORY_NARRATIVES = [
+  "{name} a pensé à vous aujourd'hui",
+  "Un petit geste de {name}, plein de douceur",
+  "{name} vous a fait une belle surprise",
+  "Comme quoi, {name} ne vous oublie pas",
+  "Un moment tout doux offert par {name}",
+];
+function getMemoryNarrative(id, name) {
+  if (!name) return null;
+  let hash = 0;
+  for (let i = 0; i < String(id).length; i++) hash = (hash * 31 + String(id).charCodeAt(i)) >>> 0;
+  const template = MEMORY_NARRATIVES[hash % MEMORY_NARRATIVES.length];
+  return template.replace("{name}", name);
+}
+
 const GIFT_CATALOG = [
   // Nourriture chien
   { id: "bone", emoji: "🦴", label: "Os du Chef", price: "1,99 €", category: "food", species: "dog", gender: "m" },
@@ -8992,6 +9143,7 @@ async function fetchReceivedTreats(userProfile) {
       id: t.id,
       seen: t.seen,
       time: formatRelativeTime(t.created_at),
+      createdAt: t.created_at,
       name: sender?.pet_name || "Un animal",
       breed: sender?.breed || "",
       photo: sender?.photos?.[0]?.url || null,
@@ -9003,8 +9155,78 @@ async function fetchReceivedTreats(userProfile) {
       giftEmoji: giftInfo?.emoji || "🎁",
       giftCategory: giftInfo?.category || null,
       message: t.message || null,
+      ownerNote: t.owner_note || null,
     };
   });
+}
+
+async function updateTreatNote(treatId, note) {
+  const { error } = await supabase.from("treats").update({ owner_note: note || null }).eq("id", treatId);
+  if (error) throw new Error(error.message);
+}
+
+// ── LIVRE DE SOUVENIRS (PDF) ──────────────────────────────────────────────
+// Nécessite la bibliothèque jsPDF (npm install jspdf) — pas encore installée
+// dans le projet à ce stade, voir la note livrée avec ce fichier.
+async function imageUrlToBase64(url) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function generateMemoryBookPdf(petName, items, onProgress) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "mm", format: "a5" });
+
+  // Page de titre
+  doc.setFillColor(250, 240, 235);
+  doc.rect(0, 0, 148, 210, "F");
+  doc.setTextColor(178, 95, 70);
+  doc.setFontSize(26);
+  doc.text("Le Livre de Souvenirs", 74, 90, { align: "center" });
+  doc.setFontSize(18);
+  doc.text(`de ${petName}`, 74, 104, { align: "center" });
+  doc.setFontSize(10);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Généré le ${new Date().toLocaleDateString("fr-FR")} — Miloute`, 74, 190, { align: "center" });
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (onProgress) onProgress(i + 1, items.length);
+    doc.addPage();
+    let y = 20;
+    if (item.photo) {
+      try {
+        const imgData = await imageUrlToBase64(item.photo);
+        doc.addImage(imgData, "JPEG", 24, y, 100, 100);
+        y += 112;
+      } catch {
+        y += 4; // image indisponible (CORS ou lien mort) — on continue sans bloquer tout le livre
+      }
+    }
+    doc.setFontSize(13);
+    doc.setTextColor(45, 18, 0);
+    doc.text(item.title, 74, y, { align: "center", maxWidth: 120 });
+    y += 8;
+    if (item.subtitle) {
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text(item.subtitle, 74, y, { align: "center", maxWidth: 120 });
+      y += 6;
+    }
+    if (item.quote) {
+      doc.setFontSize(10);
+      doc.setTextColor(139, 61, 40);
+      doc.text(`« ${item.quote} »`, 74, y, { align: "center", maxWidth: 110 });
+    }
+  }
+
+  doc.save(`livre-de-souvenirs-${petName.toLowerCase().replace(/\s+/g, "-")}.pdf`);
 }
 
 async function deleteTreatMemory(treatId) {
@@ -9060,7 +9282,22 @@ async function fetchJournalEntries(userProfile) {
     ...(postRows || []).map(p => ({ id: `post-${p.id}`, date: p.created_at, icon: "📸", text: "Vous avez publié dans la Communauté" })),
   ];
 
-  return entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Moments Spéciaux : le premier de chaque type, et quelques jalons ronds
+  // sur le total cumulé — repérés en parcourant la chronologie dans l'ordre.
+  const chronological = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const seenTypes = new Set();
+  const FIRST_LABELS = { match: "🎉 Premier match !", treat: "🎉 Premier cadeau reçu !", post: "🎉 Premier post publié !" };
+  chronological.forEach((e, i) => {
+    const type = e.id.split("-")[0];
+    if (!seenTypes.has(type)) {
+      seenTypes.add(type);
+      e.special = FIRST_LABELS[type];
+    } else if ([10, 25, 50, 100].includes(i + 1)) {
+      e.special = `🏆 ${i + 1}ᵉ moment partagé !`;
+    }
+  });
+
+  return chronological.sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 // ── STATISTIQUES AVANCÉES (Premium) ──────────────────────────────────────
