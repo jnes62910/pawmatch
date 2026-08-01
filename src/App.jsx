@@ -985,12 +985,25 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     // Les profils de démo gardent toujours leur fausse distance, même avec une
     // vraie position activée : leurs coordonnées sont fixes (Paris), donc un
     // vrai calcul GPS viderait Découvrir pour n'importe qui hors de cette zone.
-    if (!p.isDemo && userProfile?.location && p.lat && p.lng) {
+    if (p.isDemo) {
+      const parsed = parseFloat((p.distance || "0").replace(",", ".").replace(/[^\d.]/g, ""));
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    // Vrai profil : distance calculable seulement si on connaît sa propre
+    // position ET celle du profil en face. Sinon, on renvoie Infinity plutôt
+    // que 0 — un profil de distance inconnue ne doit jamais passer un filtre
+    // de rayon (ça reviendrait à prétendre "il est juste à côté").
+    if (userProfile?.location && p.lat && p.lng) {
       return distanceKm(userProfile.location.lat, userProfile.location.lng, p.lat, p.lng);
     }
-    // Repli : on parse la distance fictive ("1,2 km" → 1.2)
-    const parsed = parseFloat((p.distance || "0").replace(",", ".").replace(/[^\d.]/g, ""));
-    return isNaN(parsed) ? 0 : parsed;
+    return Infinity;
+  }
+
+  function formatProfileDistance(p) {
+    if (p.isDemo) return p.distance;
+    const km = getProfileDistance(p);
+    if (!isFinite(km)) return "Distance inconnue";
+    return km.toFixed(1).replace(".", ",") + " km";
   }
 
   const availableBreeds = userProfile?.species === "cat" ? CAT_BREEDS : DOG_BREEDS;
@@ -1525,7 +1538,7 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
                 </span>
               )}
             </div>
-            <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{profile.breed} · {profile.distance}</div>
+            <div style={{ fontSize: 13, color: "#8B3D28", fontWeight: 600, marginBottom: 8 }}>{profile.breed} · {formatProfileDistance(profile)}</div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
               {profile.temper.map(t => <Badge key={t}>{t}</Badge>)}
               {profile.sterilized && <Badge color="#E8F5E9" text="#2E7D32">Stérilisé·e</Badge>}
