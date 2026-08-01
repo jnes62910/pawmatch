@@ -2,7 +2,6 @@
 // Vérifie qu'une image (photo ou frame de vidéo) montre bien un chat ou un
 // chien, et que le contenu est approprié. Utilise l'API Claude (vision).
 // Variable d'environnement requise sur Vercel : ANTHROPIC_API_KEY
-
 // Certains modèles habillent parfois leur réponse de balises ```json ... ```
 // ou d'un court commentaire malgré la consigne stricte — on nettoie avant
 // de tenter le JSON.parse, plutôt que d'échouer sur ce détail de mise en forme.
@@ -14,18 +13,29 @@ function extractJson(rawText) {
   if (braceMatch) return braceMatch[0];
   return text;
 }
-
 module.exports = async (req, res) => {
+  // Autorise les appels depuis l'app Android native (origine "https://localhost",
+  // différente du site web) — sans ça, le navigateur/WebView bloque la requête
+  // avant même qu'elle n'atteigne ce code (erreur CORS).
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Requête de vérification envoyée automatiquement par le navigateur avant
+  // la vraie requête POST — il faut y répondre correctement (200, avec les
+  // en-têtes ci-dessus) pour que la vraie requête soit ensuite autorisée.
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   try {
     const { image, mimeType } = req.body;
     if (!image) {
       return res.status(400).json({ error: 'image is required' });
     }
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -58,14 +68,11 @@ module.exports = async (req, res) => {
         ],
       }),
     });
-
     const data = await response.json();
-
     if (!response.ok) {
       console.error('Anthropic API error:', data);
       return res.status(200).json({ approved: false, reason: 'Vérification indisponible, réessayez.' });
     }
-
     const textBlock = (data.content || []).find((b) => b.type === 'text');
     let parsed;
     try {
@@ -76,7 +83,6 @@ module.exports = async (req, res) => {
       console.error('moderate-photo: réponse non-JSON reçue de Claude :', textBlock?.text);
       return res.status(200).json({ approved: false, reason: 'Vérification impossible, réessayez.' });
     }
-
     const approved = !!parsed.is_cat_or_dog && !!parsed.is_appropriate;
     return res.status(200).json({
       approved,
