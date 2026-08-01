@@ -15,6 +15,7 @@
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
+const admin = require('firebase-admin');
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -85,6 +86,19 @@ const QUESTS = {
   first_booking:     { rewardLabel: '1 Gâteau Fiesta' },
   first_gift_sent:   { rewardLabel: '1 Cœur (selon l\'espèce)' },
 };
+
+// Notifications push réelles — initialise l'app Firebase Admin une seule
+// fois (réutilisée entre les appels tant que la fonction reste "chaude").
+function getFirebaseApp() {
+  if (admin.apps.length > 0) return admin.apps[0];
+  return admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    }),
+  });
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -298,6 +312,61 @@ module.exports = async (req, res) => {
       if (updateError) throw updateError;
 
       return res.status(200).json({ claimed: true, giftInventory: newInventory, questsCompleted: newCompleted, rewardItemId });
+    }
+
+    // ── Enregistrer le token d'un appareil pour les notifications push ────
+    if (action === 'register-token') {
+      const { userId, token, platform } = req.body;
+      if (!userId || !token) return res.status(400).json({ error: 'userId et token requis' });
+
+      const { error } = await supabase.from('device_tokens').upsert(
+        { user_id: userId, token, platform: platform || 'android' },
+        { onConflict: 'user_id,token' }
+      );
+      if (error) throw error;
+      return res.status(200).json({ success: true });
+    }
+
+    // ── Envoyer une notification push réelle (hors app) ────────────────────
+    if (action === 'send-push') {
+      const { targetUserId, title, body, data } = req.body;
+      if (!targetUserId || !title || !body) return res.status(400).json({ error: 'targetUserId, title et body requis' });
+
+      const { data: tokenRows, error: fetchError } = await supabase
+        .from('device_tokens').select('token').eq('user_id', targetUserId);
+      if (fetchError) throw fetchError;
+      if (!tokenRows || tokenRows.length === 0) return res.status(200).json({ success: true, sent: 0, reason: 'no_device' });
+
+      getFirebaseApp();
+      const messaging = admin.messaging();
+
+      let sent = 0;
+      const staleTokens = [];
+      for (const row of tokenRows) {
+        try {
+          await messaging.send({
+            token: row.token,
+            notification: { title, body },
+            data: data || {},
+            android: { priority: 'high' },
+          });
+          sent++;
+        } catch (err) {
+          // Token périmé (app désinstallée, etc.) — nettoyé après coup, sans
+          // faire échouer l'envoi aux autres appareils de l'utilisateur.
+          if (err.code === 'messaging/registration-token-not-registered') {
+            staleTokens.push(row.token);
+          } else {
+            console.error('Erreur envoi push:', err.message);
+          }
+        }
+      }
+
+      if (staleTokens.length > 0) {
+        await supabase.from('device_tokens').delete().eq('user_id', targetUserId).in('token', staleTokens);
+      }
+
+      return res.status(200).json({ success: true, sent });
     }
 
     return res.status(400).json({ error: 'Action inconnue' });
