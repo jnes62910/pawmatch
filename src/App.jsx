@@ -479,7 +479,7 @@ async function moderateImage(base64, mimeType = "image/jpeg") {
   if (!MODERATION_ENABLED) return { approved: true, reason: null };
   try {
     const compressed = await compressImageForModeration(base64, mimeType);
-    const res = await fetch("/api/moderate-photo", {
+    const res = await fetch(apiUrl("/api/moderate-photo"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image: compressed, mimeType: "image/jpeg" }),
@@ -495,7 +495,7 @@ async function moderateImage(base64, mimeType = "image/jpeg") {
 async function moderateText(text) {
   if (!MODERATION_ENABLED) return { approved: true, reason: null };
   try {
-    const res = await fetch("/api/moderate-text", {
+    const res = await fetch(apiUrl("/api/moderate-text"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
@@ -839,7 +839,7 @@ function countEmojis(str) {
 
 async function generatePhotoCaption(species, breed, temper, name) {
   try {
-    const res = await fetch("/api/moderate-text", {
+    const res = await fetch(apiUrl("/api/moderate-text"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "generate-caption", species, breed, temper, name }),
@@ -1735,7 +1735,7 @@ function neighborCellIds(lat, lng) {
 // moins de 30 jours, donc peut être appelé à chaque ouverture sans souci de coût.
 async function ensureSpotsForLocation(lat, lng, city) {
   try {
-    await fetch("/api/ensure-spots-for-location", {
+    await fetch(apiUrl("/api/ensure-spots-for-location"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lat, lng, city }),
@@ -7612,7 +7612,7 @@ function PremiumTunnel({ onClose, onSuccess, initialPlan = "yearly", userProfile
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
-      const res = await fetch("/api/create-checkout-session", {
+      const res = await fetch(apiUrl("/api/create-checkout-session"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan, profileId: userProfile?.id, userId: userProfile?.userId }),
@@ -8632,7 +8632,7 @@ async function deleteProviderService(id) {
 }
 
 async function startConnectOnboarding(userProfile) {
-  const res = await fetch("/api/create-connect-onboarding", {
+  const res = await fetch(apiUrl("/api/create-connect-onboarding"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -8648,7 +8648,7 @@ async function startConnectOnboarding(userProfile) {
 }
 
 async function checkConnectStatus(profileId) {
-  const res = await fetch("/api/check-connect-status", {
+  const res = await fetch(apiUrl("/api/check-connect-status"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ profileId }),
@@ -8659,7 +8659,7 @@ async function checkConnectStatus(profileId) {
 
 // ── RÉSERVATIONS ──────────────────────────────────────────────────────────────
 async function startBookingCheckout(service, userProfile) {
-  const res = await fetch("/api/create-booking-checkout", {
+  const res = await fetch(apiUrl("/api/create-booking-checkout"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -8676,7 +8676,7 @@ async function startBookingCheckout(service, userProfile) {
 }
 
 async function verifyBookingSession(sessionId) {
-  const res = await fetch("/api/verify-booking-session", {
+  const res = await fetch(apiUrl("/api/verify-booking-session"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId }),
@@ -8685,7 +8685,7 @@ async function verifyBookingSession(sessionId) {
 }
 
 async function confirmBooking(bookingId, userId) {
-  const res = await fetch("/api/confirm-booking", {
+  const res = await fetch(apiUrl("/api/confirm-booking"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bookingId, userId }),
@@ -8694,7 +8694,7 @@ async function confirmBooking(bookingId, userId) {
 }
 
 async function cancelBooking(bookingId, userId) {
-  const res = await fetch("/api/confirm-booking", {
+  const res = await fetch(apiUrl("/api/confirm-booking"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bookingId, userId, action: "cancel" }),
@@ -8892,6 +8892,18 @@ function isNativeAndroid() {
   }
 }
 
+// Sur le web, les appels relatifs ("/api/xxx") fonctionnent car l'app est
+// servie depuis le même domaine que les fonctions serverless (miloute.app).
+// Dans l'app Android native, l'app tourne depuis un contexte local embarqué
+// (pas de server.url dans capacitor.config.json) — "/api/xxx" ne pointe donc
+// vers rien, et Capacitor renvoie la page HTML de secours de l'app au lieu
+// d'une vraie réponse JSON. On préfixe donc avec le vrai domaine uniquement
+// en contexte natif.
+const API_ORIGIN = "https://miloute.app";
+function apiUrl(path) {
+  return isNativeAndroid() ? `${API_ORIGIN}${path}` : path;
+}
+
 // ── NOTIFICATIONS PUSH RÉELLES (hors app) ─────────────────────────────────
 // ⚠️ Nécessite `npm install @capacitor/push-notifications` — cet import
 // casse le build web tant que le paquet n'est pas installé, même s'il n'est
@@ -8909,7 +8921,7 @@ async function registerPushNotifications(userProfile) {
 
     PushNotifications.addListener("registration", async (token) => {
       try {
-        await fetch("/api/shop", {
+        await fetch(apiUrl("/api/shop"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "register-token", userId: userProfile.userId, token: token.value, platform: "android" }),
@@ -8931,7 +8943,7 @@ async function registerPushNotifications(userProfile) {
 // comme un like ou un message, si la notification elle-même échoue).
 async function sendPushNotification(targetUserId, title, body, data) {
   try {
-    await fetch("/api/shop", {
+    await fetch(apiUrl("/api/shop"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "send-push", targetUserId, title, body, data: data || {} }),
@@ -8953,7 +8965,7 @@ const GOOGLE_ALTERNATIVE_BILLING_DISCLOSURE =
   "contactez Miloute directement pour toute question ou remboursement.";
 
 async function startShopCheckout({ itemId, bundleId }, userProfile) {
-  const res = await fetch("/api/shop", {
+  const res = await fetch(apiUrl("/api/shop"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -8969,7 +8981,7 @@ async function startShopCheckout({ itemId, bundleId }, userProfile) {
 }
 
 async function verifyShopSession(sessionId) {
-  const res = await fetch("/api/shop", {
+  const res = await fetch(apiUrl("/api/shop"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "verify-session", sessionId }),
@@ -8978,7 +8990,7 @@ async function verifyShopSession(sessionId) {
 }
 
 async function spendGift(userProfile, giftId) {
-  const res = await fetch("/api/shop", {
+  const res = await fetch(apiUrl("/api/shop"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "spend-gift", profileId: userProfile.id, userId: userProfile.userId, giftId }),
@@ -8987,7 +8999,7 @@ async function spendGift(userProfile, giftId) {
 }
 
 async function claimQuest(userProfile, questId) {
-  const res = await fetch("/api/shop", {
+  const res = await fetch(apiUrl("/api/shop"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "claim-quest", profileId: userProfile.id, userId: userProfile.userId, questId }),
