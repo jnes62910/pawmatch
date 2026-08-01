@@ -9116,7 +9116,16 @@ async function checkMagicMoment(userProfile) {
   if (daysSince < MAGIC_MOMENT_MIN_GAP_DAYS) return null;
   if (Math.random() > MAGIC_MOMENT_DAILY_CHANCE) return null;
 
-  const giftId = MAGIC_MOMENT_POOL[Math.floor(Math.random() * MAGIC_MOMENT_POOL.length)];
+  // Le pool mélange des articles chien/chat/mixtes — on ne tire que parmi
+  // ceux compatibles avec l'espèce du compte, sinon l'article gagné pourrait
+  // atterrir dans l'inventaire sans jamais apparaître dans le sélecteur de
+  // cadeaux (filtré par espèce), le rendant invisible et inutilisable.
+  const eligiblePool = MAGIC_MOMENT_POOL.filter(id => {
+    const info = GIFT_CATALOG.find(g => g.id === id);
+    return info && (info.species === "both" || info.species === userProfile.species);
+  });
+  if (eligiblePool.length === 0) return null;
+  const giftId = eligiblePool[Math.floor(Math.random() * eligiblePool.length)];
   const giftInfo = GIFT_CATALOG.find(g => g.id === giftId);
   const currentInventory = data.gift_inventory || {};
   const newInventory = { ...currentInventory, [giftId]: (currentInventory[giftId] || 0) + 1 };
@@ -9898,7 +9907,7 @@ async function fetchJournalEntries(userProfile) {
     ...(treatRows || []).map(t => {
       const sender = profileById[t.sender_profile_id];
       const giftInfo = GIFT_CATALOG.find(g => g.id === t.gift_id);
-      return { id: `treat-${t.id}`, date: t.created_at, icon: giftInfo?.emoji || "🎁", photo: sender?.photos?.[0]?.url || null, text: `${sender?.pet_name || "Un compagnon"} vous a envoyé ${giftInfo?.label || "un cadeau"}` };
+      return { id: `treat-${t.id}`, date: t.created_at, icon: giftInfo?.emoji || "🎁", photo: sender?.photos?.[0]?.url || null, text: `${sender?.pet_name || "Un compagnon"} vous a envoyé ${giftInfo ? (giftInfo.gender === "f" ? "une " : "un ") + giftInfo.label : "un cadeau"}` };
     }),
     ...(postRows || []).map(p => ({ id: `post-${p.id}`, date: p.created_at, icon: "📸", photo: p.photo_url || ownPhoto, text: "Vous avez publié dans la Communauté" })),
   ];
