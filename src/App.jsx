@@ -5457,10 +5457,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     setShowTreatsModal(true);
     setShowGiftBrowser(false);
     fetchEncounterPhotos(initialData).then(setEncounterPhotos);
-    if (unseenTreatsCount > 0) {
-      playGiftFeedback(loadSoundMode(), loadSoundPalette(), initialData?.species);
-      markTreatsSeen(initialData).then(() => { setUnseenTreatsCount(0); onTreatsSeen(); });
-    }
   }
 
   const [showJournalModal, setShowJournalModal] = useState(false);
@@ -6462,7 +6458,14 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <button onClick={() => setShowTreatsModal(false)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 14, cursor: "pointer", flexShrink: 0, marginLeft: 10 }}>✕</button>
               </div>
 
-              <button onClick={() => { setShowGiftBrowser(true); setTreatsFilterCategory("all"); }}
+              <button onClick={() => {
+                  setShowGiftBrowser(true);
+                  setTreatsFilterCategory("all");
+                  if (unseenTreatsCount > 0) {
+                    playGiftFeedback(loadSoundMode(), loadSoundPalette(), initialData?.species);
+                    markTreatsSeen(initialData).then(() => { setUnseenTreatsCount(0); onTreatsSeen(); });
+                  }
+                }}
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8 }}>
                 🎁 Voir tous mes cadeaux et photos
               </button>
@@ -6677,11 +6680,16 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <div style={{ fontSize: 14 }}>Votre histoire commence tout juste — revenez ici au fil de vos matchs et de vos moments partagés.</div>
               </div>
             ) : (
-              <div style={{ position: "relative", paddingLeft: 22 }}>
-                <div style={{ position: "absolute", left: 9, top: 6, bottom: 6, width: 2, background: "#F3E0D3" }} />
+              <div style={{ position: "relative", paddingLeft: 26 }}>
+                <div style={{ position: "absolute", left: 12, top: 6, bottom: 6, width: 2, background: "#F3E0D3" }} />
                 {journalEntries.map(entry => (
                   <div key={entry.id} style={{ position: "relative", marginBottom: 18 }}>
-                    <div style={{ position: "absolute", left: -22, top: 0, width: 20, height: 20, borderRadius: "50%", background: entry.special ? "#FFF3CD" : "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, border: "2px solid #fff", boxShadow: entry.special ? "0 0 0 2px #E8C468" : "0 0 0 2px #F3E0D3" }}>{entry.icon}</div>
+                    <div style={{ position: "absolute", left: -26, top: 0, width: 26, height: 26, borderRadius: "50%", overflow: "hidden", background: entry.special ? "#FFF3CD" : "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, border: "2px solid #fff", boxShadow: entry.special ? "0 0 0 2px #E8C468" : "0 0 0 2px #F3E0D3" }}>
+                      {entry.photo ? <img src={entry.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : entry.icon}
+                    </div>
+                    {entry.photo && (
+                      <div style={{ position: "absolute", left: -8, top: 16, width: 15, height: 15, borderRadius: "50%", background: "#fff", border: "1.5px solid #fff", boxShadow: "0 0 0 1px #F3E0D3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>{entry.icon}</div>
+                    )}
                     {entry.special && (
                       <div style={{ display: "inline-block", fontSize: 10, fontWeight: 800, color: "#946800", background: "#FFF3CD", padding: "2px 8px", borderRadius: 8, marginBottom: 3 }}>{entry.special}</div>
                     )}
@@ -9868,7 +9876,7 @@ async function fetchJournalEntries(userProfile) {
       .or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`),
     supabase.from("treats").select("id, created_at, sender_profile_id, gift_id")
       .eq("target_user_id", userProfile.userId),
-    supabase.from("community_posts").select("id, created_at, text")
+    supabase.from("community_posts").select("id, created_at, text, photo_url")
       .eq("user_id", userProfile.userId),
   ]);
 
@@ -9877,22 +9885,23 @@ async function fetchJournalEntries(userProfile) {
     ...(treatRows || []).map(t => t.sender_profile_id),
   ])].filter(Boolean);
   const { data: otherProfiles } = otherProfileIds.length > 0
-    ? await supabase.from("profiles").select("id, pet_name, species").in("id", otherProfileIds)
+    ? await supabase.from("profiles").select("id, pet_name, species, photos").in("id", otherProfileIds)
     : { data: [] };
   const profileById = Object.fromEntries((otherProfiles || []).map(p => [p.id, p]));
+  const ownPhoto = userProfile.photos?.[0]?.url || null;
 
   const entries = [
     ...(matchRows || []).map(m => {
       const otherId = m.profile_a === userProfile.id ? m.profile_b : m.profile_a;
       const other = profileById[otherId];
-      return { id: `match-${m.id}`, date: m.created_at, icon: other?.species === "cat" ? "🐱" : "🐕", text: `C'est un match avec ${other?.pet_name || "un compagnon"} !` };
+      return { id: `match-${m.id}`, date: m.created_at, icon: other?.species === "cat" ? "🐱" : "🐕", photo: other?.photos?.[0]?.url || null, text: `C'est un match avec ${other?.pet_name || "un compagnon"} !` };
     }),
     ...(treatRows || []).map(t => {
       const sender = profileById[t.sender_profile_id];
       const giftInfo = GIFT_CATALOG.find(g => g.id === t.gift_id);
-      return { id: `treat-${t.id}`, date: t.created_at, icon: giftInfo?.emoji || "🎁", text: `${sender?.pet_name || "Un compagnon"} vous a envoyé ${giftInfo?.label || "un cadeau"}` };
+      return { id: `treat-${t.id}`, date: t.created_at, icon: giftInfo?.emoji || "🎁", photo: sender?.photos?.[0]?.url || null, text: `${sender?.pet_name || "Un compagnon"} vous a envoyé ${giftInfo?.label || "un cadeau"}` };
     }),
-    ...(postRows || []).map(p => ({ id: `post-${p.id}`, date: p.created_at, icon: "📸", text: "Vous avez publié dans la Communauté" })),
+    ...(postRows || []).map(p => ({ id: `post-${p.id}`, date: p.created_at, icon: "📸", photo: p.photo_url || ownPhoto, text: "Vous avez publié dans la Communauté" })),
   ];
 
   // Moments Spéciaux : le premier de chaque type, et quelques jalons ronds
