@@ -2,6 +2,11 @@
 // Vérifie qu'un message ou commentaire ne contient pas de contenu
 // problématique (harcèlement, propos haineux, contenu explicite, arnaque,
 // partage abusif de coordonnées, etc.) et bloque automatiquement si besoin.
+// Le paramètre `context` adapte les règles : par défaut ("chat"), le texte
+// est un message entre utilisateurs, où la sollicitation commerciale est
+// interdite. En contexte "service_description" (description d'une
+// prestation dans l'espace prestataire), la promotion commerciale est au
+// contraire normale et attendue — seules les vraies dérives restent bloquées.
 // Variable d'environnement requise sur Vercel : ANTHROPIC_API_KEY
 // Certains modèles habillent parfois leur réponse de balises ```json ... ```
 // ou d'un court commentaire malgré la consigne stricte — on nettoie avant
@@ -14,6 +19,33 @@ function extractJson(rawText) {
   if (braceMatch) return braceMatch[0];
   return text;
 }
+
+const PROMPTS = {
+  chat:
+    "Tu es un modérateur de contenu pour Miloute, une application de rencontre entre animaux (chats et chiens) " +
+    "et de mise en relation entre leurs propriétaires. Analyse le message suivant, écrit par un utilisateur " +
+    "dans un chat privé ou un commentaire public de l'application. " +
+    "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, au format exact : " +
+    '{"approved": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
+    "Refuse (approved: false) si le message contient : harcèlement, insultes, propos haineux ou discriminatoires, " +
+    "menaces, contenu à caractère sexuel, sollicitation commerciale/spam, tentative d'arnaque, ou incitation à sortir " +
+    "de l'application de façon suspecte. Accepte les messages normaux de conversation, même informels ou négatifs " +
+    "sur un sujet neutre (ex: annuler un rendez-vous poliment).",
+  service_description:
+    "Tu es un modérateur de contenu pour Miloute, une application qui héberge aussi un annuaire de prestataires " +
+    "indépendants pour animaux (toiletteurs, pet-sitters, éducateurs canins, vétérinaires...). Analyse le texte " +
+    "suivant, qui est la DESCRIPTION D'UNE PRESTATION rédigée par un prestataire pour présenter son service aux " +
+    "clients potentiels — ce texte est un texte commercial par nature (présenter et vendre un service), donc la " +
+    "promotion commerciale, les mentions de tarifs, d'expérience professionnelle ou d'arguments de vente sont " +
+    "totalement normales et NE DOIVENT PAS être refusées à ce titre. " +
+    "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, au format exact : " +
+    '{"approved": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
+    "Refuse (approved: false) uniquement si le texte contient : propos haineux ou discriminatoires, contenu à " +
+    "caractère sexuel, incitation à contacter le prestataire ou à payer en dehors de l'application (numéro de " +
+    "téléphone, email, réseau social, lien externe, virement direct), promesses manifestement mensongères ou " +
+    "dangereuses, ou tout contenu sans rapport avec un service pour animaux.",
+};
+
 module.exports = async (req, res) => {
   // Autorise les appels depuis l'app Android native (origine "https://localhost",
   // différente du site web) — sans ça, le navigateur/WebView bloque la requête
@@ -33,10 +65,11 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   try {
-    const { text } = req.body;
+    const { text, context } = req.body;
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'text is required' });
     }
+    const systemPrompt = PROMPTS[context] || PROMPTS.chat;
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -50,17 +83,7 @@ module.exports = async (req, res) => {
         messages: [
           {
             role: 'user',
-            content:
-              "Tu es un modérateur de contenu pour Miloute, une application de rencontre entre animaux (chats et chiens) " +
-              "et de mise en relation entre leurs propriétaires. Analyse le message suivant, écrit par un utilisateur " +
-              "dans un chat privé ou un commentaire public de l'application. " +
-              "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, au format exact : " +
-              '{"approved": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
-              "Refuse (approved: false) si le message contient : harcèlement, insultes, propos haineux ou discriminatoires, " +
-              "menaces, contenu à caractère sexuel, sollicitation commerciale/spam, tentative d'arnaque, ou incitation à sortir " +
-              "de l'application de façon suspecte. Accepte les messages normaux de conversation, même informels ou négatifs " +
-              "sur un sujet neutre (ex: annuler un rendez-vous poliment).\n\n" +
-              `Message à analyser : """${text}"""`,
+            content: `${systemPrompt}\n\nTexte à analyser : """${text}"""`,
           },
         ],
       }),
