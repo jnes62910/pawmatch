@@ -4047,7 +4047,7 @@ function CommunityScreen({ onPremium, isPremium, userProfile = null, onProfileUp
 // ── MATCHES / CHAT ────────────────────────────────────────────────────────────
 function MatchesScreen({ onOpenChat, userProfile = null }) {
   const [tab, setTab] = useState("messages");
-  const [agendaData, setAgendaData] = useState(AGENDA);
+  const [agendaData, setAgendaData] = useState([]);
   const [rating, setRating] = useState(null);
   const [ratingFor, setRatingFor] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -4211,6 +4211,11 @@ function MatchesScreen({ onOpenChat, userProfile = null }) {
           ))}
 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", margin: "16px 0 10px", letterSpacing: 1 }}>PASSÉES</div>
+          {past.length === 0 && (
+            <div style={{ textAlign: "center", padding: "16px 0 24px", color: "#9CA3AF" }}>
+              <div style={{ fontSize: 12 }}>Aucune rencontre passée pour l'instant</div>
+            </div>
+          )}
           {past.map(ev => (
             <div key={ev.id} style={{ marginBottom: 12, borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", opacity: 0.85 }}>
               <div style={{ padding: "14px 16px", background: "#F9FAFB" }}>
@@ -5265,6 +5270,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [bookFlip, setBookFlip] = useState(null); // "next" | "prev" | null, pendant l'animation de tournage
   const [bookFlippingFrom, setBookFlippingFrom] = useState(null); // page affichée pendant le tournage (avant de basculer sur la nouvelle)
   const [bookTitleDraft, setBookTitleDraft] = useState("");
+  const [bookIntroDraft, setBookIntroDraft] = useState("");
+  const [bookConclusionDraft, setBookConclusionDraft] = useState("");
 
   function rebuildBook(custom) {
     const pages = buildBookPages(pet, treatsReceived, encounterPhotos, custom);
@@ -5276,6 +5283,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     const saved = loadBookCustomization(initialData.id);
     setBookCustom(saved);
     setBookTitleDraft(saved.title || "");
+    setBookIntroDraft(saved.introText || "");
+    setBookConclusionDraft(saved.conclusionText || "");
     setBookPageIndex(0);
     setBookPages(buildBookPages(pet, treatsReceived, encounterPhotos, saved));
     setShowMagicBook(true);
@@ -5634,24 +5643,44 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           {mediaModerationError && (
             <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>{mediaModerationError}</div>
           )}
+          {/* Photo principale — agrandie et centrée */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+            <div onClick={() => !photoSlots[0] && photoRef.current?.click()}
+              style={{ width: 160, height: 160, borderRadius: 20, overflow: "hidden", position: "relative", background: photoSlots[0] ? "#000" : "#F3F4F6", border: photoSlots[0] ? "none" : "2px dashed #D1D5DB", cursor: photoSlots[0] ? "default" : "pointer" }}>
+              {photoSlots[0] ? (
+                <>
+                  <img src={photoSlots[0].url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", bottom: 8, left: 8, background: "#B25F46", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 8 }}>PRINCIPALE</div>
+                  <button onClick={e => { e.stopPropagation(); removePhoto(0); }} style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
+                </>
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                  <span style={{ fontSize: 32, color: "#E8B89F" }}>+</span>
+                  <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, textAlign: "center" }}>Photo principale</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
-            {photoSlots.map((p, i) => (
+            {photoSlots.slice(1).map((p, idx) => {
+              const i = idx + 1;
+              return (
               <div key={i} onClick={() => !p && photoRef.current?.click()}
                 style={{ aspectRatio: "1", borderRadius: 14, overflow: "hidden", position: "relative", background: p ? "#000" : "#F3F4F6", border: p ? "none" : "2px dashed #D1D5DB", cursor: p ? "default" : "pointer" }}>
                 {p ? (
                   <>
                     <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    {i === 0 && <div style={{ position: "absolute", bottom: 5, left: 5, background: "#B25F46", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 6 }}>PRINCIPALE</div>}
                     <button onClick={e => { e.stopPropagation(); removePhoto(i); }} style={{ position: "absolute", top: 5, right: 5, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
                   </>
                 ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <span style={{ fontSize: 24, color: "#E8B89F" }}>+</span>
-                    {i === 0 && <span style={{ fontSize: 9, color: "#9CA3AF", fontWeight: 600, textAlign: "center" }}>Photo principale</span>}
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
           <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoAdd} />
           {draft.photos.length < 6 && (
@@ -6737,10 +6766,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
                   {theme.useLogo ? <PawLogo size={34} color={theme.accent} /> : <span style={{ fontSize: 30 }}>🐾</span>}
                 </div>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 16, color: theme.text, lineHeight: 1.8 }}>
-                  Depuis son arrivée sur Miloute, <strong>{page.petName}</strong> a vécu de belles rencontres et reçu de jolies attentions.
-                  <br /><br />
-                  Voici son histoire, jour après jour.
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 16, color: theme.text, lineHeight: 1.8, whiteSpace: "pre-line" }}>
+                  {page.text || (
+                    <>Depuis son arrivée sur Miloute, <strong>{page.petName}</strong> a vécu de belles rencontres et reçu de jolies attentions.<br /><br />Voici son histoire, jour après jour.</>
+                  )}
                 </div>
               </div>
             )}
@@ -6766,7 +6795,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
                   {theme.useLogo ? <PawLogo size={34} color={theme.accent} /> : <span style={{ fontSize: 30 }}>🐾</span>}
                 </div>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", color: theme.accent }}>L'histoire continue…</div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", color: theme.accent, whiteSpace: "pre-line" }}>{page.text || "L'histoire continue…"}</div>
               </div>
             )}
           </>
@@ -6868,6 +6897,28 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               <button onClick={() => applyBookCustomization({ title: bookTitleDraft.trim() || null })}
                 style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: "#B25F46", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
                 OK
+              </button>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>TEXTE D'INTRODUCTION (page 2)</div>
+            <div style={{ marginBottom: 20 }}>
+              <textarea value={bookIntroDraft} onChange={e => setBookIntroDraft(e.target.value.slice(0, 300))}
+                placeholder="Depuis son arrivée sur Miloute, [nom] a vécu de belles rencontres..."
+                style={{ width: "100%", boxSizing: "border-box", minHeight: 70, resize: "none", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB", fontSize: 13, fontFamily: "inherit", marginBottom: 6 }} />
+              <button onClick={() => applyBookCustomization({ introText: bookIntroDraft.trim() || null })}
+                style={{ width: "100%", padding: "8px", borderRadius: 10, border: "none", background: "#B25F46", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                Enregistrer ce texte
+              </button>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>TEXTE DE CONCLUSION (dernière page)</div>
+            <div style={{ marginBottom: 20 }}>
+              <textarea value={bookConclusionDraft} onChange={e => setBookConclusionDraft(e.target.value.slice(0, 200))}
+                placeholder="L'histoire continue…"
+                style={{ width: "100%", boxSizing: "border-box", minHeight: 50, resize: "none", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB", fontSize: 13, fontFamily: "inherit", marginBottom: 6 }} />
+              <button onClick={() => applyBookCustomization({ conclusionText: bookConclusionDraft.trim() || null })}
+                style={{ width: "100%", padding: "8px", borderRadius: 10, border: "none", background: "#B25F46", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                Enregistrer ce texte
               </button>
             </div>
 
@@ -9511,9 +9562,9 @@ function buildBookPages(pet, treatsReceived, encounterPhotos, custom = {}) {
 
   return [
     { type: "cover", petPhoto: custom.coverPhoto || pet.photos?.[0]?.url || null, petName: pet.name, title: custom.title || null, startDate },
-    { type: "intro", petName: pet.name },
+    { type: "intro", petName: pet.name, text: custom.introText || null },
     ...contentItems.map(item => ({ type: item.kind, ...item })),
-    { type: "conclusion", petName: pet.name },
+    { type: "conclusion", petName: pet.name, text: custom.conclusionText || null },
   ];
 }
 
@@ -9591,11 +9642,11 @@ async function exportBookToPdf(pages, onProgress, theme = BOOK_THEMES.doux) {
       doc.text(`L'histoire de ${page.petName}`, 74, 50, { align: "center" });
       doc.setFontSize(10.5);
       doc.setTextColor(subR, subG, subB);
-      doc.text(`Depuis son arrivée sur Miloute, ${page.petName} a vécu de belles rencontres\net reçu de jolies attentions. Voici son histoire, jour après jour.`, 74, 70, { align: "center", maxWidth: 110 });
+      doc.text(page.text || `Depuis son arrivée sur Miloute, ${page.petName} a vécu de belles rencontres\net reçu de jolies attentions. Voici son histoire, jour après jour.`, 74, 70, { align: "center", maxWidth: 110 });
     } else if (page.type === "conclusion") {
       doc.setFontSize(16);
       doc.setTextColor(accentR, accentG, accentB);
-      doc.text("L'histoire continue…", 74, 100, { align: "center" });
+      doc.text(page.text || "L'histoire continue…", 74, 100, { align: "center", maxWidth: 120 });
       doc.setFontSize(10);
       doc.setTextColor(subR, subG, subB);
       doc.text("Miloute", 74, 190, { align: "center" });
