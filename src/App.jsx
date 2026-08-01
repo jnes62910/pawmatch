@@ -492,13 +492,13 @@ async function moderateImage(base64, mimeType = "image/jpeg") {
   }
 }
 
-async function moderateText(text) {
+async function moderateText(text, context = "chat") {
   if (!MODERATION_ENABLED) return { approved: true, reason: null };
   try {
     const res = await fetch(apiUrl("/api/moderate-text"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, context }),
     });
     if (!res.ok) return { approved: true, reason: null }; // texte : on ne bloque pas si le service est indisponible
     const data = await res.json();
@@ -7535,7 +7535,7 @@ function AddServiceForm({ userProfile, onClose, onAdded }) {
     setError(null);
     setSubmitting(true);
     if (description.trim()) {
-      const modResult = await moderateText(description);
+      const modResult = await moderateText(description, "service_description");
       if (!modResult.approved) {
         setError(modResult.reason || "Ce texte enfreint les règles de Miloute.");
         setSubmitting(false);
