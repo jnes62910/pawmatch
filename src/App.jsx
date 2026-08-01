@@ -5249,29 +5249,94 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [editingNoteFor, setEditingNoteFor] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
-  const [generatingBook, setGeneratingBook] = useState(false);
-  const [bookProgress, setBookProgress] = useState(null);
+
+  const [showMagicBook, setShowMagicBook] = useState(false);
+  const [bookPages, setBookPages] = useState([]);
+  const [bookPageIndex, setBookPageIndex] = useState(0);
+  const [bookTouchStartX, setBookTouchStartX] = useState(null);
+  const [exportingBookPdf, setExportingBookPdf] = useState(false);
+  const [bookExportProgress, setBookExportProgress] = useState(null);
   const [bookError, setBookError] = useState(null);
 
-  async function handleGenerateMemoryBook() {
-    const items = [
-      ...treatsReceived.map(t => ({ photo: t.photo, title: `${t.giftLabel} de ${t.name}`, subtitle: t.time, quote: t.message, date: t.createdAt })),
-      ...encounterPhotos.map(e => ({ photo: e.photo, title: e.otherName ? `Rencontre avec ${e.otherName}` : "Photo de rencontre", subtitle: e.location || "", quote: e.caption, date: e.createdAt })),
-    ].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const [bookCustom, setBookCustom] = useState({});
+  const [showBookSettings, setShowBookSettings] = useState(false);
+  const [bookOpening, setBookOpening] = useState(false);
+  const [bookFlip, setBookFlip] = useState(null); // "next" | "prev" | null, pendant l'animation de tournage
+  const [bookFlippingFrom, setBookFlippingFrom] = useState(null); // page affichée pendant le tournage (avant de basculer sur la nouvelle)
+  const [bookTitleDraft, setBookTitleDraft] = useState("");
 
-    if (items.length === 0) return;
+  function rebuildBook(custom) {
+    const pages = buildBookPages(pet, treatsReceived, encounterPhotos, custom);
+    setBookPages(pages);
+    setBookPageIndex(i => Math.min(i, pages.length - 1));
+  }
 
-    setGeneratingBook(true);
+  function openMagicBook() {
+    const saved = loadBookCustomization(initialData.id);
+    setBookCustom(saved);
+    setBookTitleDraft(saved.title || "");
+    setBookPageIndex(0);
+    setBookPages(buildBookPages(pet, treatsReceived, encounterPhotos, saved));
+    setShowMagicBook(true);
+    setBookOpening(true);
+    setTimeout(() => setBookOpening(false), 900);
+  }
+
+  function applyBookCustomization(patch) {
+    const next = { ...bookCustom, ...patch };
+    setBookCustom(next);
+    saveBookCustomization(initialData.id, next);
+    rebuildBook(next);
+  }
+
+  function moveContentPage(pageId, direction) {
+    const contentIds = bookPages.filter(p => p.id).map(p => p.id);
+    const idx = contentIds.indexOf(pageId);
+    const swapWith = idx + direction;
+    if (idx === -1 || swapWith < 0 || swapWith >= contentIds.length) return;
+    [contentIds[idx], contentIds[swapWith]] = [contentIds[swapWith], contentIds[idx]];
+    applyBookCustomization({ order: contentIds });
+  }
+
+  function toggleHiddenPage(pageId) {
+    const hidden = bookCustom.hiddenIds || [];
+    const next = hidden.includes(pageId) ? hidden.filter(id => id !== pageId) : [...hidden, pageId];
+    applyBookCustomization({ hiddenIds: next });
+  }
+
+  function bookNextPage() {
+    if (bookFlip || bookPageIndex >= bookPages.length - 1) return;
+    setBookFlippingFrom(bookPageIndex);
+    setBookFlip("next");
+    setTimeout(() => {
+      setBookPageIndex(i => Math.min(i + 1, bookPages.length - 1));
+      setBookFlip(null);
+      setBookFlippingFrom(null);
+    }, 420);
+  }
+  function bookPrevPage() {
+    if (bookFlip || bookPageIndex <= 0) return;
+    setBookFlippingFrom(bookPageIndex);
+    setBookFlip("prev");
+    setTimeout(() => {
+      setBookPageIndex(i => Math.max(i - 1, 0));
+      setBookFlip(null);
+      setBookFlippingFrom(null);
+    }, 420);
+  }
+
+  async function handleExportBookPdf() {
+    setExportingBookPdf(true);
     setBookError(null);
-    setBookProgress({ done: 0, total: items.length });
+    setBookExportProgress({ done: 0, total: bookPages.length });
     try {
-      await generateMemoryBookPdf(pet.name, items, (done, total) => setBookProgress({ done, total }));
+      await exportBookToPdf(bookPages, (done, total) => setBookExportProgress({ done, total }), BOOK_THEMES[bookCustom.theme] || BOOK_THEMES.doux);
     } catch (err) {
-      console.error("generateMemoryBookPdf error:", err);
-      setBookError("La génération a échoué. Vérifiez que la bibliothèque jsPDF est bien installée.");
+      console.error("exportBookToPdf error:", err);
+      setBookError("L'export a échoué. Vérifiez que la bibliothèque jsPDF est bien installée (npm install jspdf).");
     }
-    setGeneratingBook(false);
-    setBookProgress(null);
+    setExportingBookPdf(false);
+    setBookExportProgress(null);
   }
 
   function openNoteEditor(treat) {
@@ -6330,13 +6395,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </button>
 
               {(treatsReceived.length + encounterPhotos.length) > 0 && (
-                <button onClick={handleGenerateMemoryBook} disabled={generatingBook}
-                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: generatingBook ? "default" : "pointer", marginBottom: 12 }}>
-                  {generatingBook ? `📕 Génération... (${bookProgress?.done || 0}/${bookProgress?.total || 0})` : "📕 Générer mon Livre de Souvenirs (PDF)"}
+                <button onClick={openMagicBook}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>
+                  ✨ Ouvrir le Livre Magique
                 </button>
-              )}
-              {bookError && (
-                <div style={{ fontSize: 11, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{bookError}</div>
               )}
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -6619,6 +6681,218 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         </div>
       )}
 
+      {/* Ouverture du Livre Magique — lumière et particules */}
+      {bookOpening && (
+        <div style={{ position: "absolute", inset: 0, background: "#2D1200", zIndex: 98, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          <style>{`
+            @keyframes bookGlowPulse { 0% { transform: scale(.2); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(2.6); opacity: 0; } }
+            @keyframes bookOpenParticle { 0% { transform: translate(0,0) scale(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--px), var(--py)) scale(1); opacity: 0; } }
+          `}</style>
+          <div style={{ position: "absolute", width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,196,104,.9), transparent 70%)", animation: "bookGlowPulse .9s ease-out" }} />
+          {Array.from({ length: 14 }).map((_, i) => {
+            const angle = (i / 14) * Math.PI * 2;
+            const dist = 140 + (i % 3) * 30;
+            return (
+              <span key={i} style={{
+                position: "absolute", fontSize: 12, "--px": `${Math.cos(angle) * dist}px`, "--py": `${Math.sin(angle) * dist}px`,
+                animation: `bookOpenParticle .9s ease-out ${i * 0.02}s both`, pointerEvents: "none",
+              }}>✨</span>
+            );
+          })}
+          <div style={{ position: "relative", fontSize: 40 }}>📖</div>
+        </div>
+      )}
+
+      {/* Le Livre Magique de Souvenirs — feuilletable */}
+      {showMagicBook && bookPages.length > 0 && !bookOpening && (() => {
+        const theme = BOOK_THEMES[bookCustom.theme] || BOOK_THEMES.doux;
+
+        const renderBookPage = (page) => (
+          <>
+            {/* petits éléments magiques discrets */}
+            <span style={{ position: "absolute", top: 16, right: 20, fontSize: 14, animation: "bookSparkleTwinkle 2.4s ease-in-out infinite", pointerEvents: "none" }}>✨</span>
+            <span style={{ position: "absolute", bottom: 70, left: 18, fontSize: 11, animation: "bookSparkleTwinkle 3.1s ease-in-out infinite .6s", pointerEvents: "none" }}>✨</span>
+
+            {page.type === "cover" && (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", textAlign: "center" }}>
+                <div style={{ width: 140, height: 140, borderRadius: "50%", overflow: "hidden", background: "rgba(0,0,0,.06)", marginBottom: 22, border: "4px solid rgba(255,255,255,.5)", boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
+                  {page.petPhoto && <img src={page.petPhoto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                </div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: theme.accent, lineHeight: 1.3, marginBottom: 8 }}>{page.title || "Le Livre de Souvenirs"}<br />de {page.petName}</div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontStyle: "italic", color: theme.accentDark, marginBottom: 20 }}>Ses plus beaux moments</div>
+                <div style={{ fontSize: 11, color: theme.subtext }}>Depuis le {new Date(page.startDate).toLocaleDateString("fr-FR")}</div>
+              </div>
+            )}
+
+            {page.type === "intro" && (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 30px", textAlign: "center" }}>
+                <div style={{ fontSize: 30, marginBottom: 16 }}>🐾</div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 16, color: theme.text, lineHeight: 1.8 }}>
+                  Depuis son arrivée sur Miloute, <strong>{page.petName}</strong> a vécu de belles rencontres et reçu de jolies attentions.
+                  <br /><br />
+                  Voici son histoire, jour après jour.
+                </div>
+              </div>
+            )}
+
+            {(page.type === "gift" || page.type === "encounter") && (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <div style={{ width: "100%", aspectRatio: "1", background: "rgba(0,0,0,.06)", flexShrink: 0 }}>
+                  {page.photo && <img src={page.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                </div>
+                <div style={{ flex: 1, padding: "18px 22px", textAlign: "center", overflowY: "auto" }}>
+                  {page.special && (
+                    <div style={{ display: "inline-block", fontSize: 10, fontWeight: 800, color: "#946800", background: "#FFF3CD", padding: "3px 10px", borderRadius: 10, marginBottom: 8 }}>{page.special}</div>
+                  )}
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: theme.text, marginBottom: 4 }}>{page.emoji} {page.title}</div>
+                  {page.subtitle && <div style={{ fontSize: 12, color: theme.subtext, marginBottom: 8 }}>{page.subtitle}</div>}
+                  {page.quote && <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontStyle: "italic", color: theme.accentDark }}>« {page.quote} »</div>}
+                </div>
+              </div>
+            )}
+
+            {page.type === "conclusion" && (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 30px", textAlign: "center" }}>
+                <div style={{ fontSize: 30, marginBottom: 16 }}>🐾</div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", color: theme.accent }}>L'histoire continue…</div>
+              </div>
+            )}
+          </>
+        );
+
+        const targetIdx = bookFlip === "next" ? Math.min(bookPageIndex + 1, bookPages.length - 1) : bookFlip === "prev" ? Math.max(bookPageIndex - 1, 0) : bookPageIndex;
+        const currentIdx = bookFlippingFrom !== null ? bookFlippingFrom : bookPageIndex;
+
+        return (
+        <div style={{ position: "absolute", inset: 0, background: theme.frameBg, zIndex: 97, display: "flex", flexDirection: "column" }}>
+          <style>{`
+            @keyframes bookSparkleTwinkle { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+          `}</style>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", flexShrink: 0 }}>
+            <div style={{ color: "rgba(255,255,255,.6)", fontSize: 12, fontWeight: 700 }}>{bookPageIndex + 1} / {bookPages.length}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowBookSettings(true)} style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#fff", fontSize: 13, cursor: "pointer" }}>⚙️</button>
+              <button onClick={() => setShowMagicBook(false)} style={{ background: "rgba(255,255,255,.15)", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#fff", fontSize: 14, cursor: "pointer" }}>✕</button>
+            </div>
+          </div>
+
+          <div
+            onTouchStart={e => setBookTouchStartX(e.touches[0].clientX)}
+            onTouchEnd={e => {
+              if (bookTouchStartX === null) return;
+              const delta = e.changedTouches[0].clientX - bookTouchStartX;
+              if (delta < -40) bookNextPage();
+              else if (delta > 40) bookPrevPage();
+              setBookTouchStartX(null);
+            }}
+            style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative", perspective: 1400 }}>
+
+            {/* Zones de tap gauche/droite pour naviguer, en plus du swipe */}
+            <div onClick={bookPrevPage} style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "30%", zIndex: 3, cursor: bookPageIndex > 0 ? "pointer" : "default" }} />
+            <div onClick={bookNextPage} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "30%", zIndex: 3, cursor: bookPageIndex < bookPages.length - 1 ? "pointer" : "default" }} />
+
+            {/* Page de destination, dessous — se révèle au fur et à mesure que la page du dessus se tourne */}
+            {bookFlip && (
+              <div style={{ position: "absolute", inset: "0 16px 16px", borderRadius: 20, background: theme.pageBg, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                {renderBookPage(bookPages[targetIdx])}
+              </div>
+            )}
+
+            {/* Page courante — se tourne comme une vraie page pendant la navigation */}
+            <div style={{
+              position: bookFlip ? "absolute" : "relative", inset: bookFlip ? "0 16px 16px" : undefined,
+              flex: bookFlip ? undefined : 1, margin: bookFlip ? undefined : "0 16px 16px",
+              borderRadius: 20, background: theme.pageBg, overflow: "hidden", display: "flex", flexDirection: "column",
+              transformOrigin: bookFlip === "next" ? "right center" : "left center",
+              transform: bookFlip ? `rotateY(${bookFlip === "next" ? -130 : 130}deg)` : "rotateY(0deg)",
+              transition: bookFlip ? "transform .42s cubic-bezier(.45,0,.55,1)" : "none",
+              boxShadow: bookFlip ? "0 0 30px rgba(0,0,0,.35)" : "none",
+              backfaceVisibility: "hidden",
+            }}>
+              {renderBookPage(bookPages[currentIdx])}
+            </div>
+          </div>
+
+          <div style={{ padding: "10px 20px 22px", flexShrink: 0 }}>
+            {bookError && (
+              <div style={{ fontSize: 11, color: "#FCA5A5", textAlign: "center", marginBottom: 10 }}>{bookError}</div>
+            )}
+            <button onClick={handleExportBookPdf} disabled={exportingBookPdf}
+              style={{ width: "100%", padding: "13px", borderRadius: 14, border: "none", background: exportingBookPdf ? "rgba(255,255,255,.15)" : "rgba(255,255,255,.92)", color: exportingBookPdf ? "rgba(255,255,255,.6)" : theme.accentDark, fontWeight: 800, fontSize: 13, cursor: exportingBookPdf ? "default" : "pointer" }}>
+              {exportingBookPdf ? `Export en cours... (${bookExportProgress?.done || 0}/${bookExportProgress?.total || 0})` : "📥 Exporter en PDF"}
+            </button>
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* Personnalisation du Livre Magique */}
+      {showBookSettings && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 99, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setShowBookSettings(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "85%", overflowY: "auto", padding: "20px 20px 32px" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 18 }}>⚙️ Personnaliser le livre</div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>THÈME</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
+              {Object.entries(BOOK_THEMES).map(([key, th]) => (
+                <button key={key} onClick={() => applyBookCustomization({ theme: key })}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 4px", borderRadius: 12, border: (bookCustom.theme || "doux") === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: th.pageBg, cursor: "pointer" }}>
+                  <span style={{ fontSize: 18 }}>{th.icon}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: th.text }}>{th.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>TITRE DE LA COUVERTURE</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              <input value={bookTitleDraft} onChange={e => setBookTitleDraft(e.target.value.slice(0, 60))}
+                placeholder="Le Livre de Souvenirs"
+                style={{ flex: 1, boxSizing: "border-box", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB", fontSize: 13 }} />
+              <button onClick={() => applyBookCustomization({ title: bookTitleDraft.trim() || null })}
+                style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: "#B25F46", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                OK
+              </button>
+            </div>
+
+            {pet.photos?.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>PHOTO DE COUVERTURE</div>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 20 }}>
+                  {pet.photos.map((p, i) => (
+                    <button key={i} onClick={() => applyBookCustomization({ coverPhoto: photoUrl(p) })}
+                      style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", border: (bookCustom.coverPhoto || pet.photos[0]?.url) === photoUrl(p) ? "2.5px solid #B25F46" : "1.5px solid #E5E7EB", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                      <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>PAGES (réorganiser / masquer)</div>
+            {bookPages.filter(p => p.id).map((page, i, arr) => {
+              const isHidden = (bookCustom.hiddenIds || []).includes(page.id);
+              return (
+                <div key={page.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, background: "#F9FAFB", marginBottom: 6, opacity: isHidden ? 0.5 : 1 }}>
+                  <span style={{ fontSize: 16 }}>{page.emoji}</span>
+                  <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "#2D1200", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{page.title}</span>
+                  <button onClick={() => moveContentPage(page.id, -1)} disabled={i === 0} style={{ background: "none", border: "none", fontSize: 14, cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.3 : 1, padding: "2px 4px" }}>↑</button>
+                  <button onClick={() => moveContentPage(page.id, 1)} disabled={i === arr.length - 1} style={{ background: "none", border: "none", fontSize: 14, cursor: i === arr.length - 1 ? "default" : "pointer", opacity: i === arr.length - 1 ? 0.3 : 1, padding: "2px 4px" }}>↓</button>
+                  <button onClick={() => toggleHiddenPage(page.id)} style={{ background: "none", border: "none", fontSize: 13, cursor: "pointer", padding: "2px 4px" }}>{isHidden ? "🙈" : "👁️"}</button>
+                </div>
+              );
+            })}
+
+            <button onClick={() => setShowBookSettings(false)}
+              style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", marginTop: 16 }}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Flow d'ajout d'une photo de rencontre (4 écrans) */}
       {showAddEncounter && (
         <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 95, display: "flex", flexDirection: "column" }}>
@@ -6736,9 +7010,17 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
       {/* Confirmation d'ajout réussi d'une photo de rencontre */}
       {encounterSuccessMsg && (
-        <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 98, background: "#2D1200", color: "#fff", padding: "12px 20px", borderRadius: 30, fontSize: 13, fontWeight: 700, boxShadow: "0 8px 24px rgba(0,0,0,.25)", maxWidth: "88%", textAlign: "center" }}
-          onAnimationEnd={() => {}}>
-          {encounterSuccessMsg}
+        <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 98, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <style>{`
+            @keyframes memoryToastPop { 0% { transform: scale(.7); opacity: 0; } 55% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+            @keyframes memoryToastSparkle { 0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1) rotate(160deg); opacity: 0; } }
+          `}</style>
+          <div style={{ position: "relative", background: "#2D1200", color: "#fff", padding: "12px 20px", borderRadius: 30, fontSize: 13, fontWeight: 700, boxShadow: "0 8px 24px rgba(0,0,0,.25)", maxWidth: "88%", textAlign: "center", animation: "memoryToastPop .4s cubic-bezier(.34,1.56,.64,1)" }}>
+            {[["-22px", "-16px"], ["24px", "-14px"], ["0px", "-22px"]].map(([tx, ty], idx) => (
+              <span key={idx} style={{ position: "absolute", left: "50%", top: 0, fontSize: 12, "--tx": tx, "--ty": ty, animation: `memoryToastSparkle .7s ease-out ${0.1 + idx * 0.07}s both`, pointerEvents: "none" }}>✨</span>
+            ))}
+            {encounterSuccessMsg}
+          </div>
         </div>
       )}
 
@@ -9165,9 +9447,72 @@ async function updateTreatNote(treatId, note) {
   if (error) throw new Error(error.message);
 }
 
-// ── LIVRE DE SOUVENIRS (PDF) ──────────────────────────────────────────────
-// Nécessite la bibliothèque jsPDF (npm install jspdf) — pas encore installée
-// dans le projet à ce stade, voir la note livrée avec ce fichier.
+// ── LE LIVRE MAGIQUE DE SOUVENIRS ─────────────────────────────────────────
+// Construit la structure complète du livre : couverture, introduction,
+// pages de contenu (cadeaux + rencontres, triées chronologiquement, avec
+// les moments spéciaux repérés — premier de chaque type + jalons ronds),
+// et conclusion. Consultable dans l'app ET exportable en PDF depuis la
+// même structure, pour que les deux restent toujours cohérents.
+// `custom` (optionnel) permet la personnalisation : titre, photo de
+// couverture, pages masquées, ordre personnalisé des pages de contenu.
+function buildBookPages(pet, treatsReceived, encounterPhotos, custom = {}) {
+  let contentItems = [
+    ...treatsReceived.map(t => ({ id: `gift-${t.id}`, kind: "gift", date: t.createdAt, photo: t.photo, emoji: t.giftEmoji, title: t.giftLabel, subtitle: `de ${t.name}`, quote: t.message })),
+    ...encounterPhotos.map(e => ({ id: `encounter-${e.id}`, kind: "encounter", date: e.createdAt, photo: e.photo, emoji: "📸", title: e.otherName ? `Rencontre avec ${e.otherName}` : "Une belle rencontre", subtitle: e.location || "", quote: e.caption })),
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const seenKinds = new Set();
+  contentItems.forEach((item, i) => {
+    if (!seenKinds.has(item.kind)) {
+      seenKinds.add(item.kind);
+      item.special = item.kind === "gift" ? "Premier cadeau ✨" : "Première rencontre ✨";
+    } else if ([10, 25, 50].includes(i + 1)) {
+      item.special = `${i + 1}ᵉ souvenir ✨`;
+    }
+  });
+
+  // Ordre personnalisé, si fourni (les pages non listées gardent l'ordre chronologique, à la suite)
+  if (custom.order?.length > 0) {
+    const byId = Object.fromEntries(contentItems.map(item => [item.id, item]));
+    const ordered = custom.order.map(id => byId[id]).filter(Boolean);
+    const remaining = contentItems.filter(item => !custom.order.includes(item.id));
+    contentItems = [...ordered, ...remaining];
+  }
+
+  // Pages masquées
+  if (custom.hiddenIds?.length > 0) {
+    contentItems = contentItems.filter(item => !custom.hiddenIds.includes(item.id));
+  }
+
+  const startDate = contentItems.length > 0 ? [...contentItems].sort((a, b) => new Date(a.date) - new Date(b.date))[0].date : new Date().toISOString();
+
+  return [
+    { type: "cover", petPhoto: custom.coverPhoto || pet.photos?.[0]?.url || null, petName: pet.name, title: custom.title || null, startDate },
+    { type: "intro", petName: pet.name },
+    ...contentItems.map(item => ({ type: item.kind, ...item })),
+    { type: "conclusion", petName: pet.name },
+  ];
+}
+
+// Thèmes visuels — chacun définit les couleurs de fond/texte/accent utilisées
+// à la fois par la vue in-app et par l'export PDF, pour rester cohérents.
+const BOOK_THEMES = {
+  doux: { label: "Doux", icon: "🌸", pageBg: "#FDF6EE", accent: "#B25F46", accentDark: "#8B3D28", text: "#2D1200", subtext: "#9CA3AF", frameBg: "#2D1200", pdfBg: [250, 240, 235] },
+  nuit: { label: "Nuit étoilée", icon: "🌙", pageBg: "#1B2340", accent: "#E8C468", accentDark: "#C9A94E", text: "#F5F0E6", subtext: "#9CA3C4", frameBg: "#0E1226", pdfBg: [27, 35, 64] },
+  nature: { label: "Nature", icon: "🌿", pageBg: "#F1F5EC", accent: "#5A8F5A", accentDark: "#3F6B3F", text: "#233B23", subtext: "#8FA88F", frameBg: "#1E2E1E", pdfBg: [241, 245, 236] },
+  pastel: { label: "Pastel", icon: "💜", pageBg: "#F3F0FB", accent: "#8B7BC7", accentDark: "#6C5AA8", text: "#332B4D", subtext: "#A79FC4", frameBg: "#2A2440", pdfBg: [243, 240, 251] },
+};
+
+function loadBookCustomization(petId) {
+  try {
+    const raw = localStorage.getItem(`miloute_book_custom_${petId}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+function saveBookCustomization(petId, custom) {
+  try { localStorage.setItem(`miloute_book_custom_${petId}`, JSON.stringify(custom)); } catch {}
+}
+
 async function imageUrlToBase64(url) {
   const res = await fetch(url);
   const blob = await res.blob();
@@ -9179,54 +9524,91 @@ async function imageUrlToBase64(url) {
   });
 }
 
-async function generateMemoryBookPdf(petName, items, onProgress) {
+// Nécessite la bibliothèque jsPDF (npm install jspdf).
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+async function exportBookToPdf(pages, onProgress, theme = BOOK_THEMES.doux) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a5" });
+  const [accentR, accentG, accentB] = hexToRgb(theme.accent);
+  const [accentDR, accentDG, accentDB] = hexToRgb(theme.accentDark);
+  const [textR, textG, textB] = hexToRgb(theme.text);
+  const [subR, subG, subB] = hexToRgb(theme.subtext);
 
-  // Page de titre
-  doc.setFillColor(250, 240, 235);
-  doc.rect(0, 0, 148, 210, "F");
-  doc.setTextColor(178, 95, 70);
-  doc.setFontSize(26);
-  doc.text("Le Livre de Souvenirs", 74, 90, { align: "center" });
-  doc.setFontSize(18);
-  doc.text(`de ${petName}`, 74, 104, { align: "center" });
-  doc.setFontSize(10);
-  doc.setTextColor(150, 150, 150);
-  doc.text(`Généré le ${new Date().toLocaleDateString("fr-FR")} — Miloute`, 74, 190, { align: "center" });
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    if (onProgress) onProgress(i + 1, pages.length);
+    if (i > 0) doc.addPage();
 
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (onProgress) onProgress(i + 1, items.length);
-    doc.addPage();
-    let y = 20;
-    if (item.photo) {
-      try {
-        const imgData = await imageUrlToBase64(item.photo);
-        doc.addImage(imgData, "JPEG", 24, y, 100, 100);
-        y += 112;
-      } catch {
-        y += 4; // image indisponible (CORS ou lien mort) — on continue sans bloquer tout le livre
+    doc.setFillColor(theme.pdfBg[0], theme.pdfBg[1], theme.pdfBg[2]);
+    doc.rect(0, 0, 148, 210, "F");
+
+    if (page.type === "cover") {
+      doc.setTextColor(accentR, accentG, accentB);
+      doc.setFontSize(24);
+      doc.text(page.title || "Le Livre de Souvenirs", 74, 80, { align: "center", maxWidth: 120 });
+      doc.setFontSize(18);
+      doc.text(`de ${page.petName}`, 74, 96, { align: "center" });
+      doc.setFontSize(12);
+      doc.setTextColor(accentDR, accentDG, accentDB);
+      doc.text("Ses plus beaux moments", 74, 110, { align: "center" });
+      doc.setFontSize(9);
+      doc.setTextColor(subR, subG, subB);
+      doc.text(`Depuis le ${new Date(page.startDate).toLocaleDateString("fr-FR")}`, 74, 190, { align: "center" });
+    } else if (page.type === "intro") {
+      doc.setFontSize(13);
+      doc.setTextColor(textR, textG, textB);
+      doc.text(`L'histoire de ${page.petName}`, 74, 50, { align: "center" });
+      doc.setFontSize(10.5);
+      doc.setTextColor(subR, subG, subB);
+      doc.text(`Depuis son arrivée sur Miloute, ${page.petName} a vécu de belles rencontres\net reçu de jolies attentions. Voici son histoire, jour après jour.`, 74, 70, { align: "center", maxWidth: 110 });
+    } else if (page.type === "conclusion") {
+      doc.setFontSize(16);
+      doc.setTextColor(accentR, accentG, accentB);
+      doc.text("L'histoire continue…", 74, 100, { align: "center" });
+      doc.setFontSize(10);
+      doc.setTextColor(subR, subG, subB);
+      doc.text("Miloute", 74, 190, { align: "center" });
+    } else {
+      // gift / encounter
+      let y = 18;
+      if (page.photo) {
+        try {
+          const imgData = await imageUrlToBase64(page.photo);
+          doc.addImage(imgData, "JPEG", 24, y, 100, 100);
+          y += 112;
+        } catch {
+          y += 4; // image indisponible — on continue sans bloquer tout le livre
+        }
       }
-    }
-    doc.setFontSize(13);
-    doc.setTextColor(45, 18, 0);
-    doc.text(item.title, 74, y, { align: "center", maxWidth: 120 });
-    y += 8;
-    if (item.subtitle) {
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(item.subtitle, 74, y, { align: "center", maxWidth: 120 });
-      y += 6;
-    }
-    if (item.quote) {
-      doc.setFontSize(10);
-      doc.setTextColor(139, 61, 40);
-      doc.text(`« ${item.quote} »`, 74, y, { align: "center", maxWidth: 110 });
+      if (page.special) {
+        doc.setFontSize(9);
+        doc.setTextColor(148, 104, 0);
+        doc.text(page.special, 74, y, { align: "center" });
+        y += 7;
+      }
+      doc.setFontSize(13);
+      doc.setTextColor(textR, textG, textB);
+      doc.text(page.title, 74, y, { align: "center", maxWidth: 120 });
+      y += 8;
+      if (page.subtitle) {
+        doc.setFontSize(10);
+        doc.setTextColor(subR, subG, subB);
+        doc.text(page.subtitle, 74, y, { align: "center", maxWidth: 120 });
+        y += 6;
+      }
+      if (page.quote) {
+        doc.setFontSize(10);
+        doc.setTextColor(accentDR, accentDG, accentDB);
+        doc.text(`« ${page.quote} »`, 74, y, { align: "center", maxWidth: 110 });
+      }
     }
   }
 
-  doc.save(`livre-de-souvenirs-${petName.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+  doc.save(`livre-de-souvenirs-${pages[0]?.petName?.toLowerCase().replace(/\s+/g, "-") || "miloute"}.pdf`);
 }
 
 async function deleteTreatMemory(treatId) {
