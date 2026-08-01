@@ -37,13 +37,17 @@ const PROMPTS = {
     "suivant, qui est la DESCRIPTION D'UNE PRESTATION rédigée par un prestataire pour présenter son service aux " +
     "clients potentiels — ce texte est un texte commercial par nature (présenter et vendre un service), donc la " +
     "promotion commerciale, les mentions de tarifs, d'expérience professionnelle ou d'arguments de vente sont " +
-    "totalement normales et NE DOIVENT PAS être refusées à ce titre. " +
+    "totalement normales et NE DOIVENT PAS être refusées à ce titre. De nombreuses prestations pour animaux se " +
+    "déroulent normalement AU DOMICILE du client (toilettage à domicile, garde d'animaux à domicile, visites à " +
+    "domicile, déplacement chez le client...) : ceci est un modèle de service parfaitement légitime et courant " +
+    "dans ce secteur, PAS une tentative de sortir de l'application — ne le refuse jamais à ce seul titre. " +
     "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, au format exact : " +
     '{"approved": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
     "Refuse (approved: false) uniquement si le texte contient : propos haineux ou discriminatoires, contenu à " +
-    "caractère sexuel, incitation à contacter le prestataire ou à payer en dehors de l'application (numéro de " +
-    "téléphone, email, réseau social, lien externe, virement direct), promesses manifestement mensongères ou " +
-    "dangereuses, ou tout contenu sans rapport avec un service pour animaux.",
+    "caractère sexuel, une incitation à CONTACTER le prestataire ou à PAYER en dehors de l'application (numéro de " +
+    "téléphone, email, réseau social, lien externe, virement direct — la simple mention d'un service rendu au " +
+    "domicile du client n'entre pas dans ce cas), promesses manifestement mensongères ou dangereuses, ou tout " +
+    "contenu sans rapport avec un service pour animaux.",
 };
 
 module.exports = async (req, res) => {
