@@ -6848,7 +6848,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               {Object.entries(BOOK_THEMES).map(([key, th]) => (
                 <button key={key} onClick={() => applyBookCustomization({ theme: key })}
                   style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 4px", borderRadius: 12, border: (bookCustom.theme || "doux") === key ? "1.5px solid #B25F46" : "1.5px solid #E5E7EB", background: th.pageBg, cursor: "pointer" }}>
-                  {th.useLogo ? <PawLogo size={18} color={th.accent} /> : <span style={{ fontSize: 18 }}>{th.icon}</span>}
+                  <div style={{ width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {th.useLogo ? <PawLogo size={18} color={th.accent} /> : <span style={{ fontSize: 18, lineHeight: 1 }}>{th.icon}</span>}
+                  </div>
                   <span style={{ fontSize: 10, fontWeight: 700, color: th.text }}>{th.label}</span>
                 </button>
               ))}
@@ -8931,7 +8933,7 @@ async function checkMagicMoment(userProfile) {
   }).eq("id", userProfile.id);
   if (updateError) return null;
 
-  return { giftId, emoji: giftInfo?.emoji || "🎁", label: giftInfo?.label || "Cadeau", giftInventory: newInventory };
+  return { giftId, emoji: giftInfo?.emoji || "🎁", label: giftInfo?.label || "Cadeau", gender: giftInfo?.gender || "m", giftInventory: newInventory };
 }
 
 // Formatage relatif simple ("À l'instant", "12:34", "Hier", "Lun.")
@@ -10435,7 +10437,7 @@ export default function Miloute() {
               <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.5, marginBottom: 18 }}>Comme ça, sans raison — juste pour vous faire sourire aujourd'hui.</div>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "#FAF0EB", borderRadius: 16, padding: "12px 20px", marginBottom: 22 }}>
                 <span style={{ fontSize: 28 }}>{magicMomentReward.emoji}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#8B3D28" }}>{magicMomentReward.label} offert(e) !</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#8B3D28" }}>{magicMomentReward.label} {magicMomentReward.gender === "f" ? "offerte" : "offert"} !</span>
               </div>
               <button onClick={() => setMagicMomentReward(null)}
                 style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
