@@ -96,7 +96,7 @@ module.exports = async (req, res) => {
           includedTypes: [cat.includedType],
           maxResultCount: 20,
           locationRestriction: {
-            circle: { center: { latitude: lat, longitude: lng }, radius: 5000 },
+            circle: { center: { latitude: lat, longitude: lng }, radius: 10000 },
           },
         }),
       });
