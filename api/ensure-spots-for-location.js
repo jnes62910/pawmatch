@@ -33,7 +33,12 @@ const CATEGORIES = [
 // Enseignes de jardinerie/grande distribution que Google classe parfois par
 // erreur comme animalerie ("pet_store"), alors qu'il ne s'agit pas de
 // commerces spécialisés animaux — on les exclut par précaution.
-const EXCLUDED_NAME_PATTERNS = [/gamm\s*vert/i, /jardiland/i, /truffaut/i, /botanic/i];
+// Idem pour tout ce qui relève du monde équestre (centres équestres,
+// écuries, poneys...) : Miloute ne concerne que chats et chiens.
+const EXCLUDED_NAME_PATTERNS = [
+  /gamm\s*vert/i, /jardiland/i, /truffaut/i, /botanic/i,
+  /cheval|chevaux|équestre|equestre|équitation|equitation|poney|poneys|haras|écurie|ecurie|écuries|ecuries|hippique|équin|equin/i,
+];
 // Devine l'espèce visée par le nom de l'établissement lui-même (Google ne
 // fournit aucune info structurée là-dessus). Reste "both" par défaut si le
 // nom ne mentionne clairement ni l'un ni l'autre — mieux vaut sous-filtrer
