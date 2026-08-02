@@ -5089,6 +5089,62 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [searchingSimilar, setSearchingSimilar] = useState(false);
   const [claimingSpotId, setClaimingSpotId] = useState(null);
 
+  const [selfSpotInfo, setSelfSpotInfo] = useState(null);
+  const [showEditSpot, setShowEditSpot] = useState(false);
+  const [editSpotName, setEditSpotName] = useState("");
+  const [editSpotCategory, setEditSpotCategory] = useState("petsitter");
+  const [editSpotDescription, setEditSpotDescription] = useState("");
+  const [savingSpotEdit, setSavingSpotEdit] = useState(false);
+  const [editSpotError, setEditSpotError] = useState(null);
+  const [confirmDeleteSpot, setConfirmDeleteSpot] = useState(false);
+  const [deletingSpot, setDeletingSpot] = useState(false);
+  const [deleteSpotError, setDeleteSpotError] = useState(null);
+
+  function openEditSpot() {
+    setEditSpotName(selfSpotInfo?.name || "");
+    setEditSpotCategory(selfSpotInfo?.type || "petsitter");
+    setEditSpotDescription(selfSpotInfo?.description || "");
+    setEditSpotError(null);
+    setShowEditSpot(true);
+  }
+
+  async function saveSpotEdit() {
+    if (!editSpotName.trim()) { setEditSpotError("Le nom de votre activité est requis."); return; }
+    setEditSpotError(null);
+    setSavingSpotEdit(true);
+    try {
+      await updateSpotInfo(selfSpotId, { name: editSpotName.trim(), type: editSpotCategory, description: editSpotDescription.trim() });
+      setSelfSpotInfo({ name: editSpotName.trim(), type: editSpotCategory, description: editSpotDescription.trim() });
+      setShowEditSpot(false);
+    } catch {
+      setEditSpotError("L'enregistrement a échoué, réessayez.");
+    }
+    setSavingSpotEdit(false);
+  }
+
+  async function handleDeleteSpot() {
+    setDeleteSpotError(null);
+    setDeletingSpot(true);
+    try {
+      const hasPending = await hasPendingBookingsAsProvider(initialData.userId);
+      if (hasPending) {
+        setDeleteSpotError("Impossible de supprimer : vous avez des réservations payées en attente de confirmation. Confirmez-les ou annulez-les d'abord.");
+        setDeletingSpot(false);
+        return;
+      }
+      await deleteProviderSpot(selfSpotId);
+      setSelfSpotId(null);
+      setSelfSpotInfo(null);
+      setSpotPhotos([]);
+      setProviderServices([]);
+      setShowEditSpot(false);
+      setConfirmDeleteSpot(false);
+    } catch {
+      setDeleteSpotError("La suppression a échoué, réessayez.");
+    }
+    setDeletingSpot(false);
+  }
+
   async function searchForMySpot() {
     if (!newSpotName.trim()) { setCreateSpotError("Le nom de votre activité est requis."); return; }
     setCreateSpotError(null);
@@ -5219,6 +5275,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     fetchSelfProviderSpot(initialData.userId).then(spot => {
       setSelfSpotId(spot?.id || null);
       setSpotPhotos(spot?.photos || []);
+      setSelfSpotInfo(spot ? { name: spot.name, type: spot.type, description: spot.description || "" } : null);
       setLoadingSelfSpot(false);
       if (!spot) fetchPendingClaim(initialData.userId).then(setPendingClaim);
     });
@@ -7298,6 +7355,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Toiletteur, éducateur, pet-sitter, pension... proposez vos services aux propriétaires d'animaux près de chez vous. Ajoutez votre première prestation pour apparaître dans l'annuaire, et recevez vos paiements directement une fois la prestation confirmée par les deux parties !</div>
             </div>
 
+            <button onClick={openEditSpot}
+              style={{ width: "100%", padding: "11px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 12.5, cursor: "pointer", marginBottom: 20 }}>
+              ✏️ Modifier ma fiche
+            </button>
+
             {/* Statut des paiements */}
             <div style={{ background: connectOnboarded ? "#E8F5E9" : "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 20 }}>
               {checkingConnect ? (
@@ -7394,6 +7456,63 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             ))}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modification / suppression de la fiche prestataire */}
+      {showEditSpot && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 82, display: "flex", alignItems: "flex-end" }} onClick={() => !savingSpotEdit && !deletingSpot && setShowEditSpot(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "90%", overflowY: "auto", padding: "20px 20px 32px" }}>
+            <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Modifier ma fiche</div>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>NOM DE VOTRE ACTIVITÉ *</label>
+            <input value={editSpotName} onChange={e => setEditSpotName(e.target.value)}
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>CATÉGORIE</label>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", margin: "6px 0 16px" }}>
+              {PROVIDER_TYPES.filter(t => t !== "petshop" && t !== "insurance").map(t => (
+                <button key={t} onClick={() => setEditSpotCategory(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${editSpotCategory === t ? "#B25F46" : "#E5E7EB"}`, background: editSpotCategory === t ? "#FAF0EB" : "#fff", color: editSpotCategory === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
+              ))}
+            </div>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DESCRIPTION (optionnel)</label>
+            <textarea value={editSpotDescription} onChange={e => setEditSpotDescription(e.target.value)} rows={3} placeholder="Présentez votre activité..."
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", resize: "none", boxSizing: "border-box" }} />
+
+            {editSpotError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{editSpotError}</div>}
+
+            <button onClick={saveSpotEdit} disabled={savingSpotEdit}
+              style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: savingSpotEdit ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: savingSpotEdit ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: savingSpotEdit ? "default" : "pointer", marginBottom: 24 }}>
+              {savingSpotEdit ? "Enregistrement..." : "Enregistrer"}
+            </button>
+
+            <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", letterSpacing: 1, marginBottom: 8 }}>ZONE DE DANGER</div>
+              {deleteSpotError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>{deleteSpotError}</div>}
+              {!confirmDeleteSpot ? (
+                <button onClick={() => setConfirmDeleteSpot(true)}
+                  style={{ width: "100%", padding: "12px", borderRadius: 12, border: "1.5px solid #FCA5A5", background: "#fff", color: "#DC2626", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                  🗑️ Supprimer ma fiche
+                </button>
+              ) : (
+                <div style={{ background: "#FEF2F2", borderRadius: 14, padding: 16 }}>
+                  <div style={{ fontSize: 13, color: "#7F1D1D", lineHeight: 1.5, marginBottom: 14 }}>Supprimer votre fiche retirera aussi vos photos et vos prestations de l'annuaire. Cette action est irréversible. Confirmez-vous ?</div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={() => setConfirmDeleteSpot(false)} disabled={deletingSpot}
+                      style={{ flex: 1, padding: "11px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                      Annuler
+                    </button>
+                    <button onClick={handleDeleteSpot} disabled={deletingSpot}
+                      style={{ flex: 1, padding: "11px", borderRadius: 12, border: "none", background: deletingSpot ? "#E5E7EB" : "#DC2626", color: deletingSpot ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: deletingSpot ? "default" : "pointer" }}>
+                      {deletingSpot ? "..." : "Oui, supprimer"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -8920,6 +9039,28 @@ async function requestSpotClaim(spotId, userId) {
 
 async function updateSpotPhotos(spotId, photos) {
   const { error } = await supabase.from("spots").update({ photos }).eq("id", spotId);
+  if (error) throw new Error(error.message);
+}
+
+async function updateSpotInfo(spotId, { name, type, description }) {
+  const { error } = await supabase.from("spots").update({
+    name, type, description: description || null,
+    emoji: PROVIDER_TYPE_INFO[type]?.emoji || "📍",
+  }).eq("id", spotId);
+  if (error) throw new Error(error.message);
+}
+
+// Une fiche ne peut pas être supprimée tant qu'il reste des réservations
+// payées en attente de confirmation — l'argent est retenu par Miloute et
+// doit d'abord être confirmé ou annulé, pas laissé sans prestataire en face.
+async function hasPendingBookingsAsProvider(userId) {
+  const { count } = await supabase.from("bookings").select("id", { count: "exact", head: true }).eq("provider_user_id", userId).eq("status", "paid_held");
+  return (count || 0) > 0;
+}
+
+async function deleteProviderSpot(spotId) {
+  await supabase.from("provider_services").delete().eq("spot_id", spotId);
+  const { error } = await supabase.from("spots").delete().eq("id", spotId);
   if (error) throw new Error(error.message);
 }
 
