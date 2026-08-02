@@ -2353,9 +2353,9 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       fetchProvidersForCell(cellId, refLat, refLng),
       fetchAffiliatePartners(),
     ]);
-    const realFiltered = list.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
-    const partnersFiltered = partners.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
-    const merged = [...partnersFiltered, ...realFiltered]; // partenaires toujours en tête — plus de prestataires fictifs
+    const realFiltered = list.filter(p => (!userProfile?.species || p.species === "both" || p.species === userProfile.species) && p.type !== "petshop" && p.type !== "insurance");
+    const partnersFiltered = partners.filter(p => (!userProfile?.species || p.species === "both" || p.species === userProfile.species) && p.type !== "petshop" && p.type !== "insurance");
+    const merged = [...partnersFiltered, ...realFiltered]; // partenaires toujours en tête — plus de prestataires fictifs, plus de boutique/assurances
     const reviews = await fetchReviewsForProviders(list.map(p => p.id));
     setProviders(merged);
     setReviewsBySpot(reviews);
