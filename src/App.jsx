@@ -2373,8 +2373,6 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
     return { avg, count: list.length };
   }
 
-  const MAX_VETS_IN_ALL_VIEW = 3;
-
   const sortedProviders = providers
     .filter(p => category === "all" || p.type === category)
     .sort((a, b) => {
@@ -2386,22 +2384,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       return ratingB - ratingA;
     });
 
-  // Dans la vue "Toutes les catégories", les vétérinaires (souvent nombreux
-  // via Google) ne doivent pas noyer les autres catégories, moins fournies —
-  // on en limite l'affichage ici, le filtre "Vétérinaires" reste complet.
-  const hiddenVetsCount = category === "all"
-    ? Math.max(0, sortedProviders.filter(p => p.type === "vet").length - MAX_VETS_IN_ALL_VIEW)
-    : 0;
-  const filtered = category === "all" && hiddenVetsCount > 0
-    ? (() => {
-        let vetsShown = 0;
-        return sortedProviders.filter(p => {
-          if (p.type !== "vet") return true;
-          vetsShown++;
-          return vetsShown <= MAX_VETS_IN_ALL_VIEW;
-        });
-      })()
-    : sortedProviders;
+  const filtered = sortedProviders;
 
   async function openProvider(p) {
     setSelected(p);
@@ -2559,12 +2542,6 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
             </div>
           );
         })}
-        {hiddenVetsCount > 0 && (
-          <button onClick={() => setCategory("vet")}
-            style={{ width: "100%", padding: "14px 8px", background: "none", border: "none", color: "#B25F46", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
-            Voir les {hiddenVetsCount + MAX_VETS_IN_ALL_VIEW} vétérinaires →
-          </button>
-        )}
       </PullToRefresh>
 
       {/* Détail d'un prestataire */}
