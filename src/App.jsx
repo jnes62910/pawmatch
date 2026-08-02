@@ -2515,7 +2515,9 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
           const r = ratingFor(p);
           return (
             <div key={p.id} onClick={() => openProvider(p)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px", borderBottom: "1px solid #F3F4F6", cursor: "pointer" }}>
-              <div style={{ fontSize: 26 }}>{p.emoji || PROVIDER_TYPE_INFO[p.type]?.emoji}</div>
+              <div style={{ width: 44, height: 44, borderRadius: 12, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, background: photoUrl(p.photos?.[0]) ? "#000" : "transparent" }}>
+                {photoUrl(p.photos?.[0]) ? <img src={photoUrl(p.photos[0])} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (p.emoji || PROVIDER_TYPE_INFO[p.type]?.emoji)}
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{p.name}</div>
