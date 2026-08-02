@@ -18,6 +18,9 @@ const supabase = createClient(
 );
 const CELL_SIZE = 0.05; // ≈ 5,5 km de côté
 const REFRESH_AFTER_DAYS = 30;
+const STANDARD_RADIUS = 10000; // 10 km, le rayon de base partout
+const WIDE_RADIUS = 25000; // 25 km — utilisé seulement si la zone standard est peu dense
+const SPARSE_THRESHOLD = 3; // en dessous de ce nombre de résultats, on élargit pour cette catégorie précise
 const CATEGORIES = [
   { includedType: 'veterinary_care', type: 'vet', species: 'both', emoji: '🩺', metricLabel: 'avis Google' },
   { includedType: 'park', type: 'park', species: 'both', emoji: '🌳', metricLabel: null },
@@ -47,6 +50,33 @@ function guessSpeciesFromName(name) {
 function cellIdFor(lat, lng) {
   return `${Math.round(lat / CELL_SIZE)}_${Math.round(lng / CELL_SIZE)}`;
 }
+
+// Un seul appel Google pour une catégorie donnée, à un rayon donné — renvoie
+// la liste déjà filtrée (type exact + enseignes exclues).
+async function searchCategory(cat, lat, lng, radius) {
+  const response = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.userRatingCount,places.types',
+    },
+    body: JSON.stringify({
+      includedTypes: [cat.includedType],
+      maxResultCount: 20,
+      locationRestriction: {
+        circle: { center: { latitude: lat, longitude: lng }, radius },
+      },
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) return { ok: false, error: data, places: [] };
+  const places = (data.places || [])
+    .filter(p => (p.types || []).includes(cat.includedType))
+    .filter(p => !EXCLUDED_NAME_PATTERNS.some(pattern => pattern.test(p.displayName?.text || '')));
+  return { ok: true, places };
+}
+
 module.exports = async (req, res) => {
   // Autorise les appels depuis l'app Android native (origine "https://localhost",
   // différente du site web) — sans ça, le navigateur/WebView bloque la requête
@@ -85,33 +115,28 @@ module.exports = async (req, res) => {
     let upserted = 0;
     const errors = [];
     for (const cat of CATEGORIES) {
-      const response = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
-          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.userRatingCount,places.types',
-        },
-        body: JSON.stringify({
-          includedTypes: [cat.includedType],
-          maxResultCount: 20,
-          locationRestriction: {
-            circle: { center: { latitude: lat, longitude: lng }, radius: 10000 },
-          },
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        errors.push({ category: cat.type, error: data });
+      const standard = await searchCategory(cat, lat, lng, STANDARD_RADIUS);
+      if (!standard.ok) {
+        errors.push({ category: cat.type, error: standard.error });
         continue;
       }
-      // Filtre strict : Google renvoie parfois des résultats approchants
-      // (ex. des pharmacies mélangées aux vétérinaires) même avec
-      // includedTypes — on ne garde que ceux dont le type exact est présent.
-      // On exclut aussi les grandes surfaces connues pour être mal classées.
-      const places = (data.places || [])
-        .filter(p => (p.types || []).includes(cat.includedType))
-        .filter(p => !EXCLUDED_NAME_PATTERNS.some(pattern => pattern.test(p.displayName?.text || '')));
+
+      let places = standard.places;
+
+      // Zone peu dense pour cette catégorie précise (ex: vétérinaires en
+      // milieu rural) : un second appel à rayon élargi, uniquement si le
+      // premier n'a presque rien trouvé — pour ne pas doubler le coût
+      // Google partout, seulement là où c'est vraiment utile.
+      if (places.length < SPARSE_THRESHOLD) {
+        const wide = await searchCategory(cat, lat, lng, WIDE_RADIUS);
+        if (wide.ok) {
+          const existingIds = new Set(places.map(p => p.id));
+          places = [...places, ...wide.places.filter(p => !existingIds.has(p.id))];
+        } else {
+          errors.push({ category: cat.type, error: wide.error, note: 'échec sur le rayon élargi, résultats standard conservés' });
+        }
+      }
+
       for (const place of places) {
         const name = place.displayName?.text || 'Sans nom';
         const row = {
