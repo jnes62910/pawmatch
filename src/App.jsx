@@ -7241,7 +7241,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
                 <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 20 }}>
                   {PROVIDER_TYPES.filter(t => t !== "petshop" && t !== "insurance").map(t => (
                     <button key={t} onClick={() => { setNewSpotCategory(t); setSimilarSpots(null); }} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newSpotCategory === t ? "#B25F46" : "#E5E7EB"}`, background: newSpotCategory === t ? "#FAF0EB" : "#fff", color: newSpotCategory === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
                   ))}
