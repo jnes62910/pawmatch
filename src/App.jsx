@@ -1789,6 +1789,7 @@ function mapProviderRow(row) {
     lat: row.lat, lng: row.lng, address: row.address, phone: row.phone, desc: row.description,
     open: row.open, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
     isFounder: !!row.is_founder, photos: row.photos || [],
+    claimStatus: row.claim_status || null, claimedByUserId: row.claimed_by_user_id || null,
   };
 }
 
@@ -2295,7 +2296,6 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
   const [reviewsBySpot, setReviewsBySpot] = useState({});
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
-  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [selected, setSelected] = useState(null);
   const [selectedReviews, setSelectedReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -2488,33 +2488,13 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
             Vous êtes vous-même prestataire ? <span style={{ color: "#B25F46", fontWeight: 700 }}>Configurez vos tarifs →</span>
           </button>
         </div>
-        <div style={{ position: "relative" }}>
-          <button onClick={() => setShowCategoryMenu(m => !m)}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14,
-              border: `2px solid ${category !== "all" ? "#8B3D28" : "#E5E7EB"}`,
-              background: category !== "all" ? "#FAF0EB" : "#fff", cursor: "pointer" }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: category !== "all" ? "#8B3D28" : "#2D1200" }}>
-              {category === "all" ? "Toutes les catégories" : `${PROVIDER_TYPE_INFO[category].emoji} ${PROVIDER_TYPE_INFO[category].label}`}
-            </span>
-            <span style={{ fontSize: 12, color: "#9CA3AF", transform: showCategoryMenu ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
-          </button>
-
-          {showCategoryMenu && (
-            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,.15)", border: "1px solid #F3F4F6", zIndex: 30, overflow: "hidden" }}>
-              <div style={{ maxHeight: 280, overflowY: "auto" }}>
-                <button onClick={() => { setCategory("all"); setShowCategoryMenu(false); }}
-                  style={{ width: "100%", padding: "11px 14px", border: "none", background: category === "all" ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#8B3D28", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
-                  Toutes les catégories
-                </button>
-                {PROVIDER_TYPES.map(t => (
-                  <button key={t} onClick={() => { setCategory(t); setShowCategoryMenu(false); }}
-                    style={{ width: "100%", padding: "11px 14px", border: "none", background: category === t ? "#FAF0EB" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: category === t ? 700 : 500, color: category === t ? "#8B3D28" : "#374151", textAlign: "left", borderBottom: "1px solid #F9FAFB" }}>
-                    {PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
+          {PROVIDER_TYPES.map(t => (
+            <button key={t} onClick={() => setCategory(c => c === t ? "all" : t)}
+              style={{ padding: "8px 13px", borderRadius: 20, border: `1.5px solid ${category === t ? "#8B3D28" : "#E5E7EB"}`, background: category === t ? "#FAF0EB" : "#fff", color: category === t ? "#8B3D28" : "#6B7280", fontSize: 12.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              {PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}
+            </button>
+          ))}
         </div>
 
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14, background: userProfile?.location ? "linear-gradient(90deg,#E8F5E9,#F1F8E9)" : "#FAF0EB", border: `1.5px solid ${userProfile?.location ? "#A5D6A7" : "#E5E7EB"}`, transition: "all .3s" }}>
@@ -2597,6 +2577,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{selected.emoji} {selected.name}</div>
                   {selected.isFounder && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#946800", background: "#FFF3CD", padding: "2px 8px", borderRadius: 8, marginTop: 4 }}>🏅 Membre fondateur</span>}
+                  {selected.claimStatus === "approved" && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#1565C0", background: "#E3F2FD", padding: "2px 8px", borderRadius: 8, marginTop: 4, marginLeft: 6 }}>✓ Revendiqué</span>}
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.address ? ` · ${selected.address}` : ""}</div>
                   {selected.phone && <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 4, fontWeight: 600 }}>📞 {selected.phone}</div>}
                   {selected.type === "groomer" && selected.source === "google_places" && (
@@ -5125,9 +5106,35 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [newSpotCategory, setNewSpotCategory] = useState("petsitter");
   const [creatingSpot, setCreatingSpot] = useState(false);
   const [createSpotError, setCreateSpotError] = useState(null);
+  const [pendingClaim, setPendingClaim] = useState(null);
+  const [similarSpots, setSimilarSpots] = useState(null); // null = pas encore cherché, [] = cherché et rien trouvé
+  const [searchingSimilar, setSearchingSimilar] = useState(false);
+  const [claimingSpotId, setClaimingSpotId] = useState(null);
+
+  async function searchForMySpot() {
+    if (!newSpotName.trim()) { setCreateSpotError("Le nom de votre activité est requis."); return; }
+    setCreateSpotError(null);
+    setSearchingSimilar(true);
+    const lat = initialData?.location?.lat ?? 48.8566;
+    const lng = initialData?.location?.lng ?? 2.3522;
+    const matches = await findSimilarSpots(newSpotName, newSpotCategory, lat, lng);
+    setSimilarSpots(matches);
+    setSearchingSimilar(false);
+  }
+
+  async function claimExistingSpot(spotId) {
+    setClaimingSpotId(spotId);
+    try {
+      await requestSpotClaim(spotId, initialData.userId);
+      const claim = await fetchPendingClaim(initialData.userId);
+      setPendingClaim(claim);
+    } catch {
+      setCreateSpotError("La demande a échoué, réessayez.");
+    }
+    setClaimingSpotId(null);
+  }
 
   async function createMySpot() {
-    if (!newSpotName.trim()) { setCreateSpotError("Le nom de votre activité est requis."); return; }
     setCreateSpotError(null);
     setCreatingSpot(true);
     try {
@@ -5235,6 +5242,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       setSelfSpotId(spot?.id || null);
       setSpotPhotos(spot?.photos || []);
       setLoadingSelfSpot(false);
+      if (!spot) fetchPendingClaim(initialData.userId).then(setPendingClaim);
     });
   }, [initialData?.id, initialData?.stripeConnectOnboarded]);
 
@@ -7237,6 +7245,12 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 40px" }}>
             {loadingSelfSpot ? (
               <div style={{ display: "flex", justifyContent: "center", padding: 60 }}><PawLogo size={32} color="#E8B89F" /></div>
+            ) : pendingClaim ? (
+              <div style={{ textAlign: "center", padding: "40px 10px" }}>
+                <div style={{ fontSize: 40, marginBottom: 14 }}>⏳</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#2D1200", marginBottom: 8 }}>Demande en cours de vérification</div>
+                <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.6, marginBottom: 4 }}>Vous avez demandé à revendiquer la fiche <strong>{pendingClaim.name}</strong>. On vous confirme dès que c'est validé de notre côté — généralement sous 24 à 48h.</div>
+              </div>
             ) : !selfSpotId ? (
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Créez votre fiche prestataire</div>
@@ -7244,23 +7258,60 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>NOM DE VOTRE ACTIVITÉ *</label>
                 <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Le nom affiché dans l'annuaire — celui de votre salon, entreprise, ou simplement le vôtre.</div>
-                <input value={newSpotName} onChange={e => setNewSpotName(e.target.value)} placeholder="Ex: Léa, pet-sitter du 15e"
+                <input value={newSpotName} onChange={e => { setNewSpotName(e.target.value); setSimilarSpots(null); }} placeholder="Ex: Léa, pet-sitter du 15e"
                   style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
 
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
                 <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
                   {PROVIDER_TYPES.filter(t => t !== "insurance").map(t => (
-                    <button key={t} onClick={() => setNewSpotCategory(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newSpotCategory === t ? "#B25F46" : "#E5E7EB"}`, background: newSpotCategory === t ? "#FAF0EB" : "#fff", color: newSpotCategory === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
+                    <button key={t} onClick={() => { setNewSpotCategory(t); setSimilarSpots(null); }} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newSpotCategory === t ? "#B25F46" : "#E5E7EB"}`, background: newSpotCategory === t ? "#FAF0EB" : "#fff", color: newSpotCategory === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
                   ))}
                 </div>
 
                 {createSpotError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{createSpotError}</div>}
 
-                <button onClick={createMySpot} disabled={creatingSpot}
-                  style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: creatingSpot ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: creatingSpot ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: creatingSpot ? "default" : "pointer" }}>
-                  {creatingSpot ? "Création..." : "Créer ma fiche"}
-                </button>
+                {similarSpots === null && (
+                  <button onClick={searchForMySpot} disabled={searchingSimilar}
+                    style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: searchingSimilar ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: searchingSimilar ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: searchingSimilar ? "default" : "pointer" }}>
+                    {searchingSimilar ? "Recherche..." : "Continuer"}
+                  </button>
+                )}
+
+                {similarSpots !== null && similarSpots.length === 0 && (
+                  <button onClick={createMySpot} disabled={creatingSpot}
+                    style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: creatingSpot ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: creatingSpot ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: creatingSpot ? "default" : "pointer" }}>
+                    {creatingSpot ? "Création..." : "Créer ma fiche"}
+                  </button>
+                )}
+
+                {similarSpots !== null && similarSpots.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Nous avons trouvé une fiche qui pourrait être la vôtre</div>
+                    <div style={{ fontSize: 12.5, color: "#9CA3AF", marginBottom: 16 }}>Est-ce que c'est votre activité ?</div>
+
+                    {similarSpots.map(s => (
+                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px", borderRadius: 14, border: "1.5px solid #E5E7EB", marginBottom: 10 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "#FAF0EB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                          {photoUrl(s.photos?.[0]) ? <img src={photoUrl(s.photos[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : s.emoji}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, color: "#2D1200" }}>{s.name}</div>
+                          <div style={{ fontSize: 11.5, color: "#9CA3AF" }}>{s.address || PROVIDER_TYPE_INFO[s.type]?.label}</div>
+                        </div>
+                        <button onClick={() => claimExistingSpot(s.id)} disabled={claimingSpotId === s.id}
+                          style={{ padding: "8px 12px", borderRadius: 10, border: "none", background: "#B25F46", color: "#fff", fontWeight: 700, fontSize: 12, cursor: claimingSpotId === s.id ? "default" : "pointer", flexShrink: 0 }}>
+                          {claimingSpotId === s.id ? "..." : "Oui, c'est moi"}
+                        </button>
+                      </div>
+                    ))}
+
+                    <button onClick={createMySpot} disabled={creatingSpot}
+                      style={{ width: "100%", padding: "13px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 13, cursor: creatingSpot ? "default" : "pointer", marginTop: 6 }}>
+                      {creatingSpot ? "Création..." : "Non, ce n'est pas moi — créer une nouvelle fiche"}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -8850,8 +8901,43 @@ function mapBookingRow(row, isProvider) {
 }
 
 async function fetchSelfProviderSpot(userId) {
-  const { data } = await supabase.from("spots").select("*").eq("added_by_user_id", userId).eq("source", "self").maybeSingle();
+  // Une fiche "à moi" peut venir de deux origines : créée directement par
+  // moi (source "self"), ou revendiquée puis validée manuellement sur une
+  // fiche préexistante (ajoutée par la communauté ou suggérée par Google).
+  const { data } = await supabase.from("spots").select("*")
+    .or(`and(added_by_user_id.eq.${userId},source.eq.self),and(claimed_by_user_id.eq.${userId},claim_status.eq.approved)`)
+    .maybeSingle();
   return data || null;
+}
+
+// Demande de revendication en attente, si l'utilisateur en a une (pour
+// afficher "en cours de vérification" plutôt que le formulaire de création).
+async function fetchPendingClaim(userId) {
+  const { data } = await supabase.from("spots").select("*").eq("claimed_by_user_id", userId).eq("claim_status", "pending").maybeSingle();
+  return data ? mapProviderRow(data) : null;
+}
+
+// Recherche de fiches déjà existantes qui pourraient correspondre — même
+// type, nom proche, et dans la case géographique ou ses voisines — pour
+// éviter les doublons avant de proposer de créer une nouvelle fiche.
+async function findSimilarSpots(name, type, lat, lng) {
+  if (!name?.trim()) return [];
+  const cellId = cellIdFor(lat, lng);
+  const cellIds = [cellId, ...neighborCellIds(lat, lng)];
+  const { data, error } = await supabase.from("spots").select("*")
+    .in("cell_id", cellIds).eq("type", type).ilike("name", `%${name.trim()}%`)
+    .is("claimed_by_user_id", null); // une fiche déjà revendiquée par quelqu'un d'autre ne doit pas ressortir ici
+  if (error || !data) return [];
+  return data.map(mapProviderRow);
+}
+
+// Enregistre une demande de revendication — passe en attente de validation
+// manuelle, ne donne pas encore le contrôle de la fiche.
+async function requestSpotClaim(spotId, userId) {
+  const { error } = await supabase.from("spots").update({
+    claim_status: "pending", claimed_by_user_id: userId, claim_requested_at: new Date().toISOString(),
+  }).eq("id", spotId);
+  if (error) throw new Error(error.message);
 }
 
 async function updateSpotPhotos(spotId, photos) {
