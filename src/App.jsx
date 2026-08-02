@@ -2353,10 +2353,9 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       fetchProvidersForCell(cellId, refLat, refLng),
       fetchAffiliatePartners(),
     ]);
-    const demo = DEMO_PROVIDERS.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
     const realFiltered = list.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
     const partnersFiltered = partners.filter(p => !userProfile?.species || p.species === "both" || p.species === userProfile.species);
-    const merged = [...partnersFiltered, ...realFiltered, ...(SHOW_DEMO_CONTENT ? demo : [])]; // partenaires toujours en tête
+    const merged = [...partnersFiltered, ...realFiltered]; // partenaires toujours en tête — plus de prestataires fictifs
     const reviews = await fetchReviewsForProviders(list.map(p => p.id));
     setProviders(merged);
     setReviewsBySpot(reviews);
@@ -2471,10 +2470,10 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
             Vous êtes vous-même prestataire ? <span style={{ color: "#B25F46", fontWeight: 700 }}>Configurez vos tarifs →</span>
           </button>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
           {PROVIDER_TYPES.filter(t => t !== "petshop" && t !== "insurance").map(t => (
             <button key={t} onClick={() => setCategory(c => c === t ? "all" : t)}
-              style={{ padding: "8px 6px", borderRadius: 14, border: `1.5px solid ${category === t ? "#8B3D28" : "#E5E7EB"}`, background: category === t ? "#FAF0EB" : "#fff", color: category === t ? "#8B3D28" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>
+              style={{ flex: "0 1 31%", padding: "8px 6px", borderRadius: 14, border: `1.5px solid ${category === t ? "#8B3D28" : "#E5E7EB"}`, background: category === t ? "#FAF0EB" : "#fff", color: category === t ? "#8B3D28" : "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>
               {PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}
             </button>
           ))}
@@ -2737,7 +2736,7 @@ function AddProviderForm({ userProfile, refLat, refLng, onClose, onAdded }) {
         <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Ajouter un prestataire</div>
 
         <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>CATÉGORIE</label>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "6px 0 14px" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", margin: "6px 0 14px" }}>
           {PROVIDER_TYPES.filter(t => t !== "petshop" && t !== "insurance").map(t => (
             <button key={t} onClick={() => setType(t)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${type === t ? "#B25F46" : "#E5E7EB"}`, background: type === t ? "#FAF0EB" : "#fff", color: type === t ? "#B25F46" : "#6B7280", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}</button>
           ))}
