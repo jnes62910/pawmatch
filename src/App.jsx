@@ -998,8 +998,8 @@ function SwipeScreen({ onNav, userProfile, isPremium = false, onPremium = () => 
     // position ET celle du profil en face. Sinon, on renvoie Infinity plutôt
     // que 0 — un profil de distance inconnue ne doit jamais passer un filtre
     // de rayon (ça reviendrait à prétendre "il est juste à côté").
-    if (userProfile?.location && p.lat && p.lng) {
-      return distanceKm(userProfile.location.lat, userProfile.location.lng, p.lat, p.lng);
+    if (userProfile?.location && p.location?.lat && p.location?.lng) {
+      return distanceKm(userProfile.location.lat, userProfile.location.lng, p.location.lat, p.location.lng);
     }
     return Infinity;
   }
