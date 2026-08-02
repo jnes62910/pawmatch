@@ -24,7 +24,6 @@ const SPARSE_THRESHOLD = 3; // en dessous de ce nombre de résultats, on élargi
 const CATEGORIES = [
   { includedType: 'veterinary_care', type: 'vet', species: 'both', emoji: '🩺', metricLabel: 'avis Google' },
   { includedType: 'park', type: 'park', species: 'both', emoji: '🌳', metricLabel: null },
-  { includedType: 'pet_store', type: 'petshop', species: 'both', emoji: '🛍️', metricLabel: 'avis Google' },
   { includedType: 'pet_boarding_service', type: 'boarding', species: 'both', emoji: '🏠', metricLabel: 'avis Google' },
   // Pas de catégorie "pet_care" ici : trop large côté Google (remontait des
   // jardineries, animaleries générales, etc. classées comme "toiletteurs").
