@@ -7374,8 +7374,37 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               ✏️ Modifier ma fiche
             </button>
 
+            {/* Liste des prestations */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>MES PRESTATIONS</div>
+              <button onClick={() => connectOnboarded ? setShowAddService(true) : null}
+                style={{ background: "none", border: "none", color: connectOnboarded ? "#B25F46" : "#D1D5DB", fontWeight: 700, fontSize: 13, cursor: connectOnboarded ? "pointer" : "default" }}>+ Ajouter</button>
+            </div>
+
+            {providerServices.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "24px 0", color: "#9CA3AF", fontSize: 13 }}>
+                {connectOnboarded ? "Aucune prestation pour l'instant." : "Activez les paiements pour ajouter vos prestations."}
+              </div>
+            ) : providerServices.map(s => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px", borderBottom: "1px solid #F3F4F6", opacity: s.active ? 1 : 0.5 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{s.title}</div>
+                  {s.description && <div style={{ fontSize: 12, color: "#9CA3AF" }}>{s.description}</div>}
+                  <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 2 }}>
+                    {(s.priceCents / 100).toFixed(2)} € · vous touchez {((s.priceCents / 100) * (1 - commissionRate / 100)).toFixed(2)} €
+                  </div>
+                </div>
+                <button onClick={async () => { await updateProviderService(s.id, { active: !s.active }); setProviderServices(await fetchProviderServices(initialData.id)); }}
+                  style={{ background: "#F3F4F6", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#6B7280", cursor: "pointer" }}>
+                  {s.active ? "Désactiver" : "Réactiver"}
+                </button>
+                <button onClick={async () => { await deleteProviderService(s.id); setProviderServices(await fetchProviderServices(initialData.id)); }}
+                  style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "#DC2626" }}>🗑️</button>
+              </div>
+            ))}
+
             {/* Statut des paiements */}
-            <div style={{ background: connectOnboarded ? "#E8F5E9" : "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 20 }}>
+            <div style={{ background: connectOnboarded ? "#E8F5E9" : "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 20, marginTop: 20 }}>
               {checkingConnect ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}><PawLogo size={22} color="#E8B89F" /><span style={{ fontSize: 13, color: "#6B7280" }}>Vérification en cours...</span></div>
               ) : connectOnboarded ? (
@@ -7417,34 +7446,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </div>
             </div>
 
-            {/* Liste des prestations */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>MES PRESTATIONS</div>
-              <button onClick={() => connectOnboarded ? setShowAddService(true) : null}
-                style={{ background: "none", border: "none", color: connectOnboarded ? "#B25F46" : "#D1D5DB", fontWeight: 700, fontSize: 13, cursor: connectOnboarded ? "pointer" : "default" }}>+ Ajouter</button>
-            </div>
-
-            {providerServices.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "24px 0", color: "#9CA3AF", fontSize: 13 }}>
-                {connectOnboarded ? "Aucune prestation pour l'instant." : "Activez les paiements pour ajouter vos prestations."}
-              </div>
-            ) : providerServices.map(s => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px", borderBottom: "1px solid #F3F4F6", opacity: s.active ? 1 : 0.5 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{s.title}</div>
-                  {s.description && <div style={{ fontSize: 12, color: "#9CA3AF" }}>{s.description}</div>}
-                  <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 2 }}>
-                    {(s.priceCents / 100).toFixed(2)} € · vous touchez {((s.priceCents / 100) * (1 - commissionRate / 100)).toFixed(2)} €
-                  </div>
-                </div>
-                <button onClick={async () => { await updateProviderService(s.id, { active: !s.active }); setProviderServices(await fetchProviderServices(initialData.id)); }}
-                  style={{ background: "#F3F4F6", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#6B7280", cursor: "pointer" }}>
-                  {s.active ? "Désactiver" : "Réactiver"}
-                </button>
-                <button onClick={async () => { await deleteProviderService(s.id); setProviderServices(await fetchProviderServices(initialData.id)); }}
-                  style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "#DC2626" }}>🗑️</button>
-              </div>
-            ))}
               </>
             )}
           </div>
