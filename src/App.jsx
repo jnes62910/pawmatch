@@ -7355,6 +7355,19 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Toiletteur, éducateur, pet-sitter, pension... proposez vos services aux propriétaires d'animaux près de chez vous. Ajoutez votre première prestation pour apparaître dans l'annuaire, et recevez vos paiements directement une fois la prestation confirmée par les deux parties !</div>
             </div>
 
+            {selfSpotInfo && (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#FAF0EB", borderRadius: 16, padding: 14, marginBottom: 12 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>
+                  {photoUrl(spotPhotos?.[0]) ? <img src={photoUrl(spotPhotos[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (PROVIDER_TYPE_INFO[selfSpotInfo.type]?.emoji || "📍")}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14.5, color: "#2D1200" }}>{selfSpotInfo.name}</div>
+                  <div style={{ fontSize: 12, color: "#8B3D28", fontWeight: 600 }}>{PROVIDER_TYPE_INFO[selfSpotInfo.type]?.emoji} {PROVIDER_TYPE_INFO[selfSpotInfo.type]?.label}</div>
+                  {selfSpotInfo.description && <div style={{ fontSize: 11.5, color: "#9CA3AF", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selfSpotInfo.description}</div>}
+                </div>
+              </div>
+            )}
+
             <button onClick={openEditSpot}
               style={{ width: "100%", padding: "11px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, fontSize: 12.5, cursor: "pointer", marginBottom: 20 }}>
               ✏️ Modifier ma fiche
