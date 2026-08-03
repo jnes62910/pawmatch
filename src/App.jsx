@@ -2462,9 +2462,6 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
           <div style={{ fontSize: 15, fontWeight: 800, color: "#2D1200", marginBottom: 4 }}>Un annuaire de prestataires de confiance près de chez vous 🐾</div>
           <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>Vétérinaires, toiletteurs, pensions, éducateurs canins... tous recommandés par la communauté Miloute et triés selon votre position. Parcourez librement l'annuaire et laissez un avis après chaque prestation pour aider les autres propriétaires.</div>
         </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-          <button onClick={() => setShowAddForm(true)} style={{ background: "#FAF0EB", border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, color: "#8B3D28", cursor: "pointer" }}>+ Ajouter un prestataire</button>
-        </div>
         <div style={{ textAlign: "right", marginBottom: 10 }}>
           <button onClick={onGoToProviderSetup} style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 11, cursor: "pointer", padding: 0 }}>
             Vous êtes vous-même prestataire ? <span style={{ color: "#B25F46", fontWeight: 700 }}>Configurez vos tarifs →</span>
@@ -2477,6 +2474,10 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
               {PROVIDER_TYPE_INFO[t].emoji} {PROVIDER_TYPE_INFO[t].label}
             </button>
           ))}
+          <button onClick={() => setShowAddForm(true)}
+            style={{ flex: "0 1 31%", padding: "8px 6px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#fff", color: "#6B7280", fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>
+            + Ajouter
+          </button>
         </div>
 
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 14, background: userProfile?.location ? "linear-gradient(90deg,#E8F5E9,#F1F8E9)" : "#FAF0EB", border: `1.5px solid ${userProfile?.location ? "#A5D6A7" : "#E5E7EB"}`, transition: "all .3s" }}>
@@ -7401,29 +7402,6 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               )}
             </div>
 
-            {/* Galerie photo du profil prestataire */}
-            {selfSpotId && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>PHOTOS ({spotPhotos.length}/6)</div>
-                <div style={{ fontSize: 11.5, color: "#9CA3AF", marginBottom: 10, lineHeight: 1.5 }}>Salon, équipements, animaux toilettés, photo de vous ou de l'équipe... — pas besoin qu'un animal soit visible sur chaque photo.</div>
-                <input ref={spotPhotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleSpotPhotoAdd} />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: spotPhotoError ? 8 : 0 }}>
-                  {spotPhotos.map((p, i) => (
-                    <div key={i} style={{ aspectRatio: "1", borderRadius: 12, overflow: "hidden", position: "relative", background: "#000" }}>
-                      <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      <button onClick={() => removeSpotPhoto(i)} style={{ position: "absolute", top: 5, right: 5, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
-                    </div>
-                  ))}
-                  {spotPhotos.length < 6 && (
-                    <div onClick={() => !uploadingSpotPhoto && spotPhotoRef.current?.click()}
-                      style={{ aspectRatio: "1", borderRadius: 12, background: "#F3F4F6", border: "2px dashed #D1D5DB", cursor: uploadingSpotPhoto ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {uploadingSpotPhoto ? <PawLogo size={20} color="#E8B89F" /> : <span style={{ fontSize: 24, color: "#E8B89F" }}>+</span>}
-                    </div>
-                  )}
-                </div>
-                {spotPhotoError && <div style={{ fontSize: 11.5, color: "#DC2626" }}>{spotPhotoError}</div>}
-              </div>
-            )}
 
             {/* Transparence commission */}
             <div style={{ display: "flex", gap: 10, background: commissionPromoUntil ? "#FFF8E7" : "#F9FAFB", border: commissionPromoUntil ? "1.5px solid #E8C468" : "none", borderRadius: 12, padding: "12px 14px", marginBottom: 20, alignItems: "flex-start" }}>
@@ -7494,6 +7472,25 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DESCRIPTION (optionnel)</label>
             <textarea value={editSpotDescription} onChange={e => setEditSpotDescription(e.target.value)} rows={3} placeholder="Présentez votre activité..."
               style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", resize: "none", boxSizing: "border-box" }} />
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>PHOTOS ({spotPhotos.length}/6)</label>
+            <div style={{ fontSize: 11.5, color: "#9CA3AF", margin: "4px 0 10px", lineHeight: 1.5 }}>Salon, équipements, animaux toilettés, photo de vous ou de l'équipe... — pas besoin qu'un animal soit visible sur chaque photo.</div>
+            <input ref={spotPhotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleSpotPhotoAdd} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: spotPhotoError ? 8 : 16 }}>
+              {spotPhotos.map((p, i) => (
+                <div key={i} style={{ aspectRatio: "1", borderRadius: 12, overflow: "hidden", position: "relative", background: "#000" }}>
+                  <img src={photoUrl(p)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button onClick={() => removeSpotPhoto(i)} style={{ position: "absolute", top: 5, right: 5, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,.6)", border: "none", color: "#fff", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
+                </div>
+              ))}
+              {spotPhotos.length < 6 && (
+                <div onClick={() => !uploadingSpotPhoto && spotPhotoRef.current?.click()}
+                  style={{ aspectRatio: "1", borderRadius: 12, background: "#F3F4F6", border: "2px dashed #D1D5DB", cursor: uploadingSpotPhoto ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {uploadingSpotPhoto ? <PawLogo size={20} color="#E8B89F" /> : <span style={{ fontSize: 24, color: "#E8B89F" }}>+</span>}
+                </div>
+              )}
+            </div>
+            {spotPhotoError && <div style={{ fontSize: 11.5, color: "#DC2626", marginBottom: 16 }}>{spotPhotoError}</div>}
 
             {editSpotError && <div style={{ fontSize: 12, color: "#DC2626", background: "#FEF2F2", borderRadius: 10, padding: "8px 12px", marginBottom: 14 }}>{editSpotError}</div>}
 
