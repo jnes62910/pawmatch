@@ -2464,7 +2464,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
         </div>
         <div style={{ textAlign: "right", marginBottom: 10 }}>
           <button onClick={onGoToProviderSetup} style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 11, cursor: "pointer", padding: 0 }}>
-            Vous êtes vous-même prestataire ? <span style={{ color: "#B25F46", fontWeight: 700 }}>Configurez vos tarifs →</span>
+            Vous êtes vous-même prestataire ? <span style={{ color: "#B25F46", fontWeight: 700 }}>Créez votre fiche ici →</span>
           </button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
