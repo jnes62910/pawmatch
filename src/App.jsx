@@ -9757,9 +9757,21 @@ async function sendTreatToProfile(userProfile, targetProfile, giftId, message = 
 
 async function fetchUnreadMessagesCount(userProfile) {
   if (!userProfile?.userId) return 0;
+
+  // On ne compte que les messages de MES conversations — il faut d'abord
+  // récupérer mes match_id, sinon la requête compterait les messages non lus
+  // de toute la plateforme, peu importe qui est concerné.
+  const { data: matchRows, error: matchError } = await supabase
+    .from("matches")
+    .select("id")
+    .or(`user_a.eq.${userProfile.userId},user_b.eq.${userProfile.userId}`);
+  if (matchError || !matchRows || matchRows.length === 0) return 0;
+
+  const matchIds = matchRows.map(m => m.id);
   const { count, error } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
+    .in("match_id", matchIds)
     .neq("sender_user_id", userProfile.userId)
     .eq("read", false);
   if (error) { console.error("fetchUnreadMessagesCount error:", error); return 0; }
