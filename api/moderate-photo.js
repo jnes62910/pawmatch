@@ -23,8 +23,10 @@ function promptFor(context) {
     return (
       "Tu es un modérateur de contenu pour Miloute, une application avec un annuaire de prestataires " +
       "indépendants pour animaux (toiletteurs, pet-sitters, éducateurs canins...). Cette image est destinée à la " +
-      "galerie photo d'un profil prestataire (salon, équipements, animaux déjà toilettés, photo de l'équipe...) — " +
-      "elle n'a PAS besoin de montrer un chat ou un chien pour être acceptée. " +
+      "galerie photo d'un profil prestataire (salon, équipements, animaux déjà toilettés, photo de l'équipe, " +
+      "SELFIE OU PHOTO PERSONNELLE du prestataire lui-même...) — elle n'a PAS besoin de montrer un chat ou un " +
+      "chien pour être acceptée, et une photo montrant clairement le visage d'une seule personne (un selfie du " +
+      "prestataire par exemple) est un cas tout à fait normal et attendu, à ne JAMAIS refuser pour cette seule raison. " +
       "Réponds UNIQUEMENT avec un objet JSON, sans aucun texte autour, sans balises markdown, au format exact : " +
       '{"is_appropriate": true|false, "reason": "courte explication en français si refusé, sinon null"}. ' +
       "is_appropriate : l'image est-elle dépourvue de contenu choquant, violent, sexuel, ou manifestement sans " +
