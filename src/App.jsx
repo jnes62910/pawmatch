@@ -7678,7 +7678,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   </div>
                 </div>
                 <button disabled={buyingItemId === b.id}
-                  style={{ background: buyingItemId === b.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === b.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
+                  style={{ position: "relative", overflow: "visible", background: buyingItemId === b.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: isHalloweenPack ? "1.5px solid #000" : locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === b.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
+                  {isHalloweenPack && (
+                    <span style={{ position: "absolute", bottom: -8, left: -8, fontSize: 14, animation: "spectralFloat 3.4s ease-in-out infinite", animationDelay: "1.1s", pointerEvents: "none", filter: "drop-shadow(0 0 3px rgba(124,58,237,.55))" }}>👻</span>
+                  )}
                   {buyingItemId === b.id ? "..." : locked ? "🔒" : b.price}
                 </button>
               </div>
