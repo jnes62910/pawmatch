@@ -7651,8 +7651,18 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>PACKS (prix réduit)</div>
             {[...GIFT_BUNDLES, ...seasonalCatalog.activeBundles].filter(b => b.species === "both" || b.species === initialData?.species).map(b => {
               const locked = b.premiumOnly && !isPremium;
+              const isHalloweenPack = b.eventKey === "halloween";
               return (
-              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: b.seasonal ? "1.5px solid #E8935F" : b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
+              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ position: "relative", overflow: "visible", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: b.seasonal ? "1.5px solid #E8935F" : b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer", animation: isHalloweenPack ? "spectralGlow 2.6s ease-in-out infinite" : undefined }}>
+                {isHalloweenPack && (
+                  <>
+                    <style>{`
+                      @keyframes spectralGlow { 0%, 100% { box-shadow: 0 0 0px rgba(124,58,237,0); } 50% { box-shadow: 0 0 18px 3px rgba(124,58,237,.38); } }
+                      @keyframes spectralFloat { 0% { transform: translate(0,0) scale(1); opacity: .3; } 45% { opacity: .95; } 50% { transform: translate(-5px,-16px) scale(1.08); } 100% { transform: translate(0,0) scale(1); opacity: .3; } }
+                    `}</style>
+                    <span style={{ position: "absolute", top: -13, right: 10, fontSize: 20, animation: "spectralFloat 3.4s ease-in-out infinite", pointerEvents: "none", filter: "drop-shadow(0 0 4px rgba(124,58,237,.55))" }}>👻</span>
+                  </>
+                )}
                 <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{b.items.map(id => findAnyGift(id)?.emoji).join("")}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
