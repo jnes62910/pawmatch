@@ -81,6 +81,36 @@ const QUESTS = {
   first_booking:     { rewardLabel: '1 Gâteau Fiesta' },
   first_gift_sent:   { rewardLabel: '1 Cœur (selon l\'espèce)' },
 };
+// Friandises saisonnières — vivent dans Supabase (table seasonal_events),
+// pas ici, pour pouvoir être ajustées sans redéploiement. Le serveur revalide
+// systématiquement la fenêtre de dates avant d'accepter un paiement : jamais
+// fait confiance au client sur ce point, même si l'UI ne montre déjà que les
+// items actifs.
+function todayMMDD() {
+  const d = new Date();
+  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function isDateInSeasonalRange(mmdd, start, end) {
+  if (!start || !end) return false;
+  if (start <= end) return mmdd >= start && mmdd <= end;
+  return mmdd >= start || mmdd <= end;
+}
+// Retourne { item, active } où item a la même forme que les entrées de
+// GIFT_CATALOG ({ label, emoji, amountCents, premiumOnly }), ou null si
+// l'id ne correspond à aucune friandise saisonnière connue.
+async function findSeasonalItem(itemId) {
+  const { data, error } = await supabase.from('seasonal_events').select('*').eq('active', true);
+  if (error || !data) return null;
+  const mmdd = todayMMDD();
+  for (const ev of data) {
+    const found = (Array.isArray(ev.items) ? ev.items : []).find(it => it.id === itemId);
+    if (found) {
+      return { item: found, active: isDateInSeasonalRange(mmdd, ev.start_date, ev.end_date) };
+    }
+  }
+  return null;
+}
+
 // Notifications push réelles — initialise l'app Firebase Admin une seule
 // fois (réutilisée entre les appels tant que la fonction reste "chaude").
 function getFirebaseApp() {
@@ -130,8 +160,13 @@ module.exports = async (req, res) => {
         label = bundle.label; amountCents = bundle.amountCents;
         metadata = { type: 'shop', bundleId, profileId, userId };
       } else {
-        const item = GIFT_CATALOG[itemId];
-        if (!item) return res.status(400).json({ error: 'Article inconnu' });
+        let item = GIFT_CATALOG[itemId];
+        if (!item) {
+          const seasonal = await findSeasonalItem(itemId);
+          if (!seasonal) return res.status(400).json({ error: 'Article inconnu' });
+          if (!seasonal.active) return res.status(410).json({ error: "Cet article saisonnier n'est plus disponible." });
+          item = seasonal.item;
+        }
         if (item.premiumOnly) {
           const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', profileId).single();
           if (!profile?.is_premium) {
@@ -192,8 +227,12 @@ module.exports = async (req, res) => {
         });
         return res.status(200).json({ paid: true, giftInventory: newInventory, itemId: meta.bundleId });
       }
-      const gift = GIFT_CATALOG[meta.itemId];
-      if (!gift) return res.status(400).json({ error: 'Article inconnu' });
+      let gift = GIFT_CATALOG[meta.itemId];
+      if (!gift) {
+        const seasonal = await findSeasonalItem(meta.itemId);
+        if (!seasonal) return res.status(400).json({ error: 'Article inconnu' });
+        gift = seasonal.item;
+      }
       const { data: profile, error: fetchError } = await supabase
         .from('profiles').select('gift_inventory').eq('id', meta.profileId).single();
       if (fetchError) throw fetchError;
@@ -211,7 +250,11 @@ module.exports = async (req, res) => {
     // ── Consommer un cadeau précis de l'inventaire ─────────────────────────
     if (action === 'spend-gift') {
       const { profileId, userId, giftId } = req.body;
-      if (!profileId || !userId || !GIFT_CATALOG[giftId]) {
+      // Un item saisonnier déjà crédité en inventaire doit rester dépensable
+      // même après la fin de l'événement — seule son existence est vérifiée
+      // ici, pas sa fenêtre de dates (contrairement à l'achat).
+      const isKnownGift = !!GIFT_CATALOG[giftId] || !!(await findSeasonalItem(giftId));
+      if (!profileId || !userId || !isKnownGift) {
         return res.status(400).json({ error: 'profileId, userId and a valid giftId are required' });
       }
       const { data: profile, error: fetchError } = await supabase
