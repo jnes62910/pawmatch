@@ -7652,17 +7652,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             {[...GIFT_BUNDLES, ...seasonalCatalog.activeBundles].filter(b => b.species === "both" || b.species === initialData?.species).map(b => {
               const locked = b.premiumOnly && !isPremium;
               const isHalloweenPack = b.eventKey === "halloween";
+              const isNoelPack = b.eventKey === "noel";
+              const isValentinPack = b.eventKey === "saint_valentin";
+              const glowColor = isHalloweenPack ? "rgba(124,58,237,.4)" : isNoelPack ? "rgba(217,4,41,.55)" : isValentinPack ? "rgba(236,64,122,.55)" : null;
               return (
-              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ position: "relative", overflow: "visible", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: isHalloweenPack ? "1.5px solid #000" : b.seasonal ? "1.5px solid #E8935F" : b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer", animation: isHalloweenPack ? "spectralGlow 2.6s ease-in-out infinite" : undefined }}>
-                {isHalloweenPack && (
-                  <>
-                    <style>{`
-                      @keyframes spectralGlow { 0%, 100% { box-shadow: 0 0 0px rgba(124,58,237,0); } 50% { box-shadow: 0 0 18px 3px rgba(124,58,237,.38); } }
-                      @keyframes spectralFloat { 0% { transform: translate(0,0) scale(1); opacity: .3; } 45% { opacity: .95; } 50% { transform: translate(-5px,-16px) scale(1.08); } 100% { transform: translate(0,0) scale(1); opacity: .3; } }
-                    `}</style>
-                    <span style={{ position: "absolute", top: -13, right: 10, fontSize: 20, animation: "spectralFloat 3.4s ease-in-out infinite", pointerEvents: "none", filter: "drop-shadow(0 0 4px rgba(124,58,237,.55))" }}>👻</span>
-                    <span style={{ position: "absolute", bottom: -13, left: 10, fontSize: 18, animation: "spectralFloat 3.4s ease-in-out infinite", animationDelay: "1.1s", pointerEvents: "none", filter: "drop-shadow(0 0 4px rgba(124,58,237,.55))" }}>👻</span>
-                  </>
+              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ position: "relative", overflow: "visible", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: isHalloweenPack ? "linear-gradient(135deg,#EDE4FB,#DBC7F5)" : (isNoelPack || isValentinPack) ? "#fff" : b.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: isHalloweenPack ? "1.5px solid #000" : isNoelPack ? "1.5px solid #D90429" : isValentinPack ? "1.5px solid #EC407A" : b.seasonal ? "1.5px solid #E8935F" : b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer", "--glow-color": glowColor, animation: glowColor ? "seasonalGlow 2.6s ease-in-out infinite" : undefined }}>
+                {glowColor && (
+                  <style>{`
+                    @keyframes seasonalGlow { 0%, 100% { box-shadow: 0 0 0px var(--glow-color); } 50% { box-shadow: 0 0 20px 4px var(--glow-color); } }
+                  `}</style>
                 )}
                 <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{b.items.map(id => findAnyGift(id)?.emoji).join("")}</span>
                 <div style={{ flex: 1 }}>
@@ -7690,8 +7688,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             {[...GIFT_CATALOG, ...seasonalCatalog.active].filter(g => g.category === "food" && (g.species === "both" || g.species === initialData?.species)).sort((a, b) => parseGiftPrice(a.price) - parseGiftPrice(b.price)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               const locked = g.premiumOnly && !isPremium;
+              const isHalloweenItem = g.eventKey === "halloween";
+              const isNoelItem = g.eventKey === "noel";
+              const isValentinItem = g.eventKey === "saint_valentin";
               return (
-                <div key={g.id} onClick={() => { if (buyingItemId === g.id) return; locked ? onPremium() : buyItem(g.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.seasonal ? "1.5px solid #E8935F" : g.premiumOnly ? "1.5px solid #E8C468" : "none", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
+                <div key={g.id} onClick={() => { if (buyingItemId === g.id) return; locked ? onPremium() : buyItem(g.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: isHalloweenItem ? "linear-gradient(135deg,#EDE4FB,#DBC7F5)" : (isNoelItem || isValentinItem) ? "#fff" : g.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: isHalloweenItem ? "1.5px solid #000" : isNoelItem ? "1.5px solid #D90429" : isValentinItem ? "1.5px solid #EC407A" : g.seasonal ? "1.5px solid #E8935F" : g.premiumOnly ? "1.5px solid #E8C468" : "none", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                   <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
