@@ -7653,7 +7653,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               const locked = b.premiumOnly && !isPremium;
               const isHalloweenPack = b.eventKey === "halloween";
               return (
-              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ position: "relative", overflow: "visible", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: b.seasonal ? "1.5px solid #E8935F" : b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer", animation: isHalloweenPack ? "spectralGlow 2.6s ease-in-out infinite" : undefined }}>
+              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ position: "relative", overflow: "visible", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: isHalloweenPack ? "1.5px solid #000" : b.seasonal ? "1.5px solid #E8935F" : b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer", animation: isHalloweenPack ? "spectralGlow 2.6s ease-in-out infinite" : undefined }}>
                 {isHalloweenPack && (
                   <>
                     <style>{`
@@ -7661,6 +7661,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                       @keyframes spectralFloat { 0% { transform: translate(0,0) scale(1); opacity: .3; } 45% { opacity: .95; } 50% { transform: translate(-5px,-16px) scale(1.08); } 100% { transform: translate(0,0) scale(1); opacity: .3; } }
                     `}</style>
                     <span style={{ position: "absolute", top: -13, right: 10, fontSize: 20, animation: "spectralFloat 3.4s ease-in-out infinite", pointerEvents: "none", filter: "drop-shadow(0 0 4px rgba(124,58,237,.55))" }}>👻</span>
+                    <span style={{ position: "absolute", bottom: -13, left: 10, fontSize: 18, animation: "spectralFloat 3.4s ease-in-out infinite", animationDelay: "1.1s", pointerEvents: "none", filter: "drop-shadow(0 0 4px rgba(124,58,237,.55))" }}>👻</span>
                   </>
                 )}
                 <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{b.items.map(id => findAnyGift(id)?.emoji).join("")}</span>
@@ -7678,10 +7679,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   </div>
                 </div>
                 <button disabled={buyingItemId === b.id}
-                  style={{ position: "relative", overflow: "visible", background: buyingItemId === b.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: isHalloweenPack ? "1.5px solid #000" : locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === b.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
-                  {isHalloweenPack && (
-                    <span style={{ position: "absolute", bottom: -8, left: -8, fontSize: 14, animation: "spectralFloat 3.4s ease-in-out infinite", animationDelay: "1.1s", pointerEvents: "none", filter: "drop-shadow(0 0 3px rgba(124,58,237,.55))" }}>👻</span>
-                  )}
+                  style={{ background: buyingItemId === b.id ? "#E5E7EB" : locked ? "#fff" : "linear-gradient(135deg,#B25F46,#C97A5E)", border: locked ? "1.5px solid #E8C468" : "none", borderRadius: 10, color: buyingItemId === b.id ? "#9CA3AF" : locked ? "#946800" : "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
                   {buyingItemId === b.id ? "..." : locked ? "🔒" : b.price}
                 </button>
               </div>
