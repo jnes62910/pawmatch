@@ -7711,15 +7711,19 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             })}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, margin: "16px 0 10px" }}>CADEAUX</div>
-            {GIFT_CATALOG.filter(g => g.category === "gift" && (g.species === "both" || g.species === initialData?.species)).sort((a, b) => parseGiftPrice(a.price) - parseGiftPrice(b.price)).map(g => {
+            {[...GIFT_CATALOG, ...seasonalCatalog.active].filter(g => g.category === "gift" && (g.species === "both" || g.species === initialData?.species)).sort((a, b) => parseGiftPrice(a.price) - parseGiftPrice(b.price)).map(g => {
               const owned = initialData?.giftInventory?.[g.id] || 0;
               const locked = g.premiumOnly && !isPremium;
+              const isHalloweenItem = g.eventKey === "halloween";
+              const isNoelItem = g.eventKey === "noel";
+              const isValentinItem = g.eventKey === "saint_valentin";
               return (
-                <div key={g.id} onClick={() => { if (buyingItemId === g.id) return; locked ? onPremium() : buyItem(g.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: g.premiumOnly ? "1.5px solid #E8C468" : "none", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
+                <div key={g.id} onClick={() => { if (buyingItemId === g.id) return; locked ? onPremium() : buyItem(g.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: isHalloweenItem ? "linear-gradient(135deg,#EDE4FB,#DBC7F5)" : (isNoelItem || isValentinItem) ? "#fff" : g.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : g.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "#F9FAFB", borderRadius: 14, marginBottom: 10, border: isHalloweenItem ? "1.5px solid #000" : isNoelItem ? "1.5px solid #D90429" : isValentinItem ? "1.5px solid #EC407A" : g.seasonal ? "1.5px solid #E8935F" : g.premiumOnly ? "1.5px solid #E8C468" : "none", cursor: buyingItemId === g.id ? "default" : "pointer" }}>
                   <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{g.emoji}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
                       {g.label}
+                      {g.seasonal && <span style={{ fontSize: 9, fontWeight: 800, color: "#B24A16", background: "rgba(178,74,22,.12)", padding: "2px 6px", borderRadius: 8 }}>✨ ÉDITION {g.eventLabel?.toUpperCase()}</span>}
                       {g.premiumOnly && <span style={{ fontSize: 9, fontWeight: 800, color: "#946800", background: "rgba(148,104,0,.12)", padding: "2px 6px", borderRadius: 8 }}>👑 PREMIUM</span>}
                     </div>
                     {owned > 0 && <div style={{ fontSize: 11, color: "#8B3D28" }}>Vous en avez {owned}</div>}
