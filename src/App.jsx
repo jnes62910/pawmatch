@@ -9097,13 +9097,43 @@ async function hasPendingBookingsAsProvider(userId) {
 
 async function deleteProviderSpot(spotId) {
   await supabase.from("provider_services").delete().eq("spot_id", spotId);
-  const { error } = await supabase.from("spots").delete().eq("id", spotId);
+  // .select() après le delete permet de savoir si une ligne a vraiment été
+  // supprimée : sous RLS, une suppression non autorisée ne renvoie aucune
+  // erreur, juste 0 ligne affectée — sans ce contrôle, l'app croit à tort
+  // que ça a fonctionné.
+  const { data, error } = await supabase.from("spots").delete().eq("id", spotId).select();
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error("La suppression n'a pas été autorisée pour cette fiche (probablement une fiche revendiquée plutôt que créée directement). Contactez le support.");
+  }
 }
 
 async function ensureProviderSpot(userProfile, category, businessName) {
   const existing = await fetchSelfProviderSpot(userProfile.userId);
-  if (existing) return existing.id;
+  if (existing) {
+    // La fiche existe déjà : on la met à jour (catégorie, nom, position) au
+    // lieu de la laisser figée sur ce qui avait été choisi à la création —
+    // sinon changer de catégorie ici n'avait jusqu'ici aucun effet réel.
+    const updates = {};
+    if (category && category !== existing.type) {
+      updates.type = category;
+      updates.emoji = PROVIDER_TYPE_INFO[category]?.emoji || existing.emoji;
+    }
+    if (businessName && businessName !== existing.name) updates.name = businessName;
+    if (userProfile?.location?.lat != null && userProfile?.location?.lng != null) {
+      const { lat, lng } = userProfile.location;
+      if (lat !== existing.lat || lng !== existing.lng) {
+        updates.lat = lat; updates.lng = lng;
+        updates.cell_id = cellIdFor(lat, lng);
+        updates.city = nearestCity(lat, lng);
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      const { error } = await supabase.from("spots").update(updates).eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    }
+    return existing.id;
+  }
   const lat = userProfile?.location?.lat ?? 48.8566;
   const lng = userProfile?.location?.lng ?? 2.3522;
   const { data, error } = await supabase.from("spots").insert({
