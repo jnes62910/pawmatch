@@ -110,6 +110,20 @@ async function findSeasonalItem(itemId) {
   }
   return null;
 }
+// Même principe pour les packs groupés saisonniers (ex: Pack Halloween).
+// Le prix (amountCents) vient directement de la table, pas recalculé ici.
+async function findSeasonalBundle(bundleId) {
+  const { data, error } = await supabase.from('seasonal_events').select('*').eq('active', true);
+  if (error || !data) return null;
+  const mmdd = todayMMDD();
+  for (const ev of data) {
+    const found = (Array.isArray(ev.bundles) ? ev.bundles : []).find(b => b.id === bundleId);
+    if (found) {
+      return { bundle: found, active: isDateInSeasonalRange(mmdd, ev.start_date, ev.end_date) };
+    }
+  }
+  return null;
+}
 
 // Notifications push réelles — initialise l'app Firebase Admin une seule
 // fois (réutilisée entre les appels tant que la fonction reste "chaude").
@@ -149,8 +163,13 @@ module.exports = async (req, res) => {
       if (!profileId || !userId) return res.status(400).json({ error: 'profileId and userId are required' });
       let label, amountCents, metadata;
       if (bundleId) {
-        const bundle = GIFT_BUNDLES[bundleId];
-        if (!bundle) return res.status(400).json({ error: 'Pack inconnu' });
+        let bundle = GIFT_BUNDLES[bundleId];
+        if (!bundle) {
+          const seasonal = await findSeasonalBundle(bundleId);
+          if (!seasonal) return res.status(400).json({ error: 'Pack inconnu' });
+          if (!seasonal.active) return res.status(410).json({ error: "Ce pack saisonnier n'est plus disponible." });
+          bundle = seasonal.bundle;
+        }
         if (bundle.premiumOnly) {
           const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', profileId).single();
           if (!profile?.is_premium) {
@@ -210,8 +229,12 @@ module.exports = async (req, res) => {
       }
       const meta = session.metadata;
       if (meta.bundleId) {
-        const bundle = GIFT_BUNDLES[meta.bundleId];
-        if (!bundle) return res.status(400).json({ error: 'Pack inconnu' });
+        let bundle = GIFT_BUNDLES[meta.bundleId];
+        if (!bundle) {
+          const seasonal = await findSeasonalBundle(meta.bundleId);
+          if (!seasonal) return res.status(400).json({ error: 'Pack inconnu' });
+          bundle = seasonal.bundle;
+        }
         const { data: profile, error: fetchError } = await supabase
           .from('profiles').select('gift_inventory').eq('id', meta.profileId).single();
         if (fetchError) throw fetchError;
