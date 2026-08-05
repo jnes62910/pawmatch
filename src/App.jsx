@@ -5175,6 +5175,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   async function createMySpot() {
     setCreateSpotError(null);
+    if (!initialData?.location) {
+      setCreateSpotError("Active d'abord ta position (bouton \"Activer ma position\" plus haut dans ton profil) pour que ta fiche apparaisse près de chez toi, et pas par défaut à Paris.");
+      return;
+    }
     setCreatingSpot(true);
     try {
       const spotId = await ensureProviderSpot(initialData, newSpotCategory, newSpotName.trim());
