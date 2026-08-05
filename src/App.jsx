@@ -7649,14 +7649,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             })()}
 
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>PACKS (prix réduit)</div>
-            {GIFT_BUNDLES.filter(b => b.species === "both" || b.species === initialData?.species).map(b => {
+            {[...GIFT_BUNDLES, ...seasonalCatalog.activeBundles].filter(b => b.species === "both" || b.species === initialData?.species).map(b => {
               const locked = b.premiumOnly && !isPremium;
               return (
-              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
+              <div key={b.id} onClick={() => { if (buyingItemId === b.id) return; locked ? onPremium() : buyItem(null, b.id); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: b.seasonal ? "linear-gradient(135deg,#FDEDE3,#FBE0CE)" : b.premiumOnly ? "linear-gradient(135deg,#FFF8E7,#FFEFC7)" : "linear-gradient(135deg,#FAF0EB,#F3E0D3)", borderRadius: 14, marginBottom: 10, border: b.seasonal ? "1.5px solid #E8935F" : b.premiumOnly ? "1.5px solid #E8C468" : "1.5px solid #E8B89F", cursor: buyingItemId === b.id ? "default" : "pointer" }}>
                 <span style={{ fontSize: 24, opacity: locked ? 0.5 : 1 }}>{b.items.map(id => findAnyGift(id)?.emoji).join("")}</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
                     {b.label}
+                    {b.seasonal && <span style={{ fontSize: 9, fontWeight: 800, color: "#B24A16", background: "rgba(178,74,22,.12)", padding: "2px 6px", borderRadius: 8 }}>✨ ÉDITION {b.eventLabel?.toUpperCase()}</span>}
                     {b.premiumOnly && <span style={{ fontSize: 9, fontWeight: 800, color: "#946800", background: "rgba(148,104,0,.12)", padding: "2px 6px", borderRadius: 8 }}>👑 PREMIUM</span>}
                   </div>
                   {b.premiumOnly && (
@@ -9210,7 +9211,7 @@ const GIFT_CATALOG = [
 // ajouter un item ne nécessite ni redéploiement web, ni resoumission Play
 // Store, juste une requête SQL. Le serveur (api/shop.js) revalide la même
 // fenêtre de dates avant tout paiement — jamais fait confiance au client.
-let _seasonalCache = null; // { active: [...], all: [...] } — partagé entre tous les composants
+let _seasonalCache = null; // { active, all, activeBundles, allBundles } — partagé entre tous les composants
 let _seasonalPromise = null;
 
 function todayMMDD() {
@@ -9231,12 +9232,15 @@ function formatCentsAsPrice(cents) {
 }
 
 async function fetchSeasonalCatalog() {
+  const empty = { active: [], all: [], activeBundles: [], allBundles: [] };
   try {
     const { data, error } = await supabase.from("seasonal_events").select("*").eq("active", true);
-    if (error || !data) return { active: [], all: [] };
+    if (error || !data) return empty;
     const mmdd = todayMMDD();
     const all = [];
     const active = [];
+    const allBundles = [];
+    const activeBundles = [];
     for (const ev of data) {
       const items = (Array.isArray(ev.items) ? ev.items : []).map(it => ({
         ...it,
@@ -9246,11 +9250,28 @@ async function fetchSeasonalCatalog() {
         eventLabel: ev.label,
       }));
       all.push(...items);
-      if (isDateInSeasonalRange(mmdd, ev.start_date, ev.end_date)) active.push(...items);
+      const isActive = isDateInSeasonalRange(mmdd, ev.start_date, ev.end_date);
+      if (isActive) active.push(...items);
+
+      const bundles = (Array.isArray(ev.bundles) ? ev.bundles : []).map(b => {
+        const originalCents = (b.items || []).reduce((sum, id) => sum + (items.find(it => it.id === id)?.amountCents || 0), 0);
+        return {
+          ...b,
+          price: formatCentsAsPrice(b.amountCents),
+          originalPrice: formatCentsAsPrice(originalCents),
+          species: "both",
+          category: "food",
+          seasonal: true,
+          eventKey: ev.event_key,
+          eventLabel: ev.label,
+        };
+      });
+      allBundles.push(...bundles);
+      if (isActive) activeBundles.push(...bundles);
     }
-    return { active, all };
+    return { active, all, activeBundles, allBundles };
   } catch {
-    return { active: [], all: [] };
+    return empty;
   }
 }
 
@@ -9258,7 +9279,7 @@ async function fetchSeasonalCatalog() {
 // pour n'effectuer qu'un seul fetch réseau même si plusieurs écrans
 // (Découvrir, Communauté, Chat, Profil/Boutique) l'appellent en parallèle.
 function useSeasonalCatalog() {
-  const [catalog, setCatalog] = useState(_seasonalCache || { active: [], all: [] });
+  const [catalog, setCatalog] = useState(_seasonalCache || { active: [], all: [], activeBundles: [], allBundles: [] });
   useEffect(() => {
     let cancelled = false;
     if (_seasonalCache) { setCatalog(_seasonalCache); return; }
@@ -9280,6 +9301,14 @@ function useSeasonalCatalog() {
 // corrigée dès le prochain rendu une fois le cache prêt).
 function findAnyGift(id) {
   return GIFT_CATALOG.find(g => g.id === id) || (_seasonalCache?.all || []).find(g => g.id === id);
+}
+
+// Même principe que findAnyGift, pour les packs groupés (statiques +
+// saisonniers). Utilisé notamment sur l'écran de succès après paiement, où
+// on ne sait pas encore si l'achat concernait un pack permanent ou un pack
+// d'un événement en cours.
+function findAnyBundle(id) {
+  return GIFT_BUNDLES.find(b => b.id === id) || (_seasonalCache?.allBundles || []).find(b => b.id === id);
 }
 
 // Packs groupés — quelques articles réunis à prix légèrement réduit, sans
@@ -10803,7 +10832,7 @@ export default function Miloute() {
       verifyShopSession(sessionId)
         .then(data => {
           if (data.paid) {
-            const bundle = GIFT_BUNDLES.find(b => b.id === data.itemId);
+            const bundle = findAnyBundle(data.itemId);
             const purchasedItem = findAnyGift(data.itemId) || bundle;
             setShopSuccessCategory(purchasedItem?.category || null);
             setShopSuccessBundleLabel(bundle?.label || null);
