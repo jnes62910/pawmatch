@@ -2290,7 +2290,7 @@ function MapScreen({ onOpenChat = () => {}, onNav = () => {}, userProfile = null
 
 // ── REPRO SCREEN ──────────────────────────────────────────────────────────────
 // ── PRESTATAIRES ──────────────────────────────────────────────────────────────
-function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNav = () => {}, onGoToProviderSetup = () => {} }) {
+function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNav = () => {}, onGoToProviderSetup = () => {}, autoReviewProviderUserId = null, onReviewPromptHandled = () => {} }) {
   const [sharingLocation, setSharingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [providers, setProviders] = useState([]);
@@ -2383,6 +2383,21 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
       const ratingA = ratingFor(a)?.avg || 0, ratingB = ratingFor(b)?.avg || 0;
       return ratingB - ratingA;
     });
+
+  useEffect(() => {
+    if (!autoReviewProviderUserId) return;
+    let cancelled = false;
+    (async () => {
+      const spot = await fetchSelfProviderSpot(autoReviewProviderUserId);
+      if (cancelled) return;
+      if (spot) {
+        await openProvider(spot);
+        setShowReviewForm(true);
+      }
+      onReviewPromptHandled();
+    })();
+    return () => { cancelled = true; };
+  }, [autoReviewProviderUserId]);
 
   const filtered = sortedProviders;
 
@@ -4933,7 +4948,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {}, onRequestReview = () => {} }) {
   const seasonalCatalog = useSeasonalCatalog();
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [sharingLocation, setSharingLocation] = useState(false);
@@ -5255,9 +5270,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   async function handleConfirmBooking(bookingId) {
     setConfirmingBookingId(bookingId);
     setBookingConfirmError(null);
+    // Repéré avant reloadBookings() : seul un booking présent côté "client"
+    // déclenche l'invitation à laisser un avis (le prestataire qui confirme
+    // sa propre prestation n'a pas à noter son propre travail).
+    const asClientBooking = myBookingsAsClient.find(b => b.id === bookingId);
     const result = await confirmBooking(bookingId, initialData.userId);
     if (result.error) {
       setBookingConfirmError(result.error);
+    } else if (asClientBooking?.providerUserId) {
+      onRequestReview(asClientBooking.providerUserId);
     }
     await reloadBookings();
     setConfirmingBookingId(null);
@@ -9030,8 +9051,14 @@ function mapBookingRow(row, isProvider) {
     myConfirmed: isProvider ? !!row.provider_confirmed_at : !!row.client_confirmed_at,
     otherConfirmed: isProvider ? !!row.client_confirmed_at : !!row.provider_confirmed_at,
     counterpartProfileId: isProvider ? row.client_profile_id : row.provider_profile_id,
+    providerUserId: row.provider_user_id,
     time: formatRelativeTime(row.created_at),
   };
+}
+
+async function fetchSpotById(id) {
+  const { data } = await supabase.from("spots").select("*").eq("id", id).maybeSingle();
+  return data || null;
 }
 
 async function fetchSelfProviderSpot(userId) {
@@ -10678,6 +10705,7 @@ export default function Miloute() {
   const [showAbout, setShowAbout] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [requestOpenProviderScreen, setRequestOpenProviderScreen] = useState(false);
+  const [reviewPromptProviderUserId, setReviewPromptProviderUserId] = useState(null);
   const [requestOpenShop, setRequestOpenShop] = useState(false);
   function goToShop() { setRequestOpenShop(true); setScreen("profile"); }
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
@@ -11051,13 +11079,13 @@ export default function Miloute() {
                 )
               : <>
                 {screen === "swipe" && <SwipeScreen onNav={setScreen} userProfile={userProfile} isPremium={isPremium} onPremium={openPremium} onGoToShop={goToShop} onProfileUpdated={updateUserProfile} />}
-                {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToProviderSetup={() => { setRequestOpenProviderScreen(true); setScreen("profile"); }} />}
+                {screen === "providers" && <ProvidersScreen userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToProviderSetup={() => { setRequestOpenProviderScreen(true); setScreen("profile"); }} autoReviewProviderUserId={reviewPromptProviderUserId} onReviewPromptHandled={() => setReviewPromptProviderUserId(null)} />}
                 {screen === "repro" && <ReproScreen isPremium={isPremium} onPremium={openPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} />}
                 
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToShop={goToShop} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} onProfileUpdated={updateUserProfile} onGoToShop={goToShop} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} onRequestReview={providerUserId => { setReviewPromptProviderUserId(providerUserId); setScreen("providers"); }} />}
               </>
           }
         </div>
