@@ -169,6 +169,23 @@ module.exports = async (req, res) => {
     if (!isClient && !isProvider) {
       return res.status(403).json({ error: 'Vous ne faites pas partie de cette réservation.' });
     }
+    // ── Date de RDV convenue ─────────────────────────────────────────────────
+    // Champ partagé, réglable par n'importe laquelle des deux parties, sans
+    // étape de validation formelle — l'accord se fait via le chat, ce champ
+    // ne fait que le rendre visible et permettre de trier "Mes réservations"
+    // par vraie date plutôt que par ordre de paiement.
+    if (action === 'set-agreed-date') {
+      const { agreedAt } = req.body;
+      if (booking.status === 'cancelled') return res.status(400).json({ error: 'Réservation annulée.' });
+      const { data: updated, error } = await supabase
+        .from('bookings').update({ agreed_at: agreedAt || null }).eq('id', bookingId).select().single();
+      if (error) throw error;
+      const recipientUserId = isClient ? booking.provider_user_id : booking.client_user_id;
+      if (agreedAt) {
+        sendPush(recipientUserId, 'Date de rendez-vous mise à jour', `Nouvelle date convenue pour "${booking.service_title}".`, { type: 'booking_date_set', bookingId });
+      }
+      return res.status(200).json({ booking: updated });
+    }
     // ── Annulation ──────────────────────────────────────────────────────────
     if (action === 'cancel') {
       if (booking.status !== 'paid_held') {
