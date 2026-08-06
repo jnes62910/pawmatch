@@ -1847,9 +1847,15 @@ async function fetchReviewsForProviders(spotIds) {
 async function fetchReviewsForSpot(spotId) {
   const { data, error } = await supabase.from("provider_reviews").select("*").eq("spot_id", spotId).order("created_at", { ascending: false });
   if (error || !data) return [];
+  const userIds = [...new Set(data.map(r => r.user_id).filter(Boolean))];
+  const { data: profs } = userIds.length > 0
+    ? await supabase.from("profiles").select("user_id, photos").in("user_id", userIds)
+    : { data: [] };
+  const photoByUserId = Object.fromEntries((profs || []).map(p => [p.user_id, p.photos?.[0] || null]));
   return data.map(r => ({
     id: r.id, rating: r.rating, text: r.text, petName: r.pet_name,
     emoji: r.species === "cat" ? "🐱" : "🐕",
+    photo: photoByUserId[r.user_id] || null,
     time: formatRelativeTime(r.created_at),
   }));
 }
@@ -2311,6 +2317,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
   const [bookingServiceId, setBookingServiceId] = useState(null);
   const [bookingError, setBookingError] = useState(null);
   const [showBecomeProviderPrompt, setShowBecomeProviderPrompt] = useState(false);
+  const [inquiryChatOpen, setInquiryChatOpen] = useState(false);
 
   const refLat = userProfile?.location?.lat ?? 48.8566;
   const refLng = userProfile?.location?.lng ?? 2.3522;
@@ -2574,7 +2581,6 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                   {selected.isFounder && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#946800", background: "#FFF3CD", padding: "2px 8px", borderRadius: 8, marginTop: 4 }}>🏅 Membre fondateur</span>}
                   {selected.claimStatus === "approved" && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#1565C0", background: "#E3F2FD", padding: "2px 8px", borderRadius: 8, marginTop: 4, marginLeft: 6 }}>✓ Revendiqué</span>}
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.address ? ` · ${selected.address}` : ""}</div>
-                  {selected.phone && <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 4, fontWeight: 600 }}>📞 {selected.phone}</div>}
                   {selected.type === "groomer" && selected.source === "google_places" && (
                     <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6, lineHeight: 1.4 }}>ℹ️ Suggéré par Google d'après son activité — à confirmer sur place.</div>
                   )}
@@ -2606,6 +2612,11 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                 </>
               ) : (
                 <>
+                  {!selected.isDemo && userProfile?.userId && (selected.addedByUserId || selected.claimedByUserId) && (selected.addedByUserId || selected.claimedByUserId) !== userProfile.userId && (
+                    <button onClick={() => setInquiryChatOpen(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>
+                      ❓ Poser une question
+                    </button>
+                  )}
                   {(loadingServices || selectedServices.length > 0) && (
                     <div style={{ marginBottom: 18 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 8 }}>PRESTATIONS</div>
@@ -2645,7 +2656,11 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                       ) : selectedReviews.map(r => (
                         <div key={r.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #F9FAFB" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                            <span>{r.emoji}</span>
+                            {photoUrl(r.photo) ? (
+                              <img src={photoUrl(r.photo)} alt="" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                            ) : (
+                              <span>{r.emoji}</span>
+                            )}
                             <span style={{ fontWeight: 700, fontSize: 13, color: "#2D1200" }}>{r.petName}</span>
                             <span style={{ color: "#F59E0B", fontSize: 12 }}>{"⭐".repeat(r.rating)}</span>
                             <span style={{ fontSize: 11, color: "#9CA3AF", marginLeft: "auto" }}>{r.time}</span>
@@ -2691,6 +2706,18 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
           refLng={refLng}
           onClose={() => setShowAddForm(false)}
           onAdded={() => { setShowAddForm(false); reload(); }}
+        />
+      )}
+
+      {/* Poser une question à un prestataire, avant réservation */}
+      {inquiryChatOpen && selected && userProfile?.userId && (
+        <InquiryChatModal
+          spotId={selected.id}
+          clientUserId={userProfile.userId}
+          myUserId={userProfile.userId}
+          recipientUserId={selected.addedByUserId || selected.claimedByUserId}
+          title={selected.name}
+          onClose={() => setInquiryChatOpen(false)}
         />
       )}
 
@@ -5110,6 +5137,9 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [claimingSpotId, setClaimingSpotId] = useState(null);
 
   const [selfSpotInfo, setSelfSpotInfo] = useState(null);
+  const [inquiryThreads, setInquiryThreads] = useState([]);
+  const [loadingInquiryThreads, setLoadingInquiryThreads] = useState(false);
+  const [openInquiryThreadUserId, setOpenInquiryThreadUserId] = useState(null);
   const [showEditSpot, setShowEditSpot] = useState(false);
   const [editSpotName, setEditSpotName] = useState("");
   const [editSpotCategory, setEditSpotCategory] = useState("petsitter");
@@ -5255,6 +5285,36 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [cancellingBookingId, setCancellingBookingId] = useState(null);
   const [confirmCancelBooking, setConfirmCancelBooking] = useState(null);
   const [bookingConfirmError, setBookingConfirmError] = useState(null);
+  const [chatBooking, setChatBooking] = useState(null); // { id, counterpartUserId, counterpartName } ou null
+  const [bookingMessages, setBookingMessages] = useState([]);
+  const [loadingBookingMessages, setLoadingBookingMessages] = useState(false);
+  const [newBookingMessage, setNewBookingMessage] = useState("");
+  const [sendingBookingMessage, setSendingBookingMessage] = useState(false);
+  const [bookingMaskWarning, setBookingMaskWarning] = useState(false);
+
+  async function openBookingChat(booking) {
+    setChatBooking(booking);
+    setLoadingBookingMessages(true);
+    const msgs = await fetchBookingMessages(booking.id);
+    setBookingMessages(msgs);
+    setLoadingBookingMessages(false);
+  }
+
+  async function submitBookingMessage() {
+    const raw = newBookingMessage.trim();
+    if (!raw || !chatBooking) return;
+    const { text, masked } = maskContactInfo(raw);
+    setBookingMaskWarning(masked);
+    setSendingBookingMessage(true);
+    try {
+      await sendBookingMessage(chatBooking.id, initialData.userId, chatBooking.counterpartUserId, text);
+      setNewBookingMessage("");
+      setBookingMessages(await fetchBookingMessages(chatBooking.id));
+    } catch (err) {
+      console.error("submitBookingMessage error:", err);
+    }
+    setSendingBookingMessage(false);
+  }
 
   async function reloadBookings() {
     setLoadingBookings(true);
@@ -5308,6 +5368,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       setSelfSpotInfo(spot ? { name: spot.name, type: spot.type, description: spot.description || "" } : null);
       setLoadingSelfSpot(false);
       if (!spot) fetchPendingClaim(initialData.userId).then(setPendingClaim);
+      if (spot?.id) {
+        setLoadingInquiryThreads(true);
+        fetchSpotInquiryThreads(spot.id).then(threads => { setInquiryThreads(threads); setLoadingInquiryThreads(false); });
+      }
     });
   }, [initialData?.id, initialData?.stripeConnectOnboarded]);
 
@@ -7432,6 +7496,23 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               </div>
             ))}
 
+            {selfSpotId && (inquiryThreads.length > 0 || loadingInquiryThreads) && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 10 }}>QUESTIONS REÇUES</div>
+                {loadingInquiryThreads ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: 16 }}><PawLogo size={22} color="#E8B89F" /></div>
+                ) : inquiryThreads.map(t => (
+                  <button key={t.clientUserId} onClick={() => setOpenInquiryThreadUserId(t.clientUserId)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderBottom: "1px solid #F3F4F6", background: "none", border: "none", cursor: "pointer" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{t.clientName}</div>
+                      <div style={{ fontSize: 12, color: "#9CA3AF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.lastText}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF", flexShrink: 0 }}>{t.time}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Statut des paiements */}
             <div style={{ background: connectOnboarded ? "#E8F5E9" : "#FAF0EB", borderRadius: 16, padding: "16px", marginBottom: 20, marginTop: 20 }}>
               {checkingConnect ? (
@@ -7600,7 +7681,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 {myBookingsAsClient.length === 0 ? (
                   <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 24 }}>Aucune réservation pour l'instant.</div>
                 ) : myBookingsAsClient.map(b => (
-                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} />
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} onOpenChat={() => openBookingChat({ id: b.id, counterpartUserId: b.counterpartUserId, counterpartName: b.counterpartName })} />
                 ))}
 
                 <div style={{ height: 1, background: "#F3F4F6", margin: "20px 0" }} />
@@ -7609,7 +7690,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 {myBookingsAsProvider.length === 0 ? (
                   <div style={{ fontSize: 13, color: "#9CA3AF" }}>Aucune réservation reçue pour l'instant.</div>
                 ) : myBookingsAsProvider.map(b => (
-                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} isProvider />
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} isProvider onOpenChat={() => openBookingChat({ id: b.id, counterpartUserId: b.counterpartUserId, counterpartName: b.counterpartName })} />
                 ))}
               </>
             )}
@@ -7633,6 +7714,61 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               <button onClick={handleCancelBooking} disabled={!!cancellingBookingId}
                 style={{ flex: 1, padding: "12px", borderRadius: 12, border: "none", background: cancellingBookingId ? "#E5E7EB" : "#DC2626", color: cancellingBookingId ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 13, cursor: cancellingBookingId ? "default" : "pointer" }}>
                 {cancellingBookingId ? "..." : "Oui, annuler et rembourser"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openInquiryThreadUserId && selfSpotId && (
+        <InquiryChatModal
+          spotId={selfSpotId}
+          clientUserId={openInquiryThreadUserId}
+          myUserId={initialData.userId}
+          recipientUserId={openInquiryThreadUserId}
+          title={inquiryThreads.find(t => t.clientUserId === openInquiryThreadUserId)?.clientName || "Question"}
+          onClose={() => setOpenInquiryThreadUserId(null)}
+        />
+      )}
+
+      {chatBooking && (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 96, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <button onClick={() => { setChatBooking(null); setBookingMessages([]); }} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+            <div style={{ fontWeight: 800, fontSize: 16, color: "#2D1200" }}>💬 {chatBooking.counterpartName}</div>
+          </div>
+
+          <div style={{ padding: "10px 20px", background: "#FAF0EB", borderBottom: "1px solid #F3F4F6", flexShrink: 0, fontSize: 11.5, color: "#8B3D28", lineHeight: 1.4 }}>
+            🔒 Paiement et échanges protégés tant qu'ils restent dans Miloute.
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+            {loadingBookingMessages ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={24} color="#E8B89F" /></div>
+            ) : bookingMessages.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 0", color: "#9CA3AF", fontSize: 13, lineHeight: 1.6 }}>Aucun message pour l'instant.<br />C'est ici que vous pouvez convenir d'un horaire ou poser vos questions.</div>
+            ) : bookingMessages.map(m => {
+              const isMine = m.senderUserId === initialData.userId;
+              return (
+                <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start", marginBottom: 10 }}>
+                  <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: 16, background: isMine ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: isMine ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.4 }}>
+                    {m.text}
+                    <div style={{ fontSize: 10, marginTop: 4, opacity: .75 }}>{m.time}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, padding: "12px 16px", borderTop: "1px solid #F3F4F6", flexShrink: 0, flexDirection: "column" }}>
+            {bookingMaskWarning && <div style={{ fontSize: 11, color: "#B45309", marginBottom: 2 }}>⚠️ Des coordonnées ont été masquées dans votre dernier message — gardez les échanges dans Miloute.</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={newBookingMessage} onChange={e => setNewBookingMessage(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !sendingBookingMessage) submitBookingMessage(); }}
+                placeholder="Écrire un message..." style={{ flex: 1, padding: "12px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none" }} />
+              <button onClick={submitBookingMessage} disabled={sendingBookingMessage || !newBookingMessage.trim()}
+                style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: (sendingBookingMessage || !newBookingMessage.trim()) ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 16, cursor: (sendingBookingMessage || !newBookingMessage.trim()) ? "default" : "pointer", flexShrink: 0 }}>
+                ➤
               </button>
             </div>
           </div>
@@ -7809,7 +7945,98 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   );
 }
 
-function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, isProvider = false }) {
+// Fil de discussion générique, réutilisé pour les questions pré-réservation
+// (côté client qui pose, côté prestataire qui répond) — même UI, seuls
+// spotId/clientUserId/myUserId/recipientUserId changent selon qui l'ouvre.
+// Détecte et masque les tentatives d'échange de coordonnées (numéro,
+// email) dans les messages de chat prestataire/client, pour limiter le
+// contournement de Miloute vers un arrangement hors app. Volontairement
+// limité aux patterns fiables (numéro, email) pour éviter les faux positifs
+// — les mentions d'app tierces (WhatsApp, etc.) sont couvertes par le
+// bandeau d'avertissement affiché dans le chat, pas par un filtre à part.
+function maskContactInfo(text) {
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const phoneRegex = /(\+33[\s.-]?|0)[1-9]([\s.-]?\d{2}){4}/g;
+  let masked = false;
+  let result = text.replace(emailRegex, () => { masked = true; return "[coordonnées masquées]"; });
+  result = result.replace(phoneRegex, () => { masked = true; return "[coordonnées masquées]"; });
+  return { text: result, masked };
+}
+
+function InquiryChatModal({ spotId, clientUserId, myUserId, recipientUserId, title, onClose }) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [maskWarning, setMaskWarning] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const msgs = await fetchSpotInquiryMessages(spotId, clientUserId);
+      if (!cancelled) { setMessages(msgs); setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [spotId, clientUserId]);
+
+  async function submit() {
+    const raw = text.trim();
+    if (!raw) return;
+    const { text: t, masked } = maskContactInfo(raw);
+    setMaskWarning(masked);
+    setSending(true);
+    try {
+      await sendSpotInquiryMessage(spotId, clientUserId, myUserId, recipientUserId, t);
+      setText("");
+      setMessages(await fetchSpotInquiryMessages(spotId, clientUserId));
+    } catch (err) { console.error("InquiryChatModal submit error:", err); }
+    setSending(false);
+  }
+
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 97, display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background: "#FAF0EB", border: "none", borderRadius: "50%", width: 34, height: 34, fontSize: 16, cursor: "pointer", color: "#8B3D28" }}>←</button>
+        <div style={{ fontWeight: 800, fontSize: 16, color: "#2D1200" }}>💬 {title}</div>
+      </div>
+      <div style={{ padding: "10px 20px", background: "#FAF0EB", borderBottom: "1px solid #F3F4F6", flexShrink: 0, fontSize: 11.5, color: "#8B3D28", lineHeight: 1.4 }}>
+        🔒 Paiement et échanges protégés tant qu'ils restent dans Miloute.
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: 30 }}><PawLogo size={24} color="#E8B89F" /></div>
+        ) : messages.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "30px 0", color: "#9CA3AF", fontSize: 13, lineHeight: 1.6 }}>Aucun message pour l'instant.</div>
+        ) : messages.map(m => {
+          const isMine = m.senderUserId === myUserId;
+          return (
+            <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start", marginBottom: 10 }}>
+              <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: 16, background: isMine ? "linear-gradient(135deg,#B25F46,#C97A5E)" : "#F3F4F6", color: isMine ? "#fff" : "#2D1200", fontSize: 14, lineHeight: 1.4 }}>
+                {m.text}
+                <div style={{ fontSize: 10, marginTop: 4, opacity: .75 }}>{m.time}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 8, padding: "12px 16px", borderTop: "1px solid #F3F4F6", flexShrink: 0, flexDirection: "column" }}>
+        {maskWarning && <div style={{ fontSize: 11, color: "#B45309", marginBottom: 2 }}>⚠️ Des coordonnées ont été masquées dans votre dernier message — gardez les échanges dans Miloute.</div>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !sending) submit(); }}
+            placeholder="Écrire un message..." style={{ flex: 1, padding: "12px 14px", borderRadius: 20, border: "1.5px solid #E5E7EB", fontSize: 14, outline: "none" }} />
+          <button onClick={submit} disabled={sending || !text.trim()}
+            style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: (sending || !text.trim()) ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: "#fff", fontSize: 16, cursor: (sending || !text.trim()) ? "default" : "pointer", flexShrink: 0 }}>
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, isProvider = false, onOpenChat = () => {} }) {
   const canCancel = b.status === "paid_held" && !b.clientConfirmed && !b.providerConfirmed;
   return (
     <div style={{ background: "#F9FAFB", borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
@@ -7823,6 +8050,12 @@ function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, i
           {isProvider && <div style={{ fontSize: 10, color: "#9CA3AF" }}>vous touchez {(b.payoutCents / 100).toFixed(2)} €</div>}
         </div>
       </div>
+
+      {b.status !== "cancelled" && (
+        <button onClick={onOpenChat} style={{ width: "100%", padding: "8px", borderRadius: 10, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 12, cursor: "pointer", marginBottom: 8 }}>
+          💬 Discuter {isProvider ? "avec le client" : "avec le prestataire"}
+        </button>
+      )}
 
       {b.status === "released" ? (
         <div style={{ fontSize: 12, fontWeight: 700, color: "#2E7D32" }}>✅ Terminée — fonds reversés</div>
@@ -9051,6 +9284,7 @@ function mapBookingRow(row, isProvider) {
     myConfirmed: isProvider ? !!row.provider_confirmed_at : !!row.client_confirmed_at,
     otherConfirmed: isProvider ? !!row.client_confirmed_at : !!row.provider_confirmed_at,
     counterpartProfileId: isProvider ? row.client_profile_id : row.provider_profile_id,
+    counterpartUserId: isProvider ? row.client_user_id : row.provider_user_id,
     providerUserId: row.provider_user_id,
     time: formatRelativeTime(row.created_at),
   };
@@ -9202,6 +9436,61 @@ async function fetchMyBookingsAsProvider(userProfile) {
   const { data: profs } = await supabase.from("profiles").select("id, pet_name, species").in("id", counterpartIds);
   const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
   return data.map(r => ({ ...mapBookingRow(r, true), counterpartName: byId[r.client_profile_id]?.pet_name || "Client" }));
+}
+
+// Messagerie minimale attachée à une réservation — permet à client et
+// prestataire de convenir d'un horaire (ou autre) sans quitter l'app,
+// maintenant que le téléphone n'est plus affiché publiquement sur les fiches.
+async function fetchBookingMessages(bookingId) {
+  const { data, error } = await supabase.from("booking_messages").select("*").eq("booking_id", bookingId).order("created_at", { ascending: true });
+  if (error || !data) return [];
+  return data.map(m => ({ id: m.id, senderUserId: m.sender_user_id, text: m.text, time: formatRelativeTime(m.created_at) }));
+}
+
+async function sendBookingMessage(bookingId, senderUserId, recipientUserId, text) {
+  const { error } = await supabase.from("booking_messages").insert({ booking_id: bookingId, sender_user_id: senderUserId, text });
+  if (error) throw new Error(error.message);
+  if (recipientUserId) {
+    sendPushNotification(recipientUserId, "Nouveau message réservation 💬", text, { type: "booking_message", bookingId });
+  }
+}
+
+// Messagerie "Poser une question" — rattachée à une fiche (pas à une
+// réservation payée), pour lever les doutes d'un client hésitant sans
+// ralentir ni modifier le tunnel de réservation existant. Un fil distinct
+// par client (spot_id + client_user_id), pas un salon commun.
+async function fetchSpotInquiryMessages(spotId, clientUserId) {
+  const { data, error } = await supabase.from("spot_inquiries").select("*")
+    .eq("spot_id", spotId).eq("client_user_id", clientUserId).order("created_at", { ascending: true });
+  if (error || !data) return [];
+  return data.map(m => ({ id: m.id, senderUserId: m.sender_user_id, text: m.text, time: formatRelativeTime(m.created_at) }));
+}
+
+async function sendSpotInquiryMessage(spotId, clientUserId, senderUserId, recipientUserId, text) {
+  const { error } = await supabase.from("spot_inquiries").insert({ spot_id: spotId, client_user_id: clientUserId, sender_user_id: senderUserId, text });
+  if (error) throw new Error(error.message);
+  if (recipientUserId) {
+    sendPushNotification(recipientUserId, "Nouvelle question 💬", text, { type: "spot_inquiry", spotId });
+  }
+}
+
+// Liste des fils de questions reçus par un prestataire sur sa fiche, un par
+// client distinct, triés par dernier message — pour l'écran "Espace
+// prestataire".
+async function fetchSpotInquiryThreads(spotId) {
+  const { data, error } = await supabase.from("spot_inquiries").select("*").eq("spot_id", spotId).order("created_at", { ascending: false });
+  if (error || !data) return [];
+  const byClient = {};
+  for (const m of data) {
+    if (!byClient[m.client_user_id]) byClient[m.client_user_id] = { clientUserId: m.client_user_id, lastText: m.text, lastTime: m.created_at };
+  }
+  const clientIds = Object.keys(byClient);
+  const { data: profs } = clientIds.length > 0
+    ? await supabase.from("profiles").select("user_id, pet_name").in("user_id", clientIds)
+    : { data: [] };
+  const nameByUserId = Object.fromEntries((profs || []).map(p => [p.user_id, p.pet_name]));
+  return Object.values(byClient)
+    .map(t => ({ ...t, clientName: nameByUserId[t.clientUserId] || "Client", time: formatRelativeTime(t.lastTime) }));
 }
 
 async function updateProfileLocation(profileId, lat, lng) {
