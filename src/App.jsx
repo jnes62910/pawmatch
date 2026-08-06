@@ -1791,6 +1791,7 @@ function mapProviderRow(row) {
     open: row.open, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
     isFounder: !!row.is_founder, photos: row.photos || [],
     claimStatus: row.claim_status || null, claimedByUserId: row.claimed_by_user_id || null,
+    addedByUserId: row.added_by_user_id || null,
   };
 }
 
