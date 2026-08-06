@@ -1787,7 +1787,7 @@ function mapProviderRow(row) {
   const url = row.affiliate_url;
   return {
     id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
-    lat: row.lat, lng: row.lng, address: row.address, city: row.city || null, phone: row.phone, desc: row.description,
+    lat: row.lat, lng: row.lng, address: row.address, city: row.city || null, availability: row.availability || null, phone: row.phone, desc: row.description,
     open: row.open, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
     isFounder: !!row.is_founder, photos: row.photos || [],
     claimStatus: row.claim_status || null, claimedByUserId: row.claimed_by_user_id || null,
@@ -2582,6 +2582,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                   {selected.isFounder && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#946800", background: "#FFF3CD", padding: "2px 8px", borderRadius: 8, marginTop: 4 }}>🏅 Membre fondateur</span>}
                   {selected.claimStatus === "approved" && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#1565C0", background: "#E3F2FD", padding: "2px 8px", borderRadius: 8, marginTop: 4, marginLeft: 6 }}>✓ Revendiqué</span>}
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.city ? ` · ${selected.city}` : ""}{selected.address ? ` · ${selected.address}` : ""}</div>
+                  {selected.availability && <div style={{ fontSize: 12, color: "#8B3D28", marginTop: 4 }}>🗓️ {selected.availability}</div>}
                   {selected.type === "groomer" && selected.source === "google_places" && (
                     <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6, lineHeight: 1.4 }}>ℹ️ Suggéré par Google d'après son activité — à confirmer sur place.</div>
                   )}
@@ -5144,6 +5145,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
   const [newSpotName, setNewSpotName] = useState("");
   const [newSpotCity, setNewSpotCity] = useState("");
+  const [newSpotAvailability, setNewSpotAvailability] = useState("");
   const [newSpotCategory, setNewSpotCategory] = useState("petsitter");
   const [creatingSpot, setCreatingSpot] = useState(false);
   const [createSpotError, setCreateSpotError] = useState(null);
@@ -5160,6 +5162,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [editSpotName, setEditSpotName] = useState("");
   const [editSpotCategory, setEditSpotCategory] = useState("petsitter");
   const [editSpotCity, setEditSpotCity] = useState("");
+  const [editSpotAvailability, setEditSpotAvailability] = useState("");
   const [editSpotDescription, setEditSpotDescription] = useState("");
   const [savingSpotEdit, setSavingSpotEdit] = useState(false);
   const [editSpotError, setEditSpotError] = useState(null);
@@ -5171,6 +5174,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     setEditSpotName(selfSpotInfo?.name || "");
     setEditSpotCategory(selfSpotInfo?.type || "petsitter");
     setEditSpotCity(selfSpotInfo?.city || "");
+    setEditSpotAvailability(selfSpotInfo?.availability || "");
     setEditSpotDescription(selfSpotInfo?.description || "");
     setEditSpotError(null);
     setShowEditSpot(true);
@@ -5181,8 +5185,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     setEditSpotError(null);
     setSavingSpotEdit(true);
     try {
-      await updateSpotInfo(selfSpotId, { name: editSpotName.trim(), type: editSpotCategory, city: editSpotCity.trim() || null, description: editSpotDescription.trim() });
-      setSelfSpotInfo({ name: editSpotName.trim(), type: editSpotCategory, city: editSpotCity.trim(), description: editSpotDescription.trim() });
+      await updateSpotInfo(selfSpotId, { name: editSpotName.trim(), type: editSpotCategory, city: editSpotCity.trim() || null, availability: editSpotAvailability.trim() || null, description: editSpotDescription.trim() });
+      setSelfSpotInfo({ name: editSpotName.trim(), type: editSpotCategory, city: editSpotCity.trim(), availability: editSpotAvailability.trim(), description: editSpotDescription.trim() });
       setShowEditSpot(false);
     } catch {
       setEditSpotError("L'enregistrement a échoué, réessayez.");
@@ -5244,7 +5248,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     }
     setCreatingSpot(true);
     try {
-      const spotId = await ensureProviderSpot(initialData, newSpotCategory, newSpotName.trim(), newSpotCity.trim());
+      const spotId = await ensureProviderSpot(initialData, newSpotCategory, newSpotName.trim(), newSpotCity.trim(), newSpotAvailability.trim());
       setSelfSpotId(spotId);
       setSpotPhotos([]);
     } catch {
@@ -5309,13 +5313,30 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [newBookingMessage, setNewBookingMessage] = useState("");
   const [sendingBookingMessage, setSendingBookingMessage] = useState(false);
   const [bookingMaskWarning, setBookingMaskWarning] = useState(false);
+  const [agreedDateInput, setAgreedDateInput] = useState("");
+  const [savingAgreedDate, setSavingAgreedDate] = useState(false);
 
   async function openBookingChat(booking) {
     setChatBooking(booking);
+    setAgreedDateInput(isoToDatetimeLocal(booking.agreedAt));
     setLoadingBookingMessages(true);
     const msgs = await fetchBookingMessages(booking.id);
     setBookingMessages(msgs);
     setLoadingBookingMessages(false);
+  }
+
+  async function saveAgreedDate() {
+    if (!chatBooking) return;
+    setSavingAgreedDate(true);
+    try {
+      const iso = agreedDateInput ? new Date(agreedDateInput).toISOString() : null;
+      await setBookingAgreedDate(chatBooking.id, initialData.userId, iso);
+      setChatBooking(prev => prev ? { ...prev, agreedAt: iso } : prev);
+      await reloadBookings();
+    } catch (err) {
+      console.error("saveAgreedDate error:", err);
+    }
+    setSavingAgreedDate(false);
   }
 
   async function submitBookingMessage() {
@@ -5383,7 +5404,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     fetchSelfProviderSpot(initialData.userId).then(spot => {
       setSelfSpotId(spot?.id || null);
       setSpotPhotos(spot?.photos || []);
-      setSelfSpotInfo(spot ? { name: spot.name, type: spot.type, city: spot.city || "", description: spot.description || "" } : null);
+      setSelfSpotInfo(spot ? { name: spot.name, type: spot.type, city: spot.city || "", availability: spot.availability || "", description: spot.description || "" } : null);
       setLoadingSelfSpot(false);
       if (!spot) fetchPendingClaim(initialData.userId).then(setPendingClaim);
       if (spot?.id) {
@@ -7413,6 +7434,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <input value={newSpotCity} onChange={e => setNewSpotCity(e.target.value)} placeholder="Ex: Saint-Omer"
                   style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
 
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOS DISPONIBILITÉS (optionnel)</label>
+                <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Aide le client à savoir si vous êtes dispo avant même de vous écrire.</div>
+                <input value={newSpotAvailability} onChange={e => setNewSpotAvailability(e.target.value)} placeholder="Ex: Lun-Ven 9h-18h, we-end sur demande"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
+
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
                 <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 20 }}>
@@ -7609,6 +7635,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
             <input value={editSpotCity} onChange={e => setEditSpotCity(e.target.value)} placeholder="Ex: Saint-Omer"
               style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", boxSizing: "border-box" }} />
 
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOS DISPONIBILITÉS (optionnel)</label>
+            <input value={editSpotAvailability} onChange={e => setEditSpotAvailability(e.target.value)} placeholder="Ex: Lun-Ven 9h-18h, we-end sur demande"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DESCRIPTION (optionnel)</label>
             <textarea value={editSpotDescription} onChange={e => setEditSpotDescription(e.target.value)} rows={3} placeholder="Présentez votre activité..."
               style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", resize: "none", boxSizing: "border-box" }} />
@@ -7712,7 +7742,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 {myBookingsAsClient.length === 0 ? (
                   <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 24 }}>Aucune réservation pour l'instant.</div>
                 ) : myBookingsAsClient.map(b => (
-                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} onOpenChat={() => openBookingChat({ id: b.id, counterpartUserId: b.counterpartUserId, counterpartName: b.counterpartName })} />
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} onOpenChat={() => openBookingChat({ id: b.id, counterpartUserId: b.counterpartUserId, counterpartName: b.counterpartName, agreedAt: b.agreedAt })} />
                 ))}
 
                 <div style={{ height: 1, background: "#F3F4F6", margin: "20px 0" }} />
@@ -7721,7 +7751,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 {myBookingsAsProvider.length === 0 ? (
                   <div style={{ fontSize: 13, color: "#9CA3AF" }}>Aucune réservation reçue pour l'instant.</div>
                 ) : myBookingsAsProvider.map(b => (
-                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} isProvider onOpenChat={() => openBookingChat({ id: b.id, counterpartUserId: b.counterpartUserId, counterpartName: b.counterpartName })} />
+                  <BookingRow key={b.id} booking={b} onConfirm={handleConfirmBooking} confirming={confirmingBookingId === b.id} onCancel={id => setConfirmCancelBooking(id)} cancelling={cancellingBookingId === b.id} isProvider onOpenChat={() => openBookingChat({ id: b.id, counterpartUserId: b.counterpartUserId, counterpartName: b.counterpartName, agreedAt: b.agreedAt })} />
                 ))}
               </>
             )}
@@ -7771,6 +7801,19 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 
           <div style={{ padding: "10px 20px", background: "#FAF0EB", borderBottom: "1px solid #F3F4F6", flexShrink: 0, fontSize: 11.5, color: "#8B3D28", lineHeight: 1.4 }}>
             🔒 Paiement et échanges protégés tant qu'ils restent dans Miloute.
+          </div>
+
+          <div style={{ padding: "12px 20px", borderBottom: "1px solid #F3F4F6", flexShrink: 0 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>📅 DATE DU RENDEZ-VOUS</label>
+            <div style={{ fontSize: 11, color: "#9CA3AF", margin: "3px 0 8px" }}>Mettez-vous d'accord dans la discussion, puis renseignez-la ici — visible des deux côtés.</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input type="datetime-local" value={agreedDateInput} onChange={e => setAgreedDateInput(e.target.value)}
+                style={{ flex: 1, padding: "9px 10px", borderRadius: 10, border: "1.5px solid #E5E7EB", fontSize: 13, fontFamily: "inherit" }} />
+              <button onClick={saveAgreedDate} disabled={savingAgreedDate}
+                style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: savingAgreedDate ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: savingAgreedDate ? "#9CA3AF" : "#fff", fontWeight: 700, fontSize: 12.5, cursor: savingAgreedDate ? "default" : "pointer" }}>
+                {savingAgreedDate ? "..." : "Enregistrer"}
+              </button>
+            </div>
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
@@ -7985,6 +8028,15 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
 // limité aux patterns fiables (numéro, email) pour éviter les faux positifs
 // — les mentions d'app tierces (WhatsApp, etc.) sont couvertes par le
 // bandeau d'avertissement affiché dans le chat, pas par un filtre à part.
+// Convertit une date ISO (ou null) au format attendu par un <input
+// type="datetime-local"> ("AAAA-MM-JJTHH:mm"), en heure locale du navigateur.
+function isoToDatetimeLocal(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function maskContactInfo(text) {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
   const phoneRegex = /(\+33[\s.-]?|0)[1-9]([\s.-]?\d{2}){4}/g;
@@ -8075,6 +8127,11 @@ function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, i
         <div>
           <div style={{ fontWeight: 700, fontSize: 14, color: "#2D1200" }}>{b.serviceTitle}</div>
           <div style={{ fontSize: 12, color: "#9CA3AF" }}>{isProvider ? "Client" : "Prestataire"} : {b.counterpartName} · {b.time}</div>
+          {b.agreedAt && (
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#B25F46", marginTop: 3 }}>
+              📅 {new Date(b.agreedAt).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} à {new Date(b.agreedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 14, color: "#8B3D28" }}>{(b.priceCents / 100).toFixed(2)} €</div>
@@ -9316,6 +9373,18 @@ async function cancelBooking(bookingId, userId) {
   return data;
 }
 
+// Date de RDV convenue — champ partagé, réglable par le client OU le
+// prestataire depuis le chat de réservation, sans étape de validation
+// formelle (l'accord se fait dans la discussion elle-même).
+async function setBookingAgreedDate(bookingId, userId, agreedAtISO) {
+  const res = await fetch(apiUrl("/api/confirm-booking"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bookingId, userId, action: "set-agreed-date", agreedAt: agreedAtISO }),
+  });
+  return res.json();
+}
+
 function mapBookingRow(row, isProvider) {
   return {
     id: row.id, serviceTitle: row.service_title,
@@ -9328,6 +9397,7 @@ function mapBookingRow(row, isProvider) {
     counterpartUserId: isProvider ? row.client_user_id : row.provider_user_id,
     providerUserId: row.provider_user_id,
     autoReleased: !!row.auto_released,
+    agreedAt: row.agreed_at || null,
     time: formatRelativeTime(row.created_at),
   };
 }
@@ -9382,9 +9452,9 @@ async function updateSpotPhotos(spotId, photos) {
   if (error) throw new Error(error.message);
 }
 
-async function updateSpotInfo(spotId, { name, type, city, description }) {
+async function updateSpotInfo(spotId, { name, type, city, availability, description }) {
   const { error } = await supabase.from("spots").update({
-    name, type, city: city ?? null, description: description || null,
+    name, type, city: city ?? null, availability: availability ?? null, description: description || null,
     emoji: PROVIDER_TYPE_INFO[type]?.emoji || "📍",
   }).eq("id", spotId);
   if (error) throw new Error(error.message);
@@ -9411,12 +9481,12 @@ async function deleteProviderSpot(spotId) {
   }
 }
 
-async function ensureProviderSpot(userProfile, category, businessName, city) {
+async function ensureProviderSpot(userProfile, category, businessName, city, availability) {
   const existing = await fetchSelfProviderSpot(userProfile.userId);
   if (existing) {
-    // La fiche existe déjà : on la met à jour (catégorie, nom, ville, position)
-    // au lieu de la laisser figée sur ce qui avait été choisi à la création —
-    // sinon changer de catégorie ici n'avait jusqu'ici aucun effet réel.
+    // La fiche existe déjà : on la met à jour (catégorie, nom, ville, dispos,
+    // position) au lieu de la laisser figée sur ce qui avait été choisi à la
+    // création — sinon changer de catégorie ici n'avait jusqu'ici aucun effet réel.
     const updates = {};
     if (category && category !== existing.type) {
       updates.type = category;
@@ -9424,6 +9494,7 @@ async function ensureProviderSpot(userProfile, category, businessName, city) {
     }
     if (businessName && businessName !== existing.name) updates.name = businessName;
     if (city && city !== existing.city) updates.city = city;
+    if (availability !== undefined && availability !== existing.availability) updates.availability = availability || null;
     if (userProfile?.location?.lat != null && userProfile?.location?.lng != null) {
       const { lat, lng } = userProfile.location;
       if (lat !== existing.lat || lng !== existing.lng) {
@@ -9441,7 +9512,7 @@ async function ensureProviderSpot(userProfile, category, businessName, city) {
   const lat = userProfile?.location?.lat ?? 48.8566;
   const lng = userProfile?.location?.lng ?? 2.3522;
   const { data, error } = await supabase.from("spots").insert({
-    cell_id: cellIdFor(lat, lng), city: city || nearestCity(lat, lng),
+    cell_id: cellIdFor(lat, lng), city: city || nearestCity(lat, lng), availability: availability || null,
     name: businessName || userProfile.name, type: category, species: "both",
     emoji: PROVIDER_TYPE_INFO[category]?.emoji || "📍",
     lat, lng, open: true, source: "self", added_by_user_id: userProfile.userId,
@@ -9461,6 +9532,16 @@ async function fetchProviderOnboardingStatus(profileId) {
   return !!data?.stripe_connect_onboarded;
 }
 
+// Priorise les réservations avec une date de RDV convenue (les plus
+// proches d'abord), puis les autres dans leur ordre habituel (plus
+// récemment payées d'abord) — évite de devoir chercher dans une liste
+// triée uniquement par ordre de paiement.
+function sortBookingsByAgreedDate(bookings) {
+  const withDate = bookings.filter(b => b.agreedAt).sort((a, b) => new Date(a.agreedAt) - new Date(b.agreedAt));
+  const withoutDate = bookings.filter(b => !b.agreedAt);
+  return [...withDate, ...withoutDate];
+}
+
 async function fetchMyBookingsAsClient(userProfile) {
   if (!userProfile?.userId) return [];
   const { data, error } = await supabase.from("bookings").select("*").eq("client_user_id", userProfile.userId).order("created_at", { ascending: false });
@@ -9468,7 +9549,7 @@ async function fetchMyBookingsAsClient(userProfile) {
   const counterpartIds = [...new Set(data.map(r => r.provider_profile_id))];
   const { data: profs } = await supabase.from("profiles").select("id, pet_name, species").in("id", counterpartIds);
   const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
-  return data.map(r => ({ ...mapBookingRow(r, false), counterpartName: byId[r.provider_profile_id]?.pet_name || "Prestataire" }));
+  return sortBookingsByAgreedDate(data.map(r => ({ ...mapBookingRow(r, false), counterpartName: byId[r.provider_profile_id]?.pet_name || "Prestataire" })));
 }
 
 async function fetchMyBookingsAsProvider(userProfile) {
@@ -9478,7 +9559,7 @@ async function fetchMyBookingsAsProvider(userProfile) {
   const counterpartIds = [...new Set(data.map(r => r.client_profile_id))];
   const { data: profs } = await supabase.from("profiles").select("id, pet_name, species").in("id", counterpartIds);
   const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
-  return data.map(r => ({ ...mapBookingRow(r, true), counterpartName: byId[r.client_profile_id]?.pet_name || "Client" }));
+  return sortBookingsByAgreedDate(data.map(r => ({ ...mapBookingRow(r, true), counterpartName: byId[r.client_profile_id]?.pet_name || "Client" })));
 }
 
 // Messagerie minimale attachée à une réservation — permet à client et
