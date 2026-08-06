@@ -1787,7 +1787,7 @@ function mapProviderRow(row) {
   const url = row.affiliate_url;
   return {
     id: row.id, name: row.name, type: row.type, species: row.species, emoji: row.emoji,
-    lat: row.lat, lng: row.lng, address: row.address, phone: row.phone, desc: row.description,
+    lat: row.lat, lng: row.lng, address: row.address, city: row.city || null, phone: row.phone, desc: row.description,
     open: row.open, source: row.source, affiliateUrl: (url && url.startsWith("http")) ? url : null,
     isFounder: !!row.is_founder, photos: row.photos || [],
     claimStatus: row.claim_status || null, claimedByUserId: row.claimed_by_user_id || null,
@@ -2581,7 +2581,7 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200" }}>{selected.emoji} {selected.name}</div>
                   {selected.isFounder && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#946800", background: "#FFF3CD", padding: "2px 8px", borderRadius: 8, marginTop: 4 }}>🏅 Membre fondateur</span>}
                   {selected.claimStatus === "approved" && <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, color: "#1565C0", background: "#E3F2FD", padding: "2px 8px", borderRadius: 8, marginTop: 4, marginLeft: 6 }}>✓ Revendiqué</span>}
-                  <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.address ? ` · ${selected.address}` : ""}</div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{PROVIDER_TYPE_INFO[selected.type]?.label}{selected.city ? ` · ${selected.city}` : ""}{selected.address ? ` · ${selected.address}` : ""}</div>
                   {selected.type === "groomer" && selected.source === "google_places" && (
                     <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6, lineHeight: 1.4 }}>ℹ️ Suggéré par Google d'après son activité — à confirmer sur place.</div>
                   )}
@@ -5129,6 +5129,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [checkingConnect, setCheckingConnect] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
+  const [editingService, setEditingService] = useState(null);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
   const [showShopModal, setShowShopModal] = useState(false);
   const [buyingItemId, setBuyingItemId] = useState(null);
@@ -5142,6 +5143,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const spotPhotoRef = useRef(null);
 
   const [newSpotName, setNewSpotName] = useState("");
+  const [newSpotCity, setNewSpotCity] = useState("");
   const [newSpotCategory, setNewSpotCategory] = useState("petsitter");
   const [creatingSpot, setCreatingSpot] = useState(false);
   const [createSpotError, setCreateSpotError] = useState(null);
@@ -5157,6 +5159,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   const [showEditSpot, setShowEditSpot] = useState(false);
   const [editSpotName, setEditSpotName] = useState("");
   const [editSpotCategory, setEditSpotCategory] = useState("petsitter");
+  const [editSpotCity, setEditSpotCity] = useState("");
   const [editSpotDescription, setEditSpotDescription] = useState("");
   const [savingSpotEdit, setSavingSpotEdit] = useState(false);
   const [editSpotError, setEditSpotError] = useState(null);
@@ -5167,6 +5170,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
   function openEditSpot() {
     setEditSpotName(selfSpotInfo?.name || "");
     setEditSpotCategory(selfSpotInfo?.type || "petsitter");
+    setEditSpotCity(selfSpotInfo?.city || "");
     setEditSpotDescription(selfSpotInfo?.description || "");
     setEditSpotError(null);
     setShowEditSpot(true);
@@ -5177,8 +5181,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     setEditSpotError(null);
     setSavingSpotEdit(true);
     try {
-      await updateSpotInfo(selfSpotId, { name: editSpotName.trim(), type: editSpotCategory, description: editSpotDescription.trim() });
-      setSelfSpotInfo({ name: editSpotName.trim(), type: editSpotCategory, description: editSpotDescription.trim() });
+      await updateSpotInfo(selfSpotId, { name: editSpotName.trim(), type: editSpotCategory, city: editSpotCity.trim() || null, description: editSpotDescription.trim() });
+      setSelfSpotInfo({ name: editSpotName.trim(), type: editSpotCategory, city: editSpotCity.trim(), description: editSpotDescription.trim() });
       setShowEditSpot(false);
     } catch {
       setEditSpotError("L'enregistrement a échoué, réessayez.");
@@ -5240,7 +5244,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     }
     setCreatingSpot(true);
     try {
-      const spotId = await ensureProviderSpot(initialData, newSpotCategory, newSpotName.trim());
+      const spotId = await ensureProviderSpot(initialData, newSpotCategory, newSpotName.trim(), newSpotCity.trim());
       setSelfSpotId(spotId);
       setSpotPhotos([]);
     } catch {
@@ -5379,7 +5383,7 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
     fetchSelfProviderSpot(initialData.userId).then(spot => {
       setSelfSpotId(spot?.id || null);
       setSpotPhotos(spot?.photos || []);
-      setSelfSpotInfo(spot ? { name: spot.name, type: spot.type, description: spot.description || "" } : null);
+      setSelfSpotInfo(spot ? { name: spot.name, type: spot.type, city: spot.city || "", description: spot.description || "" } : null);
       setLoadingSelfSpot(false);
       if (!spot) fetchPendingClaim(initialData.userId).then(setPendingClaim);
       if (spot?.id) {
@@ -7404,6 +7408,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                 <input value={newSpotName} onChange={e => { setNewSpotName(e.target.value); setSimilarSpots(null); }} placeholder="Ex: Léa, pet-sitter du 15e"
                   style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
 
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE VILLE</label>
+                <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Affichée sur votre fiche, pour que les clients sachent tout de suite si vous êtes près de chez eux.</div>
+                <input value={newSpotCity} onChange={e => setNewSpotCity(e.target.value)} placeholder="Ex: Saint-Omer"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, marginBottom: 16, fontFamily: "inherit", boxSizing: "border-box" }} />
+
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE CATÉGORIE</label>
                 <div style={{ fontSize: 11, color: "#9CA3AF", margin: "4px 0 8px" }}>Détermine où vous apparaissez dans l'annuaire Prestataires.</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 20 }}>
@@ -7505,6 +7514,8 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
                   style={{ background: "#F3F4F6", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#6B7280", cursor: "pointer" }}>
                   {s.active ? "Désactiver" : "Réactiver"}
                 </button>
+                <button onClick={() => { setEditingService(s); setShowAddService(true); }}
+                  style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer" }}>✏️</button>
                 <button onClick={async () => { await deleteProviderService(s.id); setProviderServices(await fetchProviderServices(initialData.id)); }}
                   style={{ background: "none", border: "none", fontSize: 16, cursor: "pointer", color: "#DC2626" }}>🗑️</button>
               </div>
@@ -7594,6 +7605,10 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
               ))}
             </div>
 
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>VOTRE VILLE</label>
+            <input value={editSpotCity} onChange={e => setEditSpotCity(e.target.value)} placeholder="Ex: Saint-Omer"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", boxSizing: "border-box" }} />
+
             <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>DESCRIPTION (optionnel)</label>
             <textarea value={editSpotDescription} onChange={e => setEditSpotDescription(e.target.value)} rows={3} placeholder="Présentez votre activité..."
               style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #E5E7EB", fontSize: 14, margin: "6px 0 16px", fontFamily: "inherit", resize: "none", boxSizing: "border-box" }} />
@@ -7657,9 +7672,11 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
         <AddServiceForm
           userProfile={initialData}
           spotId={selfSpotId}
-          onClose={() => setShowAddService(false)}
+          editingService={editingService}
+          onClose={() => { setShowAddService(false); setEditingService(null); }}
           onAdded={async () => {
             setShowAddService(false);
+            setEditingService(null);
             setProviderServices(await fetchProviderServices(initialData.id));
             if (!initialData?.questsCompleted?.become_provider) {
               claimQuest(initialData, "become_provider").then(result => {
@@ -8072,11 +8089,17 @@ function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, i
       )}
 
       {b.status === "released" ? (
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#2E7D32" }}>✅ Terminée — fonds reversés</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#2E7D32" }}>
+          ✅ Terminée — fonds reversés
+          {b.autoReleased && <span style={{ display: "block", fontSize: 10.5, fontWeight: 500, color: "#9CA3AF", marginTop: 2 }}>Confirmée automatiquement après 7 jours sans réponse de l'autre partie.</span>}
+        </div>
       ) : b.status === "cancelled" ? (
         <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>↩️ Annulée — remboursée</div>
       ) : b.myConfirmed ? (
-        <div style={{ fontSize: 12, color: "#B25F46" }}>✓ Vous avez confirmé — en attente de {isProvider ? "l'avis du client" : "l'avis du prestataire"}</div>
+        <div>
+          <div style={{ fontSize: 12, color: "#B25F46" }}>✓ Vous avez confirmé — en attente de {isProvider ? "l'avis du client" : "l'avis du prestataire"}</div>
+          <div style={{ fontSize: 10.5, color: "#9CA3AF", marginTop: 4, lineHeight: 1.4 }}>Si {isProvider ? "le client" : "le prestataire"} ne répond pas, Miloute le relance automatiquement, puis libère les fonds sous 7 jours même sans réponse.</div>
+        </div>
       ) : (
         <>
           <button onClick={() => onConfirm(b.id)} disabled={confirming || cancelling}
@@ -8095,10 +8118,10 @@ function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, i
   );
 }
 
-function AddServiceForm({ userProfile, spotId, onClose, onAdded }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
+function AddServiceForm({ userProfile, spotId, onClose, onAdded, editingService = null }) {
+  const [title, setTitle] = useState(editingService?.title || "");
+  const [description, setDescription] = useState(editingService?.description || "");
+  const [price, setPrice] = useState(editingService ? String(editingService.priceCents / 100).replace(".", ",") : "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -8117,10 +8140,14 @@ function AddServiceForm({ userProfile, spotId, onClose, onAdded }) {
       }
     }
     try {
-      await createProviderService(userProfile, { title: title.trim(), description: description.trim(), priceCents: Math.round(priceNum * 100), spotId });
+      if (editingService) {
+        await updateProviderService(editingService.id, { title: title.trim(), description: description.trim() || null, price_cents: Math.round(priceNum * 100) });
+      } else {
+        await createProviderService(userProfile, { title: title.trim(), description: description.trim(), priceCents: Math.round(priceNum * 100), spotId });
+      }
       onAdded();
     } catch {
-      setError("L'ajout a échoué, réessayez.");
+      setError(editingService ? "La modification a échoué, réessayez." : "L'ajout a échoué, réessayez.");
     }
     setSubmitting(false);
   }
@@ -8129,7 +8156,7 @@ function AddServiceForm({ userProfile, spotId, onClose, onAdded }) {
     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 80, display: "flex", alignItems: "flex-end" }} onClick={() => !submitting && onClose()}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", width: "100%", maxHeight: "90%", overflowY: "auto", padding: "20px 20px 32px" }}>
         <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, margin: "0 auto 16px" }} />
-        <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>Ajouter une prestation</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: "#2D1200", marginBottom: 14 }}>{editingService ? "Modifier la prestation" : "Ajouter une prestation"}</div>
 
         <label style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1 }}>TITRE *</label>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Garde à domicile (journée)"
@@ -8147,7 +8174,7 @@ function AddServiceForm({ userProfile, spotId, onClose, onAdded }) {
 
         <button onClick={submit} disabled={submitting}
           style={{ width: "100%", padding: "15px", borderRadius: 14, border: "none", background: submitting ? "#E5E7EB" : "linear-gradient(135deg,#B25F46,#C97A5E)", color: submitting ? "#9CA3AF" : "#fff", fontWeight: 800, fontSize: 15, cursor: submitting ? "default" : "pointer" }}>
-          {submitting ? "Ajout en cours..." : "Ajouter la prestation"}
+          {submitting ? (editingService ? "Modification..." : "Ajout en cours...") : (editingService ? "Enregistrer les modifications" : "Ajouter la prestation")}
         </button>
       </div>
     </div>
@@ -9300,6 +9327,7 @@ function mapBookingRow(row, isProvider) {
     counterpartProfileId: isProvider ? row.client_profile_id : row.provider_profile_id,
     counterpartUserId: isProvider ? row.client_user_id : row.provider_user_id,
     providerUserId: row.provider_user_id,
+    autoReleased: !!row.auto_released,
     time: formatRelativeTime(row.created_at),
   };
 }
@@ -9354,9 +9382,9 @@ async function updateSpotPhotos(spotId, photos) {
   if (error) throw new Error(error.message);
 }
 
-async function updateSpotInfo(spotId, { name, type, description }) {
+async function updateSpotInfo(spotId, { name, type, city, description }) {
   const { error } = await supabase.from("spots").update({
-    name, type, description: description || null,
+    name, type, city: city ?? null, description: description || null,
     emoji: PROVIDER_TYPE_INFO[type]?.emoji || "📍",
   }).eq("id", spotId);
   if (error) throw new Error(error.message);
@@ -9383,11 +9411,11 @@ async function deleteProviderSpot(spotId) {
   }
 }
 
-async function ensureProviderSpot(userProfile, category, businessName) {
+async function ensureProviderSpot(userProfile, category, businessName, city) {
   const existing = await fetchSelfProviderSpot(userProfile.userId);
   if (existing) {
-    // La fiche existe déjà : on la met à jour (catégorie, nom, position) au
-    // lieu de la laisser figée sur ce qui avait été choisi à la création —
+    // La fiche existe déjà : on la met à jour (catégorie, nom, ville, position)
+    // au lieu de la laisser figée sur ce qui avait été choisi à la création —
     // sinon changer de catégorie ici n'avait jusqu'ici aucun effet réel.
     const updates = {};
     if (category && category !== existing.type) {
@@ -9395,12 +9423,13 @@ async function ensureProviderSpot(userProfile, category, businessName) {
       updates.emoji = PROVIDER_TYPE_INFO[category]?.emoji || existing.emoji;
     }
     if (businessName && businessName !== existing.name) updates.name = businessName;
+    if (city && city !== existing.city) updates.city = city;
     if (userProfile?.location?.lat != null && userProfile?.location?.lng != null) {
       const { lat, lng } = userProfile.location;
       if (lat !== existing.lat || lng !== existing.lng) {
         updates.lat = lat; updates.lng = lng;
         updates.cell_id = cellIdFor(lat, lng);
-        updates.city = nearestCity(lat, lng);
+        if (!city) updates.city = nearestCity(lat, lng);
       }
     }
     if (Object.keys(updates).length > 0) {
@@ -9412,7 +9441,7 @@ async function ensureProviderSpot(userProfile, category, businessName) {
   const lat = userProfile?.location?.lat ?? 48.8566;
   const lng = userProfile?.location?.lng ?? 2.3522;
   const { data, error } = await supabase.from("spots").insert({
-    cell_id: cellIdFor(lat, lng), city: nearestCity(lat, lng),
+    cell_id: cellIdFor(lat, lng), city: city || nearestCity(lat, lng),
     name: businessName || userProfile.name, type: category, species: "both",
     emoji: PROVIDER_TYPE_INFO[category]?.emoji || "📍",
     lat, lng, open: true, source: "self", added_by_user_id: userProfile.userId,
