@@ -2613,9 +2613,14 @@ function ProvidersScreen({ userProfile = null, onProfileUpdated = () => {}, onNa
               ) : (
                 <>
                   {!selected.isDemo && userProfile?.userId && (selected.addedByUserId || selected.claimedByUserId) && (selected.addedByUserId || selected.claimedByUserId) !== userProfile.userId && (
-                    <button onClick={() => setInquiryChatOpen(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 16 }}>
-                      ❓ Poser une question
-                    </button>
+                    <>
+                      <button onClick={() => setInquiryChatOpen(true)} style={{ width: "100%", padding: "12px", borderRadius: 12, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8 }}>
+                        ❓ Poser une question
+                      </button>
+                      <div style={{ fontSize: 11.5, color: "#9CA3AF", lineHeight: 1.5, marginBottom: 16 }}>
+                        Une fois votre réservation validée, vous pourrez échanger directement avec {selected.name} dans l'app (conseils, prise de rendez-vous...) depuis "Mes réservations".
+                      </div>
+                    </>
                   )}
                   {(loadingServices || selectedServices.length > 0) && (
                     <div style={{ marginBottom: 18 }}>
@@ -4975,7 +4980,7 @@ function AboutScreen({ onBack }) {
   );
 }
 
-function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {}, onRequestReview = () => {} }) {
+function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = null, onProfileUpdated = () => {}, onLogout = () => {}, onTreatsSeen = () => {}, onLikesSeen = () => {}, onNav = () => {}, autoOpenProviderScreen = false, onProviderScreenOpened = () => {}, autoOpenShop = false, onShopOpened = () => {}, onRequestReview = () => {}, autoOpenBookings = false, onBookingsOpened = () => {} }) {
   const seasonalCatalog = useSeasonalCatalog();
   const [pet, setPet] = useState(() => (initialData ? { ...INIT_PET, ...initialData } : INIT_PET));
   const [sharingLocation, setSharingLocation] = useState(false);
@@ -5091,6 +5096,14 @@ function ProfileScreen({ onPremium = () => {}, isPremium = false, initialData = 
       onShopOpened();
     }
   }, [autoOpenShop]);
+
+  useEffect(() => {
+    if (autoOpenBookings) {
+      setShowBookingsModal(true);
+      reloadBookings();
+      onBookingsOpened();
+    }
+  }, [autoOpenBookings]);
 
   const [questToast, setQuestToast] = useState(null);
   async function tryClaimQuest(questId) {
@@ -10996,6 +11009,7 @@ export default function Miloute() {
   const [requestOpenProviderScreen, setRequestOpenProviderScreen] = useState(false);
   const [reviewPromptProviderUserId, setReviewPromptProviderUserId] = useState(null);
   const [requestOpenShop, setRequestOpenShop] = useState(false);
+  const [requestOpenBookings, setRequestOpenBookings] = useState(false);
   function goToShop() { setRequestOpenShop(true); setScreen("profile"); }
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
   const [showShopSuccess, setShowShopSuccess] = useState(false);
@@ -11173,6 +11187,8 @@ export default function Miloute() {
         .then(data => {
           if (data.paid) {
             setShowBookingSuccess(true);
+            setScreen("profile");
+            setRequestOpenBookings(true);
             if (userProfileRef.current && !userProfileRef.current?.questsCompleted?.first_booking) {
               claimQuest(userProfileRef.current, "first_booking").then(result => {
                 if (result.claimed) updateUserProfile({ ...userProfileRef.current, giftInventory: result.giftInventory, questsCompleted: result.questsCompleted });
@@ -11374,7 +11390,7 @@ export default function Miloute() {
                 {screen === "community" && <CommunityScreen onPremium={openPremium} isPremium={isPremium} userProfile={userProfile} onProfileUpdated={updateUserProfile} onNav={setScreen} onGoToShop={goToShop} />}
                 {screen === "messages" && <MatchesScreen onOpenChat={openChat} userProfile={userProfile} />}
                 {screen === "chat" && <ChatScreen matchId={chatId} onBack={closeChat} userProfile={userProfile} onMessagesRead={() => fetchUnreadMessagesCount(userProfile).then(setUnreadMessages)} onProfileUpdated={updateUserProfile} onGoToShop={goToShop} />}
-                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} onRequestReview={providerUserId => { setReviewPromptProviderUserId(providerUserId); setScreen("providers"); }} />}
+                {screen === "profile" && <ProfileScreen onPremium={openPremium} isPremium={isPremium} initialData={userProfile} onProfileUpdated={updateUserProfile} onLogout={handleLogout} onTreatsSeen={() => setUnseenTreats(0)} onLikesSeen={() => setUnseenLikes(0)} onNav={setScreen} autoOpenProviderScreen={requestOpenProviderScreen} onProviderScreenOpened={() => setRequestOpenProviderScreen(false)} autoOpenShop={requestOpenShop} onShopOpened={() => setRequestOpenShop(false)} onRequestReview={providerUserId => { setReviewPromptProviderUserId(providerUserId); setScreen("providers"); }} autoOpenBookings={requestOpenBookings} onBookingsOpened={() => setRequestOpenBookings(false)} />}
               </>
           }
         </div>
