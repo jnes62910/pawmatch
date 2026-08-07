@@ -8139,7 +8139,7 @@ function BookingRow({ booking: b, onConfirm, confirming, onCancel, cancelling, i
         </div>
       </div>
 
-      {b.status !== "cancelled" && (
+      {b.status !== "cancelled" && b.status !== "released" && (
         <button onClick={onOpenChat} style={{ width: "100%", padding: "8px", borderRadius: 10, border: "1.5px solid #E8B89F", background: "#FAF0EB", color: "#8B3D28", fontWeight: 700, fontSize: 12, cursor: "pointer", marginBottom: 8 }}>
           💬 Discuter {isProvider ? "avec le client" : "avec le prestataire"}
         </button>
@@ -9546,10 +9546,25 @@ async function fetchMyBookingsAsClient(userProfile) {
   if (!userProfile?.userId) return [];
   const { data, error } = await supabase.from("bookings").select("*").eq("client_user_id", userProfile.userId).order("created_at", { ascending: false });
   if (error || !data) return [];
+  // Le nom affiché doit être celui de la fiche pro du prestataire (ex: "Julien
+  // et les Miawoof"), pas le nom de son profil animal personnel — ce sont deux
+  // choses différentes en base (spots.name vs profiles.pet_name).
+  const providerUserIds = [...new Set(data.map(r => r.provider_user_id).filter(Boolean))];
+  const { data: spots } = providerUserIds.length > 0
+    ? await supabase.from("spots").select("name, added_by_user_id, claimed_by_user_id, claim_status")
+        .or(`added_by_user_id.in.(${providerUserIds.join(",")}),and(claimed_by_user_id.in.(${providerUserIds.join(",")}),claim_status.eq.approved)`)
+    : { data: [] };
+  const nameByProviderUserId = {};
+  for (const s of spots || []) {
+    if (s.added_by_user_id) nameByProviderUserId[s.added_by_user_id] = s.name;
+    if (s.claimed_by_user_id && s.claim_status === "approved") nameByProviderUserId[s.claimed_by_user_id] = s.name;
+  }
+  // Repli sur le profil animal si, pour une raison quelconque, aucune fiche
+  // n'est retrouvée (ne devrait pas arriver en usage normal).
   const counterpartIds = [...new Set(data.map(r => r.provider_profile_id))];
   const { data: profs } = await supabase.from("profiles").select("id, pet_name, species").in("id", counterpartIds);
   const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
-  return sortBookingsByAgreedDate(data.map(r => ({ ...mapBookingRow(r, false), counterpartName: byId[r.provider_profile_id]?.pet_name || "Prestataire" })));
+  return sortBookingsByAgreedDate(data.map(r => ({ ...mapBookingRow(r, false), counterpartName: nameByProviderUserId[r.provider_user_id] || byId[r.provider_profile_id]?.pet_name || "Prestataire" })));
 }
 
 async function fetchMyBookingsAsProvider(userProfile) {
